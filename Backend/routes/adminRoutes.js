@@ -1,6 +1,7 @@
 const express=require("express");
 const adminRouter=express.Router();
-const { adminModel } = require("../model/adminModel");
+const { adminModel } = require("../model/Admin/admin.models");
+
 
 const bcrypt=require("bcrypt");
 const  jwt = require('jsonwebtoken');

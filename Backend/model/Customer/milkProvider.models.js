@@ -1,24 +1,27 @@
 const mongoose=require("mongoose");
 
-const adminSchema=mongoose.Schema(
+// milk provider model
+const milkProviderSchema=new mongoose.Schema(
     {
+        userId:{type:Number,required:true},
         name:{type:String, required:[true,"Please add the full name"]},
         village:{type:String, required:[true, "Please add village name"]},
-        shopName:{type:String, required:[true, "Please add your shop name"]},
         mobile:{type:Number, required:[true,"Please add mobile number"]},
         email:{type:String, required:[true,"Please add email ID"]},
-        password:{type:String, required:[true, "Please add six digit password"]},
-        key:{type:String},
-
+        milk:[
+            {
+            type:mongoose.Schema.Types.ObjectId,
+            ref:"Milk"
+        }]
 
     },
     {
-        timestamp:true
+        timestamps:true
     }
 );
 
-const adminModel=mongoose.model("Admin",adminSchema);
+const milkProviderModel=mongoose.model("MilkProvider",milkProviderSchema);
 
 module.exports={
-    adminModel,
+    milkProviderModel,
 }
