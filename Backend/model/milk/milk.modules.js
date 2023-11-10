@@ -1,6 +1,10 @@
 const mongoose=require("mongoose");
 
 const milkSchema=new mongoose.Schema({
+    date: { 
+        type: Date,
+        default: Date.now 
+    },
     category:{
         type:String,
         required:true,
@@ -27,17 +31,16 @@ const milkSchema=new mongoose.Schema({
         type:Number,
         required:true,
         default:0
-    },
+   },
     milkOwner:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:"MilkProvider",
-        required:true
+        ref:"MilkProvider"
     },
-    adminOwner:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Admin",
-        required:true
-    } 
+    // adminOwner:{
+    //     type:mongoose.Schema.Types.ObjectId,
+    //     ref:"Admin",
+    //     required:true
+    // } 
     
 },{timestamps:true})
 
