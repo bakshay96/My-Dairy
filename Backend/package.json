@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Backend of Dairy Managment System",
   "main": "index.js",
- 
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "server": "nodemon index.js"
@@ -19,5 +18,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.0",
     "nodemon": "^3.0.1"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.3"
   }
 }
