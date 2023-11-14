@@ -14,7 +14,7 @@ if(token){
         res.send({"err":err.message})
     }
 }else{
-    res.send({"msg":"please Login"})   
+    res.send({"msg":"User don't have authorization"})   
 }
 }
 

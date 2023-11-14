@@ -1,8 +1,10 @@
 const express=require("express");
 const cors=require("cors");
 const { connection } = require("./connection/db");
-const { adminRouter } = require("./routes/adminRoutes");
-const { userRouters } = require("./routes/Providers/milkProviderRoutes");
+const { UserRouter } = require("./routes/User/userRoutes");
+const { AdminRouter } = require("./routes/Admin/adminRoutes");
+const { MilkRouter } = require("./routes/Milk/milkRoutes");
+
 require("dotenv").config();
 const PORT=process.env.PORT || 3030;
 
@@ -14,15 +16,18 @@ app.get("/",(req,res)=>{
     res.send("Welcome to Home page of Daily Milk Management System");
 })
 
-app.use("/",adminRouter,userRouters);
+
+app.use("/user",UserRouter);
+app.use("/admin",AdminRouter);
+app.use("/milk",MilkRouter)
 
 //server
 app.listen(PORT, async ()=>{
     try {
         await connection
         console.log("DB connected successfully")
+        console.log(`Server is running on port ${PORT}`)
     } catch (error) {
         console.error(error);
     }
-    console.log(`Server is running on port ${PORT}`)
 })

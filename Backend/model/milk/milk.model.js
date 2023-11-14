@@ -34,7 +34,7 @@ const milkSchema=new mongoose.Schema({
    },
     milkOwner:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:"MilkProvider"
+        ref:"user"
     },
     // adminOwner:{
     //     type:mongoose.Schema.Types.ObjectId,
@@ -44,8 +44,8 @@ const milkSchema=new mongoose.Schema({
     
 },{timestamps:true})
 
-const milkModel=mongoose.model("Milk",milkSchema);
+const MilkModel=mongoose.model("milk",milkSchema);
 
 module.exports={
-    milkModel
+    MilkModel
 }
