@@ -9,6 +9,8 @@ const userSchema=new mongoose.Schema(
         village:{type:String, required:[true, "Please add village name"]},
         mobile:{type:Number, required:[true,"Please add mobile number"],unique:true,index:true},
         email:{type:String, required:[true,"Please add email ID"]},
+        milks:[
+        ]
         
 
     },

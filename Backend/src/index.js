@@ -1,9 +1,10 @@
 const express=require("express");
 const cors=require("cors");
 const { connection } = require("./connection/db");
-const { UserRouter } = require("./routes/User/userRoutes");
-const { AdminRouter } = require("./routes/Admin/adminRoutes");
-const { MilkRouter } = require("./routes/Milk/milkRoutes");
+const { UserRouter } = require("./routes/userRoutes");
+const { AdminRouter } = require("./routes/adminRoutes");
+const { MilkRouter } = require("./routes/milkRoutes");
+
 
 require("dotenv").config();
 const PORT=process.env.PORT || 3030;

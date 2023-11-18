@@ -1,7 +1,6 @@
 const express=require("express");
-const bcrypt=require("bcrypt");
-const  jwt = require('jsonwebtoken');
-const { UserModel } = require("../model/users/user.model");
+
+const { UserModel } = require("../model/user.model");
 
 
 // POST request to create a new milk provider

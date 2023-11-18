@@ -2,7 +2,7 @@ const express = require("express");
 const adminRouter = express.Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { AdminModel } = require("../model/Admin/admin.model");
+const { AdminModel } = require("../model/admin.model");
 
 //admin registration
 const adminRegistration= async (req, res) => {

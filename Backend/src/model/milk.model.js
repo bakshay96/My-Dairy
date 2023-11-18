@@ -1,13 +1,15 @@
 const mongoose=require("mongoose");
 
+
 const milkSchema=new mongoose.Schema({
-    date: { 
-        type: Date,
-        default: Date.now 
+    userId :{
+        type:Number,
+        required:true,
+        
     },
     category:{
         type:String,
-        required:true,
+        
         enum:["COW","BUFFALO"],
         default:"COW"
 
@@ -15,27 +17,32 @@ const milkSchema=new mongoose.Schema({
     SNF:{
         type:Number,
         required:true,
-        default:0
+        default:0.0
     },
     FAT:{
         type:Number,
         required:true,
-        default:0
+        default:0.0
     },
     water:{
         type:Number,
         required:true,
-        default:0
+        default:0.0
     },
     liter:{
-        type:Number,
+        type:String,
         required:true,
-        default:0
+        default:0.0
    },
-    milkOwner:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"user"
-    },
+   date: {
+    
+    type: Number,
+    default:  new Date().getTimezoneOffset() // Automatically set to the current date and time
+  }
+    // milkOwner:{
+    //     type:mongoose.Schema.Types.ObjectId,
+    //     ref:"user"
+    // },
     // adminOwner:{
     //     type:mongoose.Schema.Types.ObjectId,
     //     ref:"Admin",
