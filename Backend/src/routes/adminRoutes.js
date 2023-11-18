@@ -4,8 +4,8 @@ const { adminLogin, adminRegistration } = require("../controllers/admin.controll
 
 const AdminRouter=express.Router();
 
-AdminRouter.post("/admin/register",adminRegistration);
-AdminRouter.post("/admin/login",adminLogin);
+AdminRouter.post("/register",adminRegistration);
+AdminRouter.post("/login",adminLogin);
 
 module.exports={
   AdminRouter

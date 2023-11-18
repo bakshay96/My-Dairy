@@ -8,10 +8,41 @@
 <body>
     <Headers>Dairy Maanagement Application</Headers>
     <menu>
-        <h4>Routes</h4>
+        <h4>Admin Routes</h4>
         <ul>
+            <li>
+                Admin Registration-admin/register
+            </li>
+            <li>
+
+                Admin Login : admin/login
+            </li>
             
         </ul>
+
+        <h4>User Route</h4>
+        <ul>
+            <li>
+                Users Registration- user/register
+            </li>
+            <li>
+                Get All users - user/
+            </li>
+            <li>
+                Get User by id - user/:userId
+            </li>
+            <li>
+                Delete user by Mobile Number= user/:mobile
+            </li>
+        </ul>
+
+        <h4>Milk Route only for admin user</h4>
+        <li>
+            add milk - /milk/add
+        </li>
+        <li>
+            get milk user= /milk/:id
+        </li>
     </menu>
 </body>
 </html>
