@@ -7,6 +7,7 @@ import UserRegistration from "../Pages/User/UserRegistration";
 
 import AdminRegistration from "../Pages/Admin/AdminRegistration";
 import  MilkInfo  from "../Componets/MilkInfo";
+import UserDashboard from "../Pages/User/UserList/UserDashboard";
 
 export const MainRoutes = () => {
   return (
@@ -17,6 +18,7 @@ export const MainRoutes = () => {
         <Route path="/user_register" element={<UserRegistration />} />
         <Route path="/admin_register" element={<AdminRegistration />} />
         <Route path="/milk_info" element={<MilkInfo />} />
+        <Route path="/user_dashboard" element={<UserDashboard/>} />
        
         <Route path="*" element={<NotFound />} />
       </Routes>

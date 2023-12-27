@@ -34,7 +34,7 @@ export default function UserRegistration() {
     >
       <Stack spacing={8} mx={"auto"} maxW={"lg"} py={12} px={6}>
         <Stack align={"center"}>
-          <Heading fontSize={"4xl"} textAlign={"center"} >
+          <Heading fontSize={"medium"} textAlign={"center"} mt={"1.5rem"}>
            Farmer Registration
            <Box display={"flex"} justifyContent={"center"}><GiCow /></Box>
           </Heading>

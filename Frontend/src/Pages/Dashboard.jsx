@@ -38,6 +38,7 @@ import {
   FiChevronDown,
 } from "react-icons/fi";
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
+import { FaAddressBook,FaRegAddressCard } from "react-icons/fa";
 
 
 import UserRegistration from "./User/UserRegistration";
@@ -47,13 +48,14 @@ import MyContext from "./ContextApi/MyContext";
 import AdminRegistration from "./Admin/AdminRegistration";
 import AddMilk from "./AddMilk";
 import MilkInfo  from "../Componets/MilkInfo";
+import UserDashboard from "./User/UserList/UserDashboard";
 
 
 
 const LinkItems = [
   {id:"1", name: 'Add Milk', icon: FiHome },
-  {id:"2", name: 'Add Farmer', icon: FiTrendingUp },
-  {id:"3", name: 'Explore', icon: FiCompass },
+  {id:"2", name: 'Customers', icon: FaRegAddressCard },
+  {id:"3", name: 'Milk Stats', icon: FiTrendingUp },
   {id:"4", name: 'Favourites', icon: FiStar },
   {id:"5", name: 'Settings', icon: FiSettings },
 ];
@@ -63,7 +65,7 @@ export default function Dashboard({ children }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {globalState, setGlobalState} = useContext(MyContext);
   const {active}=globalState;
- console.log("contact",globalState,active)
+// console.log("contact",globalState,active)
   return (
     <>
     <Box minH="100vh" bg={useColorModeValue("gray.100", "gray.900")} border={"5px solid red"}>
@@ -92,7 +94,7 @@ export default function Dashboard({ children }) {
         {children}
        
       {
-        active==1?<AddMilk />:active==2?<UserRegistration />:active==3?<MilkInfo/>:<NotFound/>
+        active==1?<AddMilk />:active==2?<UserDashboard />:active==3?<MilkInfo/>:active==4?<UserDashboard/>:<NotFound/>
       }
       </Box>
       
