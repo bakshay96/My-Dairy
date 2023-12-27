@@ -4,6 +4,7 @@ import viteLogo from '/vite.svg'
 import './App.css'
 import { MainRoutes } from './Routes/MainRoutes'
 import Footer from './Componets/Footer'
+import MilkInfo from './Componets/MilkInfo'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -11,6 +12,7 @@ function App() {
   return (
     <>
      <MainRoutes/>
+     
     
     </>
   )

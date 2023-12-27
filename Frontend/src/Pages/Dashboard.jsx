@@ -42,10 +42,11 @@ import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 
 import UserRegistration from "./User/UserRegistration";
 import { NotFound } from "./NotFound";
-import { AuthContext } from './Context/Context';
+
 import MyContext from "./ContextApi/MyContext";
 import AdminRegistration from "./Admin/AdminRegistration";
 import AddMilk from "./AddMilk";
+import MilkInfo  from "../Componets/MilkInfo";
 
 
 
@@ -85,15 +86,15 @@ export default function Dashboard({ children }) {
         </DrawerContent>
       </Drawer>
       {/* mobilenav */}
-      <MobileNav onOpen={onOpen} />
+      <MobileNav onOpen={onOpen} onClose={onClose} />
       <Box ml={{ base: 0, md: 60 }} p="4" >
         {/* main container */}
         {children}
        
-      </Box>
       {
-        active==1?<AddMilk />:active==2?<UserRegistration />:<NotFound/>
+        active==1?<AddMilk />:active==2?<UserRegistration />:active==3?<MilkInfo/>:<NotFound/>
       }
+      </Box>
       
     </Box>
    
@@ -129,7 +130,7 @@ const SidebarContent = ({ onClose, ...rest }) => {
         <CloseButton display={{ base: "flex", md: "none" }} onClick={onClose} />
       </Flex>
       {LinkItems.map((link) => (
-        <NavItem key={link.name} icon={link.icon} id={link.id}  >
+        <NavItem key={link.name} icon={link.icon} id={link.id}  onClose={onClose} >
           {link.name}
         </NavItem>
       ))}
@@ -156,7 +157,8 @@ const {globalState, setGlobalState} = useContext(MyContext);
       _focus={{ boxShadow: "none" }}
       >
       <Flex
-        onClick={()=>  setGlobalState((globalState)=>({...globalState, active:id}))}
+        onClick={()=> {setGlobalState((globalState)=>({...globalState, active:id})),onClose}}
+       
         align="center"
         p="4"
         mx="4"
@@ -186,7 +188,7 @@ const {globalState, setGlobalState} = useContext(MyContext);
 };
 
 
-const MobileNav = ({ onOpen, ...rest }) => {
+const MobileNav = ({ onOpen, onClose, ...rest }) => {
   const { colorMode, toggleColorMode } = useColorMode();
   
   return (
