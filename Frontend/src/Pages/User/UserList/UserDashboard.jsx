@@ -27,7 +27,7 @@ import { capitalize } from "./utils";
 import { DeleteIcon } from "./DeleteIcon";
 import { EditIcon } from "./EditIcon";
 import { EyeIcon } from "./EyeIcon";
-import Model from "./model";
+import Model from "./Model";
 
 const statusColorMap = {
   active: "success",
