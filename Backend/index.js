@@ -13,10 +13,10 @@ const app=express();
 app.use(cors({origin:"*"}));
 app.use(express.json());
 
-app.get("/",(req,res)=>{
-    res.sendFile(__dirname + "./utils/index.html");
-    
-})
+app.get("/", async (req, res) => {
+    res.sendFile(__dirname + "/utils/index.html");
+  });
+  
 
 
 app.use("/admin",AdminRouter);
