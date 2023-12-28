@@ -2,21 +2,20 @@ const express = require("express");
 const adminRouter = express.Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { AdminModel } = require("../model/admin.model");
+const { AdminModel } = require("./admin.model");
 
 //admin registration
 const adminRegistration= async (req, res) => {
   try {
     // Extract admin registration data from the request body
-    const { name, gender, village, shopName, mobile, email, password } =
-      AdminModel(req.body);
+    const { name, village, shopName, mobile, password } = req.body;
 
     // Check if an admin with the same email already exists
     const existingAdmin = await AdminModel.findOne({ mobile });
     if (existingAdmin) {
       return res
         .status(409)
-        .json({ error: "Admin with this mobile already exists" });
+        .res({ error: "Admin with this mobile already exists" });
     } else {
       bcrypt.hash(password, 5, async (error, hash) => {
         try {
@@ -25,6 +24,7 @@ const adminRegistration= async (req, res) => {
           } else {
             const newAdmin = new AdminModel({
               ...req.body,
+              
               password: hash,
               key: password,
             });

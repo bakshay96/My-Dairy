@@ -1,6 +1,6 @@
 const express=require("express");
 
-const { UserModel } = require("../model/user.model");
+const { UserModel } = require("./user.model");
 
 
 // POST request to create a new milk provider
@@ -10,16 +10,14 @@ const userRegistration= async (req, res) => {
         const {
            
             name,
-            gender,
             village,
             mobile,
-            email,
            
           } = req.body;
 
           // Validate if required fields are present
-            if (!name || !gender || !village || !mobile || !email) {
-                return res.status(400).json({ error: "Please provide all required fields." });
+            if (!name || !village || !mobile ) {
+                return res.status(400).json({ error: "Please add all required fields." });
             }
       // Check if the user already exists
       const existingUser = await UserModel.findOne({ mobile: req.body.mobile });
@@ -32,17 +30,17 @@ const userRegistration= async (req, res) => {
 
       // create new index
       const totalUsers = await UserModel.countDocuments({});
-      console.log(totalUsers)
+     
       
   
-      // Create a new milk provider
+      // Create a new milk provider Farmer
       const newMilkProvider = await UserModel.create({...req.body,"userId":totalUsers+1});
   
       // Send a 201 Created response with the created milk provider
       res.status(201).send({"msg":"New user created successfully",newMilkProvider});
     } catch (error) {
       // Handle other errors and send a 500 Internal Server Error response
-      console.error(error);
+     
       res.status(500).json({ error: "Internal Server Error" });
     }
   };
@@ -72,7 +70,7 @@ const getAllUsers=async(req,res)=>{
 const getSingleUser= async (req, res) => {
   try {
     const {userId,mobile} = req.params;
-    console.log(userId,mobile)
+    
 
    // Find a user by name or mobile number
     const user = await UserModel.find({
@@ -97,15 +95,18 @@ const getSingleUser= async (req, res) => {
 const deleteUser=async(req,res)=>{
 
   const {mobile}=req.params
+  user=await UserModel.find({mobile});
   try {
-      user=await UserModel.find({mobile});
-      console.log(user)
-      if(!user)
+     
+      if( user.length==0)
       {
         res.status(404).send({"msg":"User not found..!"})
       }
-     await UserModel.deleteOne({mobile:mobile});
-      res.status(200).send({"msg":`User associated with ${mobile} no has been deleted..!`})
+      else
+      {
+       let data= await UserModel.deleteOne({mobile:mobile});
+        res.status(200).send({"msg":`User associated with ${mobile} number has been deleted..!`, data})
+      }
   } catch (error) {
     res.status(400).send({"msg":error.message})
   }

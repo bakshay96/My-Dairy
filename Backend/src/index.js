@@ -1,9 +1,9 @@
 const express=require("express");
 const cors=require("cors");
 const { connection } = require("./connection/db");
-const { UserRouter } = require("./routes/userRoutes");
-const { AdminRouter } = require("./routes/adminRoutes");
-const { MilkRouter } = require("./routes/milkRoutes");
+const { UserRouter } = require("./User/userRoutes");
+const { AdminRouter } = require("./Admin/adminRoutes");
+const { MilkRouter } = require("./Milk/milkRoutes");
 
 
 require("dotenv").config();
@@ -18,8 +18,8 @@ app.get("/",(req,res)=>{
 })
 
 
-app.use("/user",UserRouter);
 app.use("/admin",AdminRouter);
+app.use("/user",UserRouter);
 app.use("/milk",MilkRouter)
 
 //server
