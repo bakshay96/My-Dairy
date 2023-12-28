@@ -48,23 +48,62 @@ const userRegistration= async (req, res) => {
 
 // get all users
 
-const getAllUsers=async(req,res)=>{
-  try {
-    totalUsers= await UserModel.find({});
-    if(totalUsers.length==0)
-    {
-      res.status(201).send({"msg":"No user present in the db"});
+// const getAllUsers=async(req,res)=>{
+//   try {
+//     totalUsers= await UserModel.find({});
+//     if(totalUsers.length==0)
+//     {
+//       res.status(201).send({"msg":"No user present in the db"});
 
-    }
-    else
-    {
-      res.status(202).send({"Total users":totalUsers.length,"Users":totalUsers})
-    }
-  } catch (error) {
+//     }
+//     else
+//     {
+//       res.status(202).send({"Total users":totalUsers.length,"Users":totalUsers})
+//     }
+//   } catch (error) {
     
-  }
-}
+//   }
+// }
 
+//get all user / pagination
+// ---->  api/dairy-entries?page=1&pageSize=10 will return the first 10 entries.
+  // ------>  api/dairy-entries?page=2&pageSize=10 will return the next 10 entries.
+  
+const getAllUsers= async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const _sort=req.query._sort || "desc"
+
+    // Calculate the skip value based on the page and pageSize
+    const skip = (page - 1) * pageSize;
+
+    // Query the database with pagination
+    const usersEntries = await UserModel.find()
+      .skip(skip)
+      .limit(pageSize)
+      .sort({ date: _sort }); // Optionally, you can sort the entries by date
+
+    // Count total number of entries for pagination
+    const totalEntries = await UserModel.countDocuments();
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalEntries / pageSize);
+
+    // Create the response object with entries, total pages, and current page
+    const response = {
+      totalPages,
+      currentPage: page,
+      totalCount:usersEntries.length,
+      entries: usersEntries,
+    };
+
+    return res.status(200).json(response);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
 
 // find user by thire userId and mobile number
 const getSingleUser= async (req, res) => {

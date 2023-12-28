@@ -19,9 +19,9 @@ app.get("/", async (req, res) => {
   
 
 
-app.use("/admin",AdminRouter);
-app.use("/user",UserRouter);
-app.use("/milk",MilkRouter)
+app.use("/api/admin",AdminRouter);
+app.use("/api/user",UserRouter);
+app.use("/api/milk",MilkRouter)
 
 //server
 app.listen(PORT, async ()=>{
