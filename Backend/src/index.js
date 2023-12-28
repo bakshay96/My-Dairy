@@ -10,11 +10,12 @@ require("dotenv").config();
 const PORT=process.env.PORT || 3030;
 
 const app=express();
-app.use(cors());
+app.use(cors({origin:"*"}));
 app.use(express.json());
 
 app.get("/",(req,res)=>{
-    res.send("Welcome to Home page of Daily Milk Management System");
+    res.sendFile(__dirname + "../utils/index.html");
+    
 })
 
 
