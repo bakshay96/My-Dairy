@@ -1,9 +1,9 @@
 const express=require("express");
 const cors=require("cors");
-const { connection } = require("./connection/db");
-const { UserRouter } = require("./User/userRoutes");
-const { AdminRouter } = require("./Admin/adminRoutes");
-const { MilkRouter } = require("./Milk/milkRoutes");
+const { connection } = require("./src/connection/db");
+const { UserRouter } = require("./src/User/userRoutes");
+const { AdminRouter } = require("./src/Admin/adminRoutes");
+const { MilkRouter } = require("./src/Milk/milkRoutes");
 
 
 require("dotenv").config();
@@ -14,7 +14,7 @@ app.use(cors({origin:"*"}));
 app.use(express.json());
 
 app.get("/",(req,res)=>{
-    res.sendFile(__dirname + "../utils/index.html");
+    res.sendFile(__dirname + "./utils/index.html");
     
 })
 

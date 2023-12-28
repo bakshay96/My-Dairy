@@ -2,10 +2,10 @@
   "name": "DMS",
   "version": "1.0.0",
   "description": "Backend of Dairy Managment System",
-  "main": "./src/index.js",
+  "main": "index.js",
   "scripts": {
    
-    "server": "nodemon src/index.js",
+    "server": "nodemon /index.js",
     "build":"npm i"
   },
   "keywords": [],
