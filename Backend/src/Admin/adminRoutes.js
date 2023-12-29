@@ -1,5 +1,6 @@
 const express=require("express");
 const { adminLogin, adminRegistration } = require("./admin.controller");
+const { auth } = require("../middleware/auth");
 
 
 const AdminRouter=express.Router();
