@@ -1,70 +1,58 @@
-import {
-    DELETE_PRODUCT_FAILURE,
-    DELETE_PRODUCT_REQUEST,
-    DELETE_PRODUCT_SUCCESS,
-    EDIT_PRODUCT_FAILURE,
-    EDIT_PRODUCT_REQUEST,
-    EDIT_PRODUCT_SUCCESS,
-    GET_PRODUCT_FAILURE,
-  GET_PRODUCT_REQUEST,
-  GET_PRODUCT_SUCCESS,
-  POST_PRODUCT_FAILURE,
-  POST_PRODUCT_REQUEST,
-  POST_PRODUCT_SUCCESS,
-} from "./actionTypes";
+User
 import axios from "axios";
-export const postProductRequestAction = () => {
-  return { type: POST_PRODUCT_REQUEST };
+import {  DELETE_FAILURE, DELETE_REQUEST, DELETE_SUCCESS, GET_FAILURE, GET_REQUEST, GET_SUCCESS, PATCH_FAILURE, PATCH_REQUEST, PATCH_SUCCESS, POST_FAILURE, POST_REQUEST, POST_SUCCESS } from "./actionTypes";
+export const postMilkRequestAction = () => {
+  return { type: POST_REQUEST };
 };
 
-export const postProductSuccessAction = () => {
-  return { type: POST_PRODUCT_SUCCESS };
+export const postMilkSuccessAction = () => {
+  return { type: POST_SUCCESS };
 };
 
-export const postProductFailureAction = () => {
-  return { type: POST_PRODUCT_FAILURE };
+export const postMilkFailureAction = () => {
+  return { type:POST_FAILURE  };
 };
 
 //get product
-export const getProductRequestAction = () => {
-  return { type: GET_PRODUCT_REQUEST };
+export const getMilkRequestAction = () => {
+  return { type: GET_REQUEST};
 };
 
-export const getProductSuccessAction = (payload) => {
-  return { type: GET_PRODUCT_SUCCESS ,payload};
+export const getMilkSuccessAction = (payload) => {
+  return { type:GET_SUCCESS ,payload};
 };
 
-export const getProductFailureAction = () => {
-  return { type: GET_PRODUCT_FAILURE };
+export const getMilkFailureAction = () => {
+  return { type:GET_FAILURE };
 };
 
 
 //Edit product
 
-export const editProductRequestAction = () => {
-    return { type: EDIT_PRODUCT_REQUEST };
+export const editMilkRequestAction = () => {
+    return { type: PATCH_REQUEUser }
+}
+  
+export const editMilkSuccessAction = () => {
+    return { type: PATCH_SUCCESS};
   };
   
-  export const editProductSuccessAction = () => {
-    return { type: EDIT_PRODUCT_SUCCESS};
-  };
-  
-  export const editProductFailureAction = () => {
-    return { type: EDIT_PRODUCT_FAILURE };
+  export const editMilkFailureAction = () => {
+    return { type: PATCH_FAILURE };
   };
 
 
   // delete
-  export const deleteProductRequestAction = () => {
-    return { type: DELETE_PRODUCT_REQUEST };
+  export const deleteMilkRequestAction = () => {
+    return { type: DELETE_REQUEST};
   };
   
-  export const deleteProductSuccessAction = () => {
-    return { type: DELETE_PRODUCT_SUCCESS};
+  export const deleteMilkSuccessAction = () => {
+    return { type: DELETE_SUCCESS};
   };
   
-  export const deleteProductFailureAction = () => {
-    return { type: DELETE_PRODUCT_FAILURE };
+  export const deleteMilkFailureAction = () => {
+    return { type: DELETE_FAILURE};
   };
 
   // post function
