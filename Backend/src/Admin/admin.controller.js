@@ -39,7 +39,7 @@ const adminRegistration= async (req, res) => {
     }
   } catch (error) {
     // Handle errors and respond with an error message
-    res.status(400).send({ "error": error.message });
+    res.status(400).send({ "catch error": error.message });
   }
 };
 
