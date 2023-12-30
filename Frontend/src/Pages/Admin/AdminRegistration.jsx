@@ -1,3 +1,7 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Flex,
   Box,
@@ -19,18 +23,19 @@ import {
   FormHelperText,
   FormErrorMessage,
 } from "@chakra-ui/react";
-import { Field, Form, Formik } from "formik";
-import { useState } from "react";
-import { GiCow, GiFarmer } from "react-icons/gi";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
-import { MoonIcon, SunIcon } from "@chakra-ui/icons";
+import { GiCow, GiFarmer } from "react-icons/gi";
+import { useToast } from '@chakra-ui/react'
 import UpperNavbar from "../../Componets/UpperNavbar";
+import { signup } from "../../Redux/AuthReducer/action";
+
 
 export default function AdminRegistration() {
+  const toast = useToast()
   const [value, setValue] = useState("Male");
   const [showPassword, setShowPassword] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
   const [showCnfPassword, setShowCnfPassword] = useState(false);
-
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -41,8 +46,10 @@ export default function AdminRegistration() {
     email: "",
     password: "",
   });
-
-  const [formErrors, setFormErrors] = useState({});
+  const data = useSelector((store) => store.authReducer);
+  console.log("auth reducer",data);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   // Handle input changes and update the state
   const handleInputChange = (e) => {
@@ -51,9 +58,6 @@ export default function AdminRegistration() {
       ...formData,
       [name]: value,
     });
-   
-    
-   
 
     // Clear validation error when the user types in the field
     setFormErrors({
@@ -63,33 +67,53 @@ export default function AdminRegistration() {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Validate form data
-    const errors = validateForm(formData);
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
 
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        position:"top",
+        title: `Password doesn't match`,
+        description: "password and confirm password should be match.",
+        status: 'warning',
+        duration:2000,
+        isClosable: true,
+      })
+    } else {
+      let name = formData.firstName + " " + formData.lastName;
+      delete formData.firstName;
+      delete formData.lastName;
+      delete formData.confirmPassword;
+
+      let adminData = { ...formData, name };
+      console.log("Admin", adminData);
+      dispatch(signup(adminData)).then((res)=>{
+        console.log("admin reg response",res);
+      })
+     
+     
     // If validation passes, proceed with form submission
-    console.log("Form data",formData)
+    //console.log("Form data",formData)
+  }
+};
+
+useEffect(()=>{
+  if(data.signupStatus)
+  {
    
-  };
-
-  // Validation function
-  const validateForm = (data) => {
-    const errors = {};
-
+      toast({
+        title: 'Account created.',
+        description: "We've created your account for you.",
+        status: 'success',
+        duration:5000,
+        isClosable: true,
+      })
+      navigate("/signin")
+    
+  }
   
-    // Check if password and confirm password match
-    if (data.password !== data.confirmPassword) {
-      errors.confirmPassword = "Passwords do not match";
-    }
-    console.log("error", errors);
+},[data.signupStatus])
 
-    return errors;
-  };
 
   return (
     <>
@@ -136,7 +160,7 @@ export default function AdminRegistration() {
                   </Box>
                   {/* last name */}
                   <Box>
-                    <FormControl id="lastName">
+                    <FormControl id="lastName" isRequired>
                       <FormLabel>Last Name</FormLabel>
                       <Input
                         placeholder="last-name"
@@ -187,7 +211,7 @@ export default function AdminRegistration() {
                 </FormControl>
 
                 {/* email */}
-                <FormControl id="email">
+                <FormControl id="email" isRequired>
                   <FormLabel>Email address</FormLabel>
                   <Input
                     placeholder="user-email@example.com"
@@ -198,21 +222,21 @@ export default function AdminRegistration() {
                   />
                 </FormControl>
                 {/* mobile  */}
-                <FormControl id="mobile">
+                <FormControl id="mobile" isRequired>
                   <FormLabel>Mobile number</FormLabel>
                   <InputGroup>
                     <InputLeftAddon>+91</InputLeftAddon>
                     <Input
                       type="tel"
                       placeholder="phone number"
-                      name="mobileNumber"
-                      value={formData.mobileNumber}
+                      name="mobile"
+                      value={formData.mobile}
                       onChange={handleInputChange}
                     />
                   </InputGroup>
                 </FormControl>
                 {/* village  */}
-                <FormControl id="Village">
+                <FormControl id="Village" isRequired>
                   <FormLabel>Village Name</FormLabel>
                   <Input
                     placeholder="user-village name"
@@ -224,7 +248,7 @@ export default function AdminRegistration() {
                 </FormControl>
 
                 {/* shopName */}
-                <FormControl id="shopname">
+                <FormControl id="shopname" isRequired>
                   <FormLabel>Shop Name</FormLabel>
                   <Input
                     placeholder="user-shop name , ex (ab milk shop Bhandari )"
@@ -236,7 +260,7 @@ export default function AdminRegistration() {
                 </FormControl>
 
                 {/* password */}
-                <FormControl id="password">
+                <FormControl id="password" isRequired>
                   <FormLabel>Password</FormLabel>
                   <InputGroup>
                     <Input
@@ -259,7 +283,7 @@ export default function AdminRegistration() {
                 </FormControl>
 
                 {/*  confirm password */}
-                <FormControl id="cnf-password">
+                <FormControl id="cnf-password" isRequired>
                   <FormLabel>Confirm Password</FormLabel>
                   <InputGroup isRequired>
                     <Input
@@ -268,7 +292,7 @@ export default function AdminRegistration() {
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
                     />
-                    
+
                     <InputRightElement h={"full"}>
                       <Button
                         variant={"ghost"}
@@ -314,3 +338,4 @@ export default function AdminRegistration() {
     </>
   );
 }
+

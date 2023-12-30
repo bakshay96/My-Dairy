@@ -2,14 +2,48 @@
 import axios from "axios";
 import * as types from "./actionTypes";
 
-const login= (payload)=>async (dispatch)=>{
 
-    dispatch({type:types.LOGIN_REQUEST});
+const signinRequestAction = () => {
+    return { type: types.USER_SIGNIN_REQUEST };
+  };
+  
+  const signinSuccessAction = (payload) => {
+    return { type: types.USER_SIGNIN_SUCCESS, payload };
+  };
+  
+  const signinFailureAction = () => {
+    return { type: types.USER_SIGNIN_FAILURE };
+  };
+
+
+  // SignUp
+  const signupRequestAction=()=>{
+    return {type:types.USER_SIGNUP_REQUEST}
+  }
+
+  const signupSuccessAction = (payload) => {
+    console.log(payload);
+    return { type: types.USER_SIGNUP_SUCCESS, payload };
+  };
+
+  const signupFailureAction = () => {
+    console.log(payload);
+    return { type: types.USER_SIGNUP_FAILURE};
+  };
+
+  
+  
+//=============Functions currying js ==========================================================================
+const url="https://milkify.cyclic.app/api";
+
+export const signin = (payload)=>async (dispatch)=>{
+
+    dispatch(signinRequestAction());
 
     try {
-        const r = await axios
-            .post("https://milkify.cyclic.app/api/admin/login", payload);
-            
+        return await axios
+            .post(`${url}/admin/login`, payload);
+        
         dispatch({ type: types.LOGIN_SUCCESS, payload: r.data.token });
     } catch (e) {
         dispatch({ type: types.LOGIN_FAILURE });
@@ -17,16 +51,22 @@ const login= (payload)=>async (dispatch)=>{
 };
 
 
-const register =(payload)=>async(dispatch)=>{
-    dispatch({type:types.SIGNUP_REQUEST});
+export const signup =(payload)=>async(dispatch)=>{
+    dispatch(signupRequestAction());
     try {
-        const r = await axios
-            .post("https://milkify.cyclic.app/api/admin/register", payload);
+        return await axios
+            .post(`${url}/admin/register`, payload)
+            .then((res)=>{
+                console.log("action",res);
+                dispatch(signupSuccessAction(true));
+            })
+            .catch((res)=>{
+                dispatch(signupFailureAction())
+            })
             
-        dispatch({ type: types.SIGNUP_SUCCESS, payload: r.data.token });
     } catch (error) {
-        dispatch({type:types.SIGNUP_FAILURE});
+        dispatch(signupFailureAction())
     }
 }
 
-export {login};
+

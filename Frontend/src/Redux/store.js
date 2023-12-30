@@ -1,5 +1,13 @@
 import { applyMiddleware, combineReducers, legacy_createStore } from "redux";
-import { reducer as productReducer } from "./Farmer/reducer";
-import thunk from "redux-thunk";
-let  rootReducer=combineReducers({productReducer})
-export const store=legacy_createStore(rootReducer, applyMiddleware(thunk));
+import {thunk} from "redux-thunk";
+import { reducer as authReducer } from "./AuthReducer/reducer";
+
+
+
+let rootReducer = combineReducers({authReducer});
+
+export const store = legacy_createStore(rootReducer, applyMiddleware(thunk));
+
+
+// `http://localhost:${process.env.REACT_APP_JSON_SERVER_PORT}/milkify`
+// http://localhost:8080/books

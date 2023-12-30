@@ -5,32 +5,33 @@ const initialState = {
   token: "",
   isLoading: false,
   isError: false,
-  response:"",
+  signupStatus:false,
 };
 
-const reducer = (state = initialState, action) => {
+export const reducer = (state = initialState, action) => {
   const {type,payload}=action;
 
   switch(type)
   {
-    case types.LOGIN_REQUEST:
+    //SignIn
+    case types.USER_SIGNIN_REQUEST:
       return {...state, isLoading:true};
     
-    case types.LOGIN_SUCCESS:
+    case types.USER_SIGNIN_SUCCESS:
       return {...state, isLoading:false, isAuth:true, token:payload};
     
-    case types.LOGIN_FAILURE:
+    case types.USER_SIGNIN_FAILURE:
       return {...state, isLoading:false, isError:true};
 
     // SignUp
 
-    case types.SIGNUP_REQUEST:
+    case types.USER_SIGNUP_REQUEST:
       return {...state,isLoading:true};
     
-    case types.SIGNUP_SUCCESS:
-      return {...state,isLoading:false, response:payload}
+    case types.USER_SIGNUP_SUCCESS:
+      return {...state,isLoading:false, signupStatus:payload}
     
-    case types.SIGNUP_FAILURE:
+    case types.USER_SIGNUP_FAILURE:
       return {...state, isError:true, isLoading:false,}
     
     default:
@@ -38,4 +39,4 @@ const reducer = (state = initialState, action) => {
   }
 };
 
-export { reducer };
+

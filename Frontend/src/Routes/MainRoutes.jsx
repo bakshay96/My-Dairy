@@ -16,9 +16,9 @@ export const MainRoutes = () => {
       <Routes>
         {/* Provide all routes here */}
         <Route path="/" element={<Dashboard />} />
-        <Route path="/user_register" element={<UserRegistration />} />
-        <Route path="/admin_register" element={<AdminRegistration />} />
-        <Route path="/admin_login" element={<AdminLoginCard/>} />
+        <Route path="/add/user" element={<UserRegistration />} />
+        <Route path="/signup" element={<AdminRegistration />} />
+        <Route path="/signin" element={<AdminLoginCard/>} />
         <Route path="/milk_info" element={<MilkInfo />} />
         <Route path="/user_dashboard" element={<UserDashboard/>} />
 
