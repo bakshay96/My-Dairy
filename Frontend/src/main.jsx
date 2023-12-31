@@ -10,15 +10,15 @@ import MyProvider from "./Pages/ContextApi/MyProvider.jsx";
 import { store } from "./Redux/store.js";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <BrowserRouter>
-    <NextUIProvider>
-      <ChakraProvider>
-        <Provider store={store}>
-          <MyProvider>
+  <NextUIProvider>
+    <ChakraProvider>
+      <Provider store={store}>
+        <MyProvider>
+          <BrowserRouter>
             <App />
-          </MyProvider>
-        </Provider>
-      </ChakraProvider>
-    </NextUIProvider>
-  </BrowserRouter>
+          </BrowserRouter>
+        </MyProvider>
+      </Provider>
+    </ChakraProvider>
+  </NextUIProvider>
 );

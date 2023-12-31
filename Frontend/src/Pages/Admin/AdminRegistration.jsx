@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate} from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Flex,
@@ -16,7 +16,7 @@ import {
   Heading,
   Text,
   useColorModeValue,
-  Link,
+  
   InputLeftAddon,
   RadioGroup,
   Radio,
@@ -28,7 +28,7 @@ import { GiCow, GiFarmer } from "react-icons/gi";
 import { useToast } from '@chakra-ui/react'
 import UpperNavbar from "../../Componets/UpperNavbar";
 import { signup } from "../../Redux/AuthReducer/action";
-
+import {Link} from "react-router-dom";
 
 export default function AdminRegistration() {
   const toast = useToast()
@@ -71,6 +71,7 @@ export default function AdminRegistration() {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
+      console.log("pass",formData.password=null, formData.confirmPassword=null)
       toast({
         position:"top",
         title: `Password doesn't match`,
@@ -98,6 +99,7 @@ export default function AdminRegistration() {
 };
 
 useEffect(()=>{
+  console.log("axios")
   if(data.signupStatus)
   {
    
@@ -325,8 +327,8 @@ useEffect(()=>{
                 <Stack pt={6}>
                   <Text align={"center"}>
                     Already a user?{" "}
-                    <Link to="/admin_login" color={"blue.400"}>
-                      Login
+                    <Link to={"/admin/signin"} color={"blue.400"}>
+                    <span style={{"color":"teal"}}>Sign in</span>
                     </Link>
                   </Text>
                 </Stack>
