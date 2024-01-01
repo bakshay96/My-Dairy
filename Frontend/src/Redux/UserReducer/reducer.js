@@ -1,7 +1,7 @@
 import * as types from "./actionTypes";
 // NOTE: DO NOT MODIFY the intial state structure in this file.
 const initialState = {
-  data:[],
+  usersData:[],
   isLoading: false,
   isError: false,
   isUserAdded:false,
@@ -18,7 +18,7 @@ export const reducer = (state = initialState, action) => {
       return {...state, isLoading:true};
     
     case types.FARMER_USER_SUCCESS:
-      return {...state, isLoading:false, isUserAdded:true, response:payload};
+      return {...state, isLoading:false, isUserAdded:payload};
     
     case types.FARMER_USER_FAILURE:
       return {...state, isLoading:false, isError:true, response:payload};
@@ -29,7 +29,7 @@ export const reducer = (state = initialState, action) => {
       return {...state, isLoading:true,}
     
       case types.GET_FARMER_SUCCESS:
-        return {...state, isLoading:false, data:payload};
+        return {...state, isLoading:false, usersData:payload};
       
       case types.GET_FARMER_FAILURE:
         return {...state, isLoading:false, isError:true};

@@ -22,7 +22,7 @@ import { PlusIcon } from "./PlusIcon";
 import { VerticalDotsIcon } from "./VerticalDotsIcon";
 import { SearchIcon } from "./SearchIcon";
 import { ChevronDownIcon } from "./ChevronDownIcon";
-import {users, columns, statusOptions } from "./data";
+import { columns, statusOptions} from "./data";
 import { capitalize } from "./utils";
 import { DeleteIcon } from "./DeleteIcon";
 import { EditIcon } from "./EditIcon";
@@ -41,11 +41,11 @@ const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
 
 
 export default function UserDashboard() {
-  const data=useSelector((store)=>store.farmerReducer)
-  //const users=data.data.users;
+  const {usersData,isLoading,isError}=useSelector((store)=>store.farmerReducer)
+  console.log("user data Dashboard",usersData.users, isLoading,isError);
+   let users=usersData.users || [];
   
   
-  console.log("user data",data,users);
 
   const dispatch=useDispatch();
   
