@@ -31,10 +31,10 @@ const userSchema = new mongoose.Schema(
       index: true,
       unique: true,
     },
-    Status: {
+    status: {
       type: String,
-      enum: ["Active", "Pause"],
-      default: "Active",
+      enum: ["active", "pause"],
+      default: "active",
     },
     role: {
       type: String,

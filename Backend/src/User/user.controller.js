@@ -95,7 +95,7 @@ const getAllUsers= async (req, res) => {
       totalPages,
       currentPage: page,
       totalCount:usersEntries.length,
-      entries: usersEntries,
+      users: usersEntries,
     };
 
     return res.status(200).json(response);
