@@ -69,3 +69,5 @@ export const getFarmersDetails = (payload) => async (dispatch) => {
     dispatch(getUserFailureAction());
   }
 };
+
+getFarmersDetails();

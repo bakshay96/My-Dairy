@@ -33,7 +33,7 @@ import {
 
 export default function UserRegistration({ onClose }) {
   const toast = useToast();
-  const [value, setValue] = useState("1");
+  const [value, setValue] = useState("Male");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",

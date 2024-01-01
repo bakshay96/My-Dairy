@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Flex,
   Box,
@@ -19,15 +21,62 @@ import {
   Select,
   GridItem,
 } from "@chakra-ui/react";
-import { useState } from "react";
+
 import { GiBuffaloHead, GiCow, GiFarmer, GiGoat } from "react-icons/gi";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
+import { getFarmersDetails } from "../../Redux/userReducer/action";
 
 export default function AddMilk() {
-  const [value, setValue] = useState("1");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showCnfPassword, setShowCnfPassword] = useState(false);
+  const { usersData } = useSelector((store) => store.farmerReducer);
+  const dispatch = useDispatch();
+  console.log("Milk data users", usersData);
+  const [isLoading, setLoading] = useState(false);
+  const [value, setValue] = useState("cow");
+  const [name, setName] = useState({
+    firstName: "",
+    lastName: "",
+  });
+  const [formMilkData, setformMilkData] = useState({
+    mobile: "",
+    category: "cow", //should be [cow,buffalo,goat];
+    fat: 0,
+    snf: 0,
+    water: 0,
+    litter: 0,
+    degree:0,
+  });
 
+  const handleChange = (e) => {
+    console.log(e.target.name, e.target.value);
+    const { name, value } = e.target;
+    
+    // get user name
+    if(name=="mobile")
+    {
+      usersData.users.forEach((user)=>{
+        if(user.mobile===value)
+        {
+          let [firstName,lastName]=user.name.split(" ");
+          console.log(firstName,lastName);
+          setName({firstName,lastName});
+        }
+      })
+
+    }
+    setformMilkData({
+      ...formMilkData,
+      [name]: value,
+    });
+  };
+  // add milk
+  const handleMilkSubmit = (e) => {
+    e.preventDefault();
+    console.log("handleMilkSubmit",formMilkData);
+  };
+
+  useEffect(() => {
+    dispatch(getFarmersDetails());
+  }, []);
   return (
     <Flex
       minH={"100vh"}
@@ -53,111 +102,156 @@ export default function AddMilk() {
           boxShadow={"lg"}
           p={8}
         >
-          <Stack spacing={4}>
-            {/* select farmer */}
-            <FormControl  colSpan={[6, 3]}>
-              <FormLabel
-                htmlFor="country"
-                fontSize="sm"
-                fontWeight="md"
-                color="gray.700"
-                _dark={{
-                  color: "gray.50",
-                }}
-              >
-               Select Farmer
-              </FormLabel>
-              <Select
-                id="farmer"
-                name="farmer"
-                autoComplete="Farmer"
-                placeholder="Select Farmer"
-                focusBorderColor="brand.400"
-                shadow="sm"
-                size="sm"
-                w="full"
-                rounded="md"
-              >
-                <option>Akshay Bombatkar</option>
-                <option>Pavan Bombatkar</option>
-                <option>Nilesh Bombatkar</option>
-              </Select>
-            </FormControl>
-            <HStack>
-              {/* first name */}
-              <Box>
-                <FormControl id="firstName" isRequired>
-                  <FormLabel>First Name</FormLabel>
-                  <Input placeholder="first-name" type="text" />
-                </FormControl>
-              </Box>
-              {/* last name */}
-              <Box>
-                <FormControl id="lastName">
-                  <FormLabel>Last Name</FormLabel>
-                  <Input placeholder="last-name" type="text" />
-                </FormControl>
-              </Box>
-            </HStack>
+          <form action="" onSubmit={handleMilkSubmit}>
+            <Stack spacing={4}>
+              {/* select farmer */}
+              <FormControl colSpan={[6, 3]}>
+                <FormLabel
+                  htmlFor="farmer-name"
+                  fontSize="sm"
+                  fontWeight="md"
+                  color="gray.700"
+                  _dark={{
+                    color: "gray.50",
+                  }}
+                >
+                  Select Farmer
+                </FormLabel>
+                <Select
+                  id="farmer"
+                  name="mobile"
+                  autoComplete="Farmer"
+                  placeholder="Select Farmer"
+                  focusBorderColor="brand.400"
+                  shadow="sm"
+                  size="sm"
+                  w="full"
+                  rounded="md"
+                  onChange={(e) => handleChange(e)}
+                >
+                  {usersData.users&&usersData.users.map((user) => {
+                    return (
+                      <option value={user.mobile} key={user.mobile}>
+                        {user.name}
+                      </option>
+                    );
+                  })}
 
-            {/* Milk Category */}
-            <FormControl>
-              <FormLabel>Milk Category</FormLabel>
-              <RadioGroup onChange={setValue} value={value}>
-                <Stack direction="row" spacing={"2rem"}>
-                  <Radio value="1"><GiCow />Cow</Radio>
-                  <Radio value="2"><GiBuffaloHead />Buffelo</Radio>
-                  <Radio value="3"><GiGoat />Goat</Radio>
-                </Stack>
-              </RadioGroup>
-            </FormControl>
+                  {/* <option>Ab</option>
+               <option>DB</option> */}
+                </Select>
+              </FormControl>
+              <HStack>
+                {/* first name */}
+                <Box>
+                  <FormControl id="firstName" isRequired>
+                    <FormLabel>First Name</FormLabel>
+                    <Input
+                      placeholder="first-name"
+                      type="text"
+                      value={name.firstName}
+                      name="firstName"
+                      
+                    />
+                  </FormControl>
+                </Box>
+                {/* last name */}
+                <Box>
+                  <FormControl id="lastName">
+                    <FormLabel>Last Name</FormLabel>
+                    <Input
+                      placeholder="last-name"
+                      type="text"
+                      value={name.lastName}
+                      name="lastName"
+                    />
+                  </FormControl>
+                </Box>
+              </HStack>
 
-            {/* liter */}
-            <FormControl id="liter" isRequired>
-              <FormLabel>Liter</FormLabel>
-              <Input placeholder="MILK Liter" type="number" />
-            </FormControl>
+              {/* Milk Category */}
+              <FormControl>
+                <FormLabel>Milk Category</FormLabel>
+                <RadioGroup onChange={setValue} value={value} name="category">
+                  <Stack direction="row" spacing={"2rem"}>
+                    <Radio value="cow" name="category" onChange={handleChange} checked={formMilkData.category=="cow"} >
+                      <GiCow />
+                      Cow
+                    </Radio>
+                    <Radio value="buffalo" name="category" onChange={handleChange} checked={formMilkData.category=="buffalo"} >
+                      <GiBuffaloHead />
+                      Buffalo
+                    </Radio>
+                    <Radio value="goat" name="category" onChange={handleChange} checked={formMilkData.category=="goat"} >
+                      <GiGoat />
+                      Goat
+                    </Radio>
+                  </Stack>
+                </RadioGroup>
+              </FormControl>
 
-            {/* FAT */}
-            <FormControl id="fat" isRequired>
-              <FormLabel>FAT</FormLabel>
-              <Input placeholder="MILK FAT" type="number" />
-            </FormControl>
+              {/* liter */}
+              <FormControl id="liter" isRequired>
+                <FormLabel>Liter</FormLabel>
+                <Input placeholder="MILK Liter" type="number" name="litter" value={formMilkData.litter} onChange={handleChange} />
+              </FormControl>
 
-            {/* WATER */}
-            <FormControl id="water" isRequired>
-              <FormLabel>WATER</FormLabel>
-              <Input placeholder="MILK WATER" type="number" />
-            </FormControl>
+              {/* FAT */}
+              <FormControl id="fat" isRequired>
+                <FormLabel>FAT</FormLabel>
+                <Input placeholder="MILK FAT" type="number" name="fat" value={formMilkData.fat} onChange={handleChange} />
+              </FormControl>
 
-            {/* SNF */}
-            <FormControl id="snf" >
-              <FormLabel>SNF</FormLabel>
-              <Input placeholder="MILK SNF" type="number" />
-            </FormControl>
+              {/* SNF */}
+              <FormControl id="snf">
+                <FormLabel>SNF</FormLabel>
+                <Input placeholder="MILK SNF" type="number" name="snf" value={formMilkData.snf} onChange={handleChange} />
+              </FormControl>
 
-            {/* Degree  */}
-            <FormControl id="degree">
-              <FormLabel>Degree</FormLabel>
-              <Input placeholder="Degree" type="number" />
-            </FormControl>
+              {/* WATER */}
+              <FormControl id="water" isRequired>
+                <FormLabel>WATER</FormLabel>
+                <Input placeholder="MILK WATER" type="number" name="water" value={formMilkData.water} onChange={handleChange} />
+              </FormControl>
 
-            
-            <Stack spacing={10} pt={2}>
-              <Button
-                size="lg"
-                bg={"blue.400"}
-                color={"white"}
-                loadingText="Submitting"
-                isLoading={"false"}
-                _hover={{
-                  bg: "blue.600",
-                }}
-              >
-                Submit  Milk
-              </Button>
+
+              {/* Degree  */}
+              <FormControl id="degree">
+                <FormLabel>Degree</FormLabel>
+                <Input placeholder="Degree" type="number" name="degree" value={formMilkData.degree} onChange={handleChange} />
+              </FormControl>
+
+              <Stack spacing={10} pt={2}>
+                {isLoading ? (
+                  <Button
+                    size="lg"
+                    bg={"blue.400"}
+                    color={"white"}
+                    loadingText="Submitting"
+                    isLoading
+                    _hover={{
+                      bg: "blue.600",
+                    }}
+                  >
+                    Submit Milk
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    bg={"blue.400"}
+                    color={"white"}
+                    loadingText="Submitting"
+                    type="submit"
+                    _hover={{
+                      bg: "blue.600",
+                    }}
+                  >
+                    Submit Milk
+                  </Button>
+                )}
+              </Stack>
             </Stack>
-          </Stack>
+          </form>
         </Box>
       </Stack>
     </Flex>

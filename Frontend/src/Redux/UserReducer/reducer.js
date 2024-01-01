@@ -1,7 +1,7 @@
 import * as types from "./actionTypes";
 // NOTE: DO NOT MODIFY the intial state structure in this file.
 const initialState = {
-  usersData:[],
+  usersData:[] || [],
   isLoading: false,
   isError: false,
   isUserAdded:false,
