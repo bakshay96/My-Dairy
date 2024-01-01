@@ -7,7 +7,7 @@ import UserRegistration from "../Pages/User/UserRegistration";
 
 import AdminRegistration from "../Pages/Admin/AdminRegistration";
 import  MilkInfo  from "../Componets/MilkInfo";
-import UserDashboard from "../Pages/User/UserList/UserDashboard";
+import UserDashboard from "../Pages/User/UserTable/UserDashboard";
 import AdminLoginCard from "../Pages/Admin/AdminLogin";
 
 export const MainRoutes = () => {

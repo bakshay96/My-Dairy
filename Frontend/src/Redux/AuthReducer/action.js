@@ -34,7 +34,7 @@ const signupFailureAction = () => {
 const url = "https://milkify.cyclic.app/api";
 const url2 = "https://dudhsankalan-ab.onrender.com/api";
 
-//signin function
+// admin signin function
 export const signin = (payload) => async (dispatch) => {
   console.log("action payload", payload);
   dispatch(signinRequestAction());
@@ -50,7 +50,7 @@ export const signin = (payload) => async (dispatch) => {
     });
 };
 
-//signup function
+//admin signup function
 export const signup = (payload) => async (dispatch) => {
   console.log("action", payload);
   dispatch(signupRequestAction());
@@ -69,3 +69,5 @@ export const signup = (payload) => async (dispatch) => {
     dispatch(signupFailureAction());
   }
 };
+
+

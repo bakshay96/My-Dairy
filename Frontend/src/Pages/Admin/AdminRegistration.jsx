@@ -321,7 +321,7 @@ useEffect(()=>{
                       bg: "blue.500",
                     }}
                   >
-                    Add Milk Provider
+                    SignUp
                   </Button>
                 </Stack>
                 <Stack pt={6}>

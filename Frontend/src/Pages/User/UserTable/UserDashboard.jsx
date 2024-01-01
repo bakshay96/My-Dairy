@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Table,
   TableHeader,
@@ -22,22 +22,33 @@ import { PlusIcon } from "./PlusIcon";
 import { VerticalDotsIcon } from "./VerticalDotsIcon";
 import { SearchIcon } from "./SearchIcon";
 import { ChevronDownIcon } from "./ChevronDownIcon";
-import { columns, users, statusOptions } from "./data";
+import {users, columns, statusOptions } from "./data";
 import { capitalize } from "./utils";
 import { DeleteIcon } from "./DeleteIcon";
 import { EditIcon } from "./EditIcon";
 import { EyeIcon } from "./EyeIcon";
 import Model from "./Model";
+import { useDispatch, useSelector } from "react-redux";
+import { getFarmersDetails } from "../../../Redux/userReducer/action";
 
 const statusColorMap = {
-  active: "success",
+  Active: "success",
   paused: "danger",
   vacation: "warning",
 };
 
 const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
 
+
 export default function UserDashboard() {
+  const data=useSelector((store)=>store.farmerReducer)
+  //const users=data.data.users;
+  
+  
+  console.log("user data",data,users);
+
+  const dispatch=useDispatch();
+  
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
   const [visibleColumns, setVisibleColumns] = React.useState(
@@ -136,7 +147,7 @@ export default function UserDashboard() {
         );
       case "actions":
         return (
-          <div className="relative flex justify-end items-center gap-2">
+          <div className="relative flex justify-center items-center gap-2">
             
             <Dropdown>
               <DropdownTrigger>
@@ -341,6 +352,14 @@ export default function UserDashboard() {
     );
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
+  const getdata=()=>{
+    dispatch(getFarmersDetails());
+
+  }
+useEffect(()=>{
+  getdata();
+},[]);
+
   return (
     <Table
       aria-label="Example table with custom cells, pagination and sorting"
@@ -371,7 +390,7 @@ export default function UserDashboard() {
       </TableHeader>
       <TableBody emptyContent={"No users found"} items={sortedItems}>
         {(item) => (
-          <TableRow key={item.id}>
+          <TableRow key={item.userId}>
             {(columnKey) => (
               <TableCell>{renderCell(item, columnKey)}</TableCell>
             )}

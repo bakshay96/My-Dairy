@@ -57,7 +57,7 @@ export default function Model() {
                 Farmer Registration
               </ModalHeader>
               <ModalBody>
-                <UserRegistration />
+                <UserRegistration onClose={onClose} />
               </ModalBody>
               <ModalFooter>
                 <Button color="danger" variant="light" onPress={onClose}>
