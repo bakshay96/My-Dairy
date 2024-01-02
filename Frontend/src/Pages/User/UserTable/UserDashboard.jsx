@@ -16,13 +16,16 @@ import {
   User,
   Pagination,
   Tooltip,
+  Select,
+  SelectSection,
+  SelectItem,
 } from "@nextui-org/react";
 import { PlusIcon } from "./PlusIcon";
 
 import { VerticalDotsIcon } from "./VerticalDotsIcon";
 import { SearchIcon } from "./SearchIcon";
 import { ChevronDownIcon } from "./ChevronDownIcon";
-import { columns, statusOptions} from "./data";
+import { columns, statusOptions } from "./data";
 import { capitalize } from "./utils";
 import { DeleteIcon } from "./DeleteIcon";
 import { EditIcon } from "./EditIcon";
@@ -30,6 +33,8 @@ import { EyeIcon } from "./EyeIcon";
 import Model from "./Model";
 import { useDispatch, useSelector } from "react-redux";
 import { getFarmersDetails } from "../../../Redux/userReducer/action";
+import SelectFarmer from "../../Milk/SelectFarmer";
+import { getMilk } from "../../../Redux/MilkReducer/action";
 
 const statusColorMap = {
   Active: "success",
@@ -39,16 +44,26 @@ const statusColorMap = {
 
 const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
 
-
 export default function UserDashboard() {
-  const {usersData,isLoading,isError}=useSelector((store)=>store.farmerReducer)
-  console.log("user data Dashboard",usersData.users, isLoading,isError);
-   let users=usersData.users || [];
-  
-  
+  const { usersData, isLoading, isError } = useSelector((store) => store.farmerReducer);
+  const {data} =useSelector((store)=>store.milkReducer);
+ const dispatch = useDispatch();
 
-  const dispatch=useDispatch();
+  console.log("user data Dashboard", usersData.users, isLoading, isError);
+  const [flag,setFlag]=React.useState(0);
   
+  
+  const handleSelectFarmer =(e)=>{
+    console.log("handle select",e.target)
+    const {name,value}=e.target;
+    console.log("target",name,value);
+    dispatch(getMilk(value));
+    dispatch(getFarmersDetails());
+    setFlag(1);
+  }
+  console.log("milk data ",data,flag);
+  
+  let users = flag? data.data || []:usersData.users || [];
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
   const [visibleColumns, setVisibleColumns] = React.useState(
@@ -148,14 +163,13 @@ export default function UserDashboard() {
       case "actions":
         return (
           <div className="relative flex justify-center items-center gap-2">
-            
             <Dropdown>
               <DropdownTrigger>
                 <Button isIconOnly size="sm" variant="light">
                   <VerticalDotsIcon className="text-default-300" />
                 </Button>
               </DropdownTrigger>
-              <DropdownMenu  >
+              <DropdownMenu>
                 <DropdownItem>
                   <Tooltip content="View">
                     <span className="text-lg text-default-400 cursor-pointer active:opacity-50">
@@ -279,7 +293,7 @@ export default function UserDashboard() {
                 ))}
               </DropdownMenu>
             </Dropdown>
-            <Model/>
+            <Model />
             {/* <Button color="primary" endContent={<PlusIcon />}>
               Add New
             </Button> */}
@@ -289,6 +303,27 @@ export default function UserDashboard() {
           <span className="text-default-400 text-small">
             Total {users.length} users
           </span>
+          {/* farmer select box */}
+          
+            <Select
+              isRequired
+              variant="underlined"
+              name="mobile"
+              label="User Stats "
+              color={"secondary"}
+              placeholder="Select an farmer"
+              defaultSelectedKeys={""}
+              onChange={(e)=>handleSelectFarmer(e)}
+              className="max-w-xs"
+            >
+              {usersData.users.map((user) => (
+                <SelectItem key={user.mobile} textValue={user.mobile}  >
+                  {user.name}
+                </SelectItem>
+              ))}
+            </Select>
+          
+          {/* <SelectFarmer /> */}
           <label className="flex items-center text-default-400 text-small">
             Rows per page:
             <select
@@ -352,13 +387,15 @@ export default function UserDashboard() {
     );
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
-  const getdata=()=>{
+  const getdata = () => {
     dispatch(getFarmersDetails());
+   
+  };
 
-  }
-useEffect(()=>{
-  getdata();
-},[]);
+
+  useEffect(() => {
+    getdata();
+  }, []);
 
   return (
     <Table
@@ -390,7 +427,7 @@ useEffect(()=>{
       </TableHeader>
       <TableBody emptyContent={"No users found"} items={sortedItems}>
         {(item) => (
-          <TableRow key={item.userId}>
+          <TableRow key={item.userId || item._id}>
             {(columnKey) => (
               <TableCell>{renderCell(item, columnKey)}</TableCell>
             )}

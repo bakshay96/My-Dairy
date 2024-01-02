@@ -25,12 +25,10 @@ import {
 import { GiBuffaloHead, GiCow, GiFarmer, GiGoat } from "react-icons/gi";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { getFarmersDetails } from "../../Redux/userReducer/action";
+import { addMilk, addMilkSuccessAction } from "../../Redux/MilkReducer/action";
 
 export default function AddMilk() {
-  const { usersData } = useSelector((store) => store.farmerReducer);
-  const dispatch = useDispatch();
-  console.log("Milk data users", usersData);
-  const [isLoading, setLoading] = useState(false);
+  
   const [value, setValue] = useState("cow");
   const [name, setName] = useState({
     firstName: "",
@@ -41,10 +39,16 @@ export default function AddMilk() {
     category: "cow", //should be [cow,buffalo,goat];
     fat: 0,
     snf: 0,
-    water: 0,
+    water: 0 || 0,
     litter: 0,
     degree:0,
   });
+  const dispatch = useDispatch();
+  const { usersData } = useSelector((store) => store.farmerReducer);
+  const {isMilkAdded,isLoading,isError,response} =useSelector((store)=>store.milkReducer);
+
+  console.log("Milk data users", usersData);
+  console.log("milk reducer",isMilkAdded,isLoading,isError,response)
 
   const handleChange = (e) => {
     console.log(e.target.name, e.target.value);
@@ -72,11 +76,26 @@ export default function AddMilk() {
   const handleMilkSubmit = (e) => {
     e.preventDefault();
     console.log("handleMilkSubmit",formMilkData);
+    const mobile=Number(formMilkData.mobile);
+    dispatch(addMilk(formMilkData));
+    setformMilkData({
+    mobile: "",
+    category: "cow", //should be [cow,buffalo,goat];
+    fat: 0,
+    snf: 0,
+    water: 0 || 0,
+    litter: 0,
+    degree:0 || 0,})
+    
   };
 
   useEffect(() => {
     dispatch(getFarmersDetails());
-  }, []);
+    if(isMilkAdded)
+    {
+      dispatch(addMilkSuccessAction({status:false,response:"initial"}))
+    }
+  }, [isMilkAdded]);
   return (
     <Flex
       minH={"100vh"}
