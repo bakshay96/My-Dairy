@@ -47,11 +47,11 @@ export default function AddMilk() {
   const { usersData } = useSelector((store) => store.farmerReducer);
   const {isMilkAdded,isLoading,isError,response} =useSelector((store)=>store.milkReducer);
 
-  console.log("Milk data users", usersData);
-  console.log("milk reducer",isMilkAdded,isLoading,isError,response)
+  // console.log("Milk data users", usersData);
+  // console.log("milk reducer",isMilkAdded,isLoading,isError,response)
 
   const handleChange = (e) => {
-    console.log(e.target.name, e.target.value);
+   // console.log(e.target.name, e.target.value);
     const { name, value } = e.target;
     
     // get user name
@@ -61,7 +61,7 @@ export default function AddMilk() {
         if(user.mobile===value)
         {
           let [firstName,lastName]=user.name.split(" ");
-          console.log(firstName,lastName);
+         // console.log(firstName,lastName);
           setName({firstName,lastName});
         }
       })
@@ -75,7 +75,7 @@ export default function AddMilk() {
   // add milk
   const handleMilkSubmit = (e) => {
     e.preventDefault();
-    console.log("handleMilkSubmit",formMilkData);
+   // console.log("handleMilkSubmit",formMilkData);
     const mobile=Number(formMilkData.mobile);
     dispatch(addMilk(formMilkData));
     setformMilkData({

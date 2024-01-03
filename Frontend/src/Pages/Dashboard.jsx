@@ -49,7 +49,8 @@ import AdminRegistration from "./Admin/AdminRegistration";
 import MilkInfo  from "../Componets/MilkInfo";
 import UserDashboard from "./User/UserTable/UserDashboard";
 import AddMilk from "./Milk/AddMilk";
-import { UserStats } from "./User/UserStats";
+import MilkDashboard from "./Milk/MilkTable/MilkDashboard";
+
 
 
 
@@ -95,7 +96,7 @@ export default function Dashboard({ children }) {
         {children}
        
       {
-        active==4?<AddMilk />:active==2?<UserDashboard />:active==3?<MilkInfo/>:active==1?<UserStats/>:<NotFound/>
+        active==4?<AddMilk />:active==2?<UserDashboard />:active==3?<MilkInfo/>:active==1?<MilkDashboard/>:<NotFound/>
       }
       </Box>
       

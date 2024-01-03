@@ -15,46 +15,43 @@ import {
   Chip,
   User,
   Pagination,
-  Tooltip,
-  Select,
-  SelectSection,
-  SelectItem,
 } from "@nextui-org/react";
-import { PlusIcon } from "./PlusIcon";
-
-import { VerticalDotsIcon } from "./VerticalDotsIcon";
-import { SearchIcon } from "./SearchIcon";
-import { ChevronDownIcon } from "./ChevronDownIcon";
-import { columns, statusOptions } from "./data";
-import { capitalize } from "./utils";
-import { DeleteIcon } from "./DeleteIcon";
-import { EditIcon } from "./EditIcon";
-import { EyeIcon } from "./EyeIcon";
-import Model from "./Model";
+import {PlusIcon} from "../../User/UserTable/PlusIcon";
+import {VerticalDotsIcon} from "../../User/UserTable/VerticalDotsIcon";
+import {SearchIcon} from "../../User/UserTable/SearchIcon";
+import {ChevronDownIcon} from "../../User/UserTable//ChevronDownIcon";
+import {columns, statusOptions} from "../../User/UserTable/data";
+import {capitalize} from "../../User/UserTable/utils";
 import { useDispatch, useSelector } from "react-redux";
+import {  getMilkDetails } from "../../../Redux/MilkReducer/action";
 import { getFarmersDetails } from "../../../Redux/userReducer/action";
-import SelectFarmer from "../../Milk/SelectFarmer";
-import { getMilkDetails } from "../../../Redux/MilkReducer/action";
+import {Select, SelectItem} from "@nextui-org/react";
 
 const statusColorMap = {
-  Active: "success",
+  active: "success",
   paused: "danger",
   vacation: "warning",
 };
 
-const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
+const INITIAL_VISIBLE_COLUMNS = ["date", "fat", "snf", "degree","litter", "actions"];
 
-export default function UserDashboard() {
-  const { usersData, isLoading, isError } = useSelector((store) => store.farmerReducer);
-  const dispatch = useDispatch();
+export default function MilkDashboard() {
+  const {data}=useSelector((store)=>store.milkReducer);
+  const {usersData,isLoading,isError}=useSelector((store)=>store.farmerReducer);
+  const dispatch=useDispatch();
+  console.log("milkdash",data);
+  const users=data.data || [];
+  console.log("milk data",data,usersData);
 
-  console.log("user data Dashboard", usersData.users, isLoading, isError);
-  let users =usersData.users || [];
+  const handleSelectFarmer =(e)=>{
+  
+    console.log("handle select",e.target.value,e.target.name);
+    const paylaod=e.target.value;
+    dispatch(getMilkDetails(e.target.value));
+  }
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
-  const [visibleColumns, setVisibleColumns] = React.useState(
-    new Set(INITIAL_VISIBLE_COLUMNS)
-  );
+  const [visibleColumns, setVisibleColumns] = React.useState(new Set(INITIAL_VISIBLE_COLUMNS));
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [sortDescriptor, setSortDescriptor] = React.useState({
@@ -68,9 +65,7 @@ export default function UserDashboard() {
   const headerColumns = React.useMemo(() => {
     if (visibleColumns === "all") return columns;
 
-    return columns.filter((column) =>
-      Array.from(visibleColumns).includes(column.uid)
-    );
+    return columns.filter((column) => Array.from(visibleColumns).includes(column.uid));
   }, [visibleColumns]);
 
   const filteredItems = React.useMemo(() => {
@@ -78,15 +73,12 @@ export default function UserDashboard() {
 
     if (hasSearchFilter) {
       filteredUsers = filteredUsers.filter((user) =>
-        user.name.toLowerCase().includes(filterValue.toLowerCase())
+        user.name.toLowerCase().includes(filterValue.toLowerCase()),
       );
     }
-    if (
-      statusFilter !== "all" &&
-      Array.from(statusFilter).length !== statusOptions.length
-    ) {
+    if (statusFilter !== "all" && Array.from(statusFilter).length !== statusOptions.length) {
       filteredUsers = filteredUsers.filter((user) =>
-        Array.from(statusFilter).includes(user.status)
+        Array.from(statusFilter).includes(user.status),
       );
     }
 
@@ -119,7 +111,7 @@ export default function UserDashboard() {
       case "name":
         return (
           <User
-            avatarProps={{ radius: "lg", src: user.avatar }}
+            avatarProps={{radius: "lg", src: user.avatar}}
             description={user.email}
             name={cellValue}
           >
@@ -130,25 +122,18 @@ export default function UserDashboard() {
         return (
           <div className="flex flex-col">
             <p className="text-bold text-small capitalize">{cellValue}</p>
-            <p className="text-bold text-tiny capitalize text-default-400">
-              {user.team}
-            </p>
+            <p className="text-bold text-tiny capitalize text-default-400">{user.team}</p>
           </div>
         );
       case "status":
         return (
-          <Chip
-            className="capitalize"
-            color={statusColorMap[user.status]}
-            size="sm"
-            variant="flat"
-          >
+          <Chip className="capitalize" color={statusColorMap[user.status]} size="sm" variant="flat">
             {cellValue}
           </Chip>
         );
       case "actions":
         return (
-          <div className="relative flex justify-center items-center gap-2">
+          <div className="relative flex justify-end items-center gap-2">
             <Dropdown>
               <DropdownTrigger>
                 <Button isIconOnly size="sm" variant="light">
@@ -156,27 +141,9 @@ export default function UserDashboard() {
                 </Button>
               </DropdownTrigger>
               <DropdownMenu>
-                <DropdownItem>
-                  <Tooltip content="View">
-                    <span className="text-lg text-default-400 cursor-pointer active:opacity-50">
-                      <EyeIcon />
-                    </span>
-                  </Tooltip>
-                </DropdownItem>
-                <DropdownItem>
-                  <Tooltip content="Edit user">
-                    <span className="text-lg text-default-400 cursor-pointer active:opacity-50">
-                      <EditIcon />
-                    </span>
-                  </Tooltip>
-                </DropdownItem>
-                <DropdownItem>
-                  <Tooltip color="danger" content="Delete user">
-                    <span className="text-lg text-danger cursor-pointer active:opacity-50">
-                      <DeleteIcon />
-                    </span>
-                  </Tooltip>
-                </DropdownItem>
+                <DropdownItem>View</DropdownItem>
+                <DropdownItem>Edit</DropdownItem>
+                <DropdownItem>Delete</DropdownItem>
               </DropdownMenu>
             </Dropdown>
           </div>
@@ -212,10 +179,10 @@ export default function UserDashboard() {
     }
   }, []);
 
-  const onClear = React.useCallback(() => {
-    setFilterValue("");
-    setPage(1);
-  }, []);
+  const onClear = React.useCallback(()=>{
+    setFilterValue("")
+    setPage(1)
+  },[])
 
   const topContent = React.useMemo(() => {
     return (
@@ -223,7 +190,7 @@ export default function UserDashboard() {
         <div className="flex justify-between gap-3 items-end">
           <Input
             isClearable
-            className="w-full sm:max-w-[30%]"
+            className="w-full sm:max-w-[44%]"
             placeholder="Search by name..."
             startContent={<SearchIcon />}
             value={filterValue}
@@ -233,10 +200,7 @@ export default function UserDashboard() {
           <div className="flex gap-3">
             <Dropdown>
               <DropdownTrigger className="hidden sm:flex">
-                <Button
-                  endContent={<ChevronDownIcon className="text-small" />}
-                  variant="flat"
-                >
+                <Button endContent={<ChevronDownIcon className="text-small" />} variant="flat">
                   Status
                 </Button>
               </DropdownTrigger>
@@ -257,10 +221,7 @@ export default function UserDashboard() {
             </Dropdown>
             <Dropdown>
               <DropdownTrigger className="hidden sm:flex">
-                <Button
-                  endContent={<ChevronDownIcon className="text-small" />}
-                  variant="flat"
-                >
+                <Button endContent={<ChevronDownIcon className="text-small" />} variant="flat">
                   Columns
                 </Button>
               </DropdownTrigger>
@@ -279,19 +240,28 @@ export default function UserDashboard() {
                 ))}
               </DropdownMenu>
             </Dropdown>
-            <Model />
-            {/* <Button color="primary" endContent={<PlusIcon />}>
-              Add New
-            </Button> */}
+            
           </div>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-default-400 text-small">
-            Total {users.length} users
-          </span>
-        
-          
-          {/* <SelectFarmer /> */}
+        <div className="flex justify-between gap-1.5 items-center">
+          <span className="text-default-400 text-small">Total {users.length} users</span>
+         
+          <Select 
+            size={"sm"}
+            
+            label="Select an farmer" 
+            className="max-w-xs" 
+
+            name="mobile"
+            onChange={(e)=>handleSelectFarmer(e)}
+          >
+            {!isLoading && usersData.users && usersData.users.map((user) => (
+              <SelectItem key={user.mobile} value={user.mobile}>
+                {user.name}
+              </SelectItem>
+            ))}
+          </Select>
+         
           <label className="flex items-center text-default-400 text-small">
             Rows per page:
             <select
@@ -304,7 +274,6 @@ export default function UserDashboard() {
             </select>
           </label>
         </div>
-
       </div>
     );
   }, [
@@ -335,20 +304,10 @@ export default function UserDashboard() {
           onChange={setPage}
         />
         <div className="hidden sm:flex w-[30%] justify-end gap-2">
-          <Button
-            isDisabled={pages === 1}
-            size="sm"
-            variant="flat"
-            onPress={onPreviousPage}
-          >
+          <Button isDisabled={pages === 1} size="sm" variant="flat" onPress={onPreviousPage}>
             Previous
           </Button>
-          <Button
-            isDisabled={pages === 1}
-            size="sm"
-            variant="flat"
-            onPress={onNextPage}
-          >
+          <Button isDisabled={pages === 1} size="sm" variant="flat" onPress={onNextPage}>
             Next
           </Button>
         </div>
@@ -356,19 +315,11 @@ export default function UserDashboard() {
     );
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
-  const getdata = () => {
-    dispatch(getFarmersDetails());
+  useEffect(()=>{
+    dispatch(getFarmersDetails())
    
-  };
-
-
-  useEffect(() => {
-    getdata();
-    
-  }, []);
-
+  },[])
   return (
-    <>
     <Table
       aria-label="Example table with custom cells, pagination and sorting"
       isHeaderSticky
@@ -398,14 +349,11 @@ export default function UserDashboard() {
       </TableHeader>
       <TableBody emptyContent={"No users found"} items={sortedItems}>
         {(item) => (
-          <TableRow key={item.userId || item._id}>
-            {(columnKey) => (
-              <TableCell>{renderCell(item, columnKey)}</TableCell>
-            )}
+          <TableRow key={item._id}>
+            {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
           </TableRow>
         )}
       </TableBody>
     </Table>
-    </>
   );
 }

@@ -34,7 +34,7 @@ console.log("action milk payload",payload.mobile,payload);
     dispatch(addMilkRequestAction());
     await axios.post(`http://localhost:8080/api/milk/add/${payload.mobile}`,payload)
     .then((res)=>{
-        console.log("action milk res",res.data);
+       // console.log("action add milk res",res.data);
         dispatch(addMilkSuccessAction({status:true,response:res.data}));
     })
     .catch((res)=>{
@@ -45,7 +45,7 @@ console.log("action milk payload",payload.mobile,payload);
 }
 
 //get milk data
-export const getMilk =(payload)=>async(dispatch)=>{
+export const getMilkDetails =(payload)=>async(dispatch)=>{
    console.log("get milk action payload",payload)
 
         dispatch(getMilkRequestAction());

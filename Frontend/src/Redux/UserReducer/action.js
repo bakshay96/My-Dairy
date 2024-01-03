@@ -38,7 +38,7 @@ const url2 = "https://dudhsankalan-ab.onrender.com/api";
 
 //add farmer function
 export const addFarmer = (payload) => async (dispatch) => {
-  console.log("action", payload);
+  //console.log("action", payload);
   dispatch(addUserRequestAction());
   try {
     return  await axios
@@ -52,7 +52,7 @@ export const addFarmer = (payload) => async (dispatch) => {
 //get All Farmer details
 
 export const getFarmersDetails = (payload) => async (dispatch) => {
-  //console.log("action", payload);
+  console.log("farmer details action", payload);
   dispatch(getUserRequestAction());
   try {
       await axios 
