@@ -96,7 +96,7 @@ export default function Dashboard({ children }) {
         {children}
        
       {
-        active==4?<AddMilk />:active==2?<UserDashboard />:active==3?<MilkInfo/>:active==1?<MilkDashboard/>:<NotFound/>
+        active==1?<AddMilk />:active==2?<UserDashboard />:active==3?<MilkInfo/>:active==4?<MilkDashboard/>:<NotFound/>
       }
       </Box>
       

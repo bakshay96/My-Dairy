@@ -9,9 +9,9 @@ const columns = [
   {name:"Village",uid:"village",sortable:true},
   {name:"GENDER", uid:"gender"},
 
-  {name:"Date",uid:"date",sortable:true},
+  {name:"Date/Time",uid:"date",sortable:true},
   {name:"SHIFT",uid:"shift",sortable:true},
-  {name:"FAT,",uid:"fat"},
+  {name:"FAT",uid:"fat"},
   {name:"SNF",uid:"snf"},
   {name:"Degree",uid:"degree"},
   {name:"WATER",uid:"water"},
