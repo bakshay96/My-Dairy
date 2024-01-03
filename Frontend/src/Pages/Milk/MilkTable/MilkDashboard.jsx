@@ -58,7 +58,7 @@ export default function MilkDashboard() {
     console.log("handle select", e.target.value, e.target.name);
     const paylaod = e.target.value;
     dispatch(getMilkDetails(e.target.value));
-    findName(e.target.value);
+    findName(e.target.value,filteredItems);
   };
 
   const [filterValue, setFilterValue] = React.useState("");
@@ -84,16 +84,7 @@ export default function MilkDashboard() {
 console.log("milkstats",milkStats)
   const hasSearchFilter = Boolean(filterValue);
 
-  //find name
-  const findName=(value)=>{
-   usersData.users.forEach((user)=>{
-      if(user.mobile==value)
-      {
-        setStatUserName(user.name)
-      }
-    })
-  
-  }
+ 
   const headerColumns = React.useMemo(() => {
     if (visibleColumns === "all") return columns;
 
@@ -122,7 +113,43 @@ console.log("milkstats",milkStats)
     return filteredUsers;
   }, [users, filterValue, statusFilter]);
 
-  
+  const findName=(value,filteredItems)=>{
+    
+     let [totalFat,totalSnf,totalWater,totalDegree,totalLitters]=[0,0,0,0,0];
+     const tItems=filteredItems.length;;
+     filteredItems.forEach((item)=>{
+       totalFat+=item.fat;
+       totalSnf+=item.snf;
+       totalDegree+=item.degree;
+       totalWater+=item.water;
+       totalLitters+=item.litter;
+     })
+     console.log("milkStatsResults",totalFat,totalSnf,totalLitters,totalWater,totalDegree)
+     let totalStats={
+       "fat":totalFat/tItems,
+       "snf":totalSnf/tItems,
+       "degree":totalDegree/tItems,
+       "water":totalWater/tItems,
+       "totalLitters":totalLitters,
+     }
+     usersData.users.forEach((user)=>{
+      if(user.mobile==value)
+      {
+        (()=>setStatUserName(user.name))();
+      }
+    })
+     setMilkStats(totalStats);
+     // let avgFat=totalFat/tItems;
+     // let avgSnf=totalSnf/tItems;
+     // let avgDegree=totalDegree/tItems;
+     // let avgWater=totalWater/tItems;
+     // setMilkStats({"fat":avgFat,
+     // "snf":avgSnf,
+     // "degree":avgDegree,
+     // "water":avgWater,
+     // "litters":totalLitters})
+   
+   }
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
   const items = React.useMemo(() => {
@@ -327,7 +354,7 @@ console.log("milkstats",milkStats)
             Rows per page:
             <select
               className="bg-transparent outline-none text-default-400 text-small"
-              onChange={onRowsPerPageChange}
+              onChange={()=>onRowsPerPageChange}
             >
               <option value="5">5</option>
               <option value="10">10</option>
@@ -364,7 +391,7 @@ console.log("milkstats",milkStats)
           color="primary"
           page={page}
           total={pages}
-          onChange={setPage}
+          onChange={()=>setPage}
         />
         <div className="hidden sm:flex w-[30%] justify-end gap-2">
           <Button
@@ -388,39 +415,39 @@ console.log("milkstats",milkStats)
     );
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
-  const milkStatsResult = React.useMemo(() => {
-    let [totalFat,totalSnf,totalWater,totalDegree,totalLitters]=[0,0,0,0,0];
-    const tItems=filteredItems.length;;
-    filteredItems.forEach((item)=>{
-      totalFat+=item.fat;
-      totalSnf+=item.snf;
-      totalDegree+=item.degree;
-      totalWater+=item.water;
-      totalLitters+=item.litter;
-    })
-    console.log("milkStatsResults",totalFat,totalSnf,totalLitters,totalWater,totalDegree)
-    let totalStats={
-      "fat":totalFat/tItems,
-      "snf":totalSnf/tItems,
-      "degree":totalDegree/tItems,
-      "water":totalWater/tItems,
-      "totalLitters":totalLitters,
-    }
-    setMilkStats(totalStats);
-    // let avgFat=totalFat/tItems;
-    // let avgSnf=totalSnf/tItems;
-    // let avgDegree=totalDegree/tItems;
-    // let avgWater=totalWater/tItems;
-    // setMilkStats({"fat":avgFat,
-    // "snf":avgSnf,
-    // "degree":avgDegree,
-    // "water":avgWater,
-    // "litters":totalLitters})
+  // const milkStatsResult = React.useMemo(() => {
+  //   let [totalFat,totalSnf,totalWater,totalDegree,totalLitters]=[0,0,0,0,0];
+  //   const tItems=filteredItems.length;;
+  //   filteredItems.forEach((item)=>{
+  //     totalFat+=item.fat;
+  //     totalSnf+=item.snf;
+  //     totalDegree+=item.degree;
+  //     totalWater+=item.water;
+  //     totalLitters+=item.litter;
+  //   })
+  //   console.log("milkStatsResults",totalFat,totalSnf,totalLitters,totalWater,totalDegree)
+  //   let totalStats={
+  //     "fat":totalFat/tItems,
+  //     "snf":totalSnf/tItems,
+  //     "degree":totalDegree/tItems,
+  //     "water":totalWater/tItems,
+  //     "totalLitters":totalLitters,
+  //   }
+  //   setMilkStats(totalStats);
+  //   // let avgFat=totalFat/tItems;
+  //   // let avgSnf=totalSnf/tItems;
+  //   // let avgDegree=totalDegree/tItems;
+  //   // let avgWater=totalWater/tItems;
+  //   // setMilkStats({"fat":avgFat,
+  //   // "snf":avgSnf,
+  //   // "degree":avgDegree,
+  //   // "water":avgWater,
+  //   // "litters":totalLitters})
   
-  }, [filteredItems]);
+  // }, [items]);
 
   useEffect(() => {
-    dispatch(getFarmersDetails());
+   
   }, []);
   return (
     <>
