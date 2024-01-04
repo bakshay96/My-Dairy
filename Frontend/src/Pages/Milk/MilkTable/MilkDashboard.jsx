@@ -53,14 +53,6 @@ export default function MilkDashboard() {
   console.log("milkdash", data);
   const users = data.data || [];
   console.log("milk data", data, usersData);
-
-  const handleSelectFarmer = (e) => {
-    console.log("handle select", e.target.value, e.target.name);
-    const paylaod = e.target.value;
-    dispatch(getMilkDetails(e.target.value));
-    findName(e.target.value,filteredItems);
-  };
-
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
   const [visibleColumns, setVisibleColumns] = React.useState(
@@ -73,18 +65,27 @@ export default function MilkDashboard() {
     direction: "ascending",
   });
   const [page, setPage] = React.useState(1);
-  const [milkStats,setMilkStats]=React.useState({
-    "fat":0,
-    "snf":0,
-    "degree":0,
-    "water":0,
-    "totalLitters":0
-  })
-  const [statUserName,setStatUserName]=React.useState("No user Seleted")
-console.log("milkstats",milkStats)
+  const [milkStats, setMilkStats] = React.useState({
+    fat: 0,
+    snf: 0,
+    degree: 0,
+    water: 0,
+    totalLitters: 0,
+  });
+  console.log("milks stats",milkStats);
+
+  const [statUserName, setStatUserName] = React.useState("data not available");
+  console.log("milkstats", milkStats);
   const hasSearchFilter = Boolean(filterValue);
 
- 
+  const handleSelectFarmer = (e) => {
+    console.log("handle select", e.target.value, e.target.name);
+    const paylaod = e.target.value;
+    dispatch(getMilkDetails(e.target.value));
+   
+    findName(e.target.value, filteredItems);
+    getMilkStats();
+  };
   const headerColumns = React.useMemo(() => {
     if (visibleColumns === "all") return columns;
 
@@ -113,49 +114,61 @@ console.log("milkstats",milkStats)
     return filteredUsers;
   }, [users, filterValue, statusFilter]);
 
-  const findName=(value,filteredItems)=>{
-    
-     let [totalFat,totalSnf,totalWater,totalDegree,totalLitters]=[0,0,0,0,0];
-     const tItems=filteredItems.length;;
-     filteredItems.forEach((item)=>{
-       totalFat+=item.fat;
-       totalSnf+=item.snf;
-       totalDegree+=item.degree;
-       totalWater+=item.water;
-       totalLitters+=item.litter;
-     })
-     console.log("milkStatsResults",totalFat,totalSnf,totalLitters,totalWater,totalDegree)
-     let totalStats={
-       "fat":totalFat/tItems,
-       "snf":totalSnf/tItems,
-       "degree":totalDegree/tItems,
-       "water":totalWater/tItems,
-       "totalLitters":totalLitters,
-     }
-     usersData.users.forEach((user)=>{
-      if(user.mobile==value)
-      {
-        (()=>setStatUserName(user.name))();
+
+  // const handleCalculate=()=>{
+  //   console.log("handleCalculate")
+  // let [totalFat, totalSnf, totalWater, totalDegree, totalLitters] = [
+  //     0, 0, 0, 0, 0,
+  //   ];
+  //   const tItems = filteredItems.length;
+  //   filteredItems.forEach((item) => {
+  //     totalFat += item.fat;
+  //     totalSnf += item.snf;
+  //     totalDegree += item.degree;
+  //     totalWater += item.water;
+  //     totalLitters += item.litter;
+  //   });
+
+  //   console.log(
+  //     "milkStatsResults handleCalculate",
+  //     totalFat,
+  //     totalSnf,
+  //     totalLitters,
+  //     totalWater,
+  //     totalDegree
+  //   );
+  //   let avgFat = totalFat / tItems;
+  //   let avgSnf = totalSnf / tItems;
+  //   let avgDegree = totalDegree / tItems;
+  //   let avgWater = totalWater / tItems;
+  //   let data={
+  //     fat: avgFat,
+  //     snf: avgSnf,
+  //     degree: avgDegree,
+  //     water: avgWater,
+  //     totalLitters,
+  //   }
+  //   console.log("handle stats avg",data);
+  // setMilkStats(data);
+  // }
+  const findName = (value, filteredItems) => {
+
+    let x=usersData.users.forEach((user) => {
+      if (user.mobile == value ) {
+        
+        setStatUserName(user.name);
       }
-    })
-     setMilkStats(totalStats);
-     // let avgFat=totalFat/tItems;
-     // let avgSnf=totalSnf/tItems;
-     // let avgDegree=totalDegree/tItems;
-     // let avgWater=totalWater/tItems;
-     // setMilkStats({"fat":avgFat,
-     // "snf":avgSnf,
-     // "degree":avgDegree,
-     // "water":avgWater,
-     // "litters":totalLitters})
-   
-   }
+      
+     
+    });
+    
+  };
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
   const items = React.useMemo(() => {
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage;
-    
+
     return filteredItems.slice(start, end);
   }, [page, filteredItems, rowsPerPage]);
 
@@ -354,7 +367,7 @@ console.log("milkstats",milkStats)
             Rows per page:
             <select
               className="bg-transparent outline-none text-default-400 text-small"
-              onChange={()=>onRowsPerPageChange}
+              onChange={() => onRowsPerPageChange}
             >
               <option value="5">5</option>
               <option value="10">10</option>
@@ -391,7 +404,7 @@ console.log("milkstats",milkStats)
           color="primary"
           page={page}
           total={pages}
-          onChange={()=>setPage}
+          onChange={() => setPage}
         />
         <div className="hidden sm:flex w-[30%] justify-end gap-2">
           <Button
@@ -415,40 +428,50 @@ console.log("milkstats",milkStats)
     );
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
-  // const milkStatsResult = React.useMemo(() => {
-  //   let [totalFat,totalSnf,totalWater,totalDegree,totalLitters]=[0,0,0,0,0];
-  //   const tItems=filteredItems.length;;
-  //   filteredItems.forEach((item)=>{
-  //     totalFat+=item.fat;
-  //     totalSnf+=item.snf;
-  //     totalDegree+=item.degree;
-  //     totalWater+=item.water;
-  //     totalLitters+=item.litter;
-  //   })
-  //   console.log("milkStatsResults",totalFat,totalSnf,totalLitters,totalWater,totalDegree)
-  //   let totalStats={
-  //     "fat":totalFat/tItems,
-  //     "snf":totalSnf/tItems,
-  //     "degree":totalDegree/tItems,
-  //     "water":totalWater/tItems,
-  //     "totalLitters":totalLitters,
-  //   }
-  //   setMilkStats(totalStats);
-  //   // let avgFat=totalFat/tItems;
-  //   // let avgSnf=totalSnf/tItems;
-  //   // let avgDegree=totalDegree/tItems;
-  //   // let avgWater=totalWater/tItems;
-  //   // setMilkStats({"fat":avgFat,
-  //   // "snf":avgSnf,
-  //   // "degree":avgDegree,
-  //   // "water":avgWater,
-  //   // "litters":totalLitters})
-  
-  // }, [items]);
+  const getMilkStats = React.useMemo(() => {
+    let [totalFat,totalSnf,totalWater,totalDegree,totalLitters]=[0,0,0,0,0];
+     const tItems=filteredItems.length;
+    if(filteredItems.length>0 && data.data.length>0)
+    {
+       filteredItems.forEach((item)=>{
+        totalFat+=item.fat;
+        totalSnf+=item.snf;
+        totalDegree+=item.degree;
+        totalWater+=item.water; 
+        totalLitters+=item.litter;
+      })
+        console.log("milkStatsResults",totalFat,totalSnf,totalLitters,totalWater,totalDegree)
+        let totalStats={
+          "fat":totalFat/tItems,
+          "snf":totalSnf/tItems,
+          "degree":totalDegree/tItems,
+          "water":totalWater/tItems,
+          "totalLitters":totalLitters,
+        }
 
-  useEffect(() => {
-   
-  }, []);
+        setMilkStats(totalStats);
+    }
+    else{
+      console.log("else block")
+      setMilkStats({fat: 0,
+        snf: 0,
+        degree: 0,
+        water: 0,
+        totalLitters: 0,});
+    }
+    // let avgFat=totalFat/tItems;
+    // let avgSnf=totalSnf/tItems;
+    // let avgDegree=totalDegree/tItems;
+    // let avgWater=totalWater/tItems;
+    // setMilkStats({"fat":avgFat,
+    // "snf":avgSnf,
+    // "degree":avgDegree,
+    // "water":avgWater,
+    // "litters":totalLitters})
+    return milkStats;
+  }, [data,statUserName]);
+
+  useEffect(() => {}, []);
   return (
     <>
       <Table

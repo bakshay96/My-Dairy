@@ -128,7 +128,7 @@ import { signin } from "../../Redux/AuthReducer/action";
             }
             height={"auto"}
             src={
-              'https://th.bing.com/th/id/OIP.O0MSFor7_5C_Ie7ridmMKwHaCz?w=309&h=132&c=7&r=0&o=5&pid=1.7'
+              'https://img.freepik.com/free-photo/close-up-view-bucket-milking-cows-animal-barn_1150-12778.jpg?size=626&ext=jpg&ga=GA1.1.597326940.1704283377&semt=ais'
             }
           />
         </Flex>
