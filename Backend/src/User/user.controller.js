@@ -46,7 +46,7 @@ const userRegistration= async (req, res) => {
   };
 
 
-// get all users
+// get all users without pagination
 
 // const getAllUsers=async(req,res)=>{
 //   try {

@@ -7,10 +7,10 @@ const mongoose = require("mongoose");
 // POST request to create a new milk provider
 //add user milk data
 const addMilkData = async (req, res) => {
-  const { userId } = req.params;
+  const { mobile } = req.params;
   try {
     
-    console.log(userId);
+    console.log(mobile);
     // Validate if required fields are present
     // if (!category || !SNF || !FAT || !water || !liter || !userId) {
     //   return res
@@ -20,7 +20,7 @@ const addMilkData = async (req, res) => {
 
     // Create a new milk provider
 
-    let isUserValid = await UserModel.find({ userId });
+    let isUserValid = await UserModel.find({mobile});
 
     //auto shift desider
     const currentHour = new Date().getHours();
@@ -31,14 +31,14 @@ const addMilkData = async (req, res) => {
     date = date.toLocaleString();
 
     if (isUserValid.length) {
-      let UserMilk = MilkModel({ ...req.body,userId, shift, date });
+      let UserMilk = MilkModel({ ...req.body,mobile, shift, date });
       await UserMilk.save();
 
       let userObjId = new mongoose.Types.ObjectId(UserMilk.id);
       console.log("user id :", userObjId);
       await UserModel.updateOne(
         {
-          userId: userId,
+          mobile: mobile,
         },
         {
           $push: {
@@ -50,7 +50,7 @@ const addMilkData = async (req, res) => {
       // Send a 201 Created response with the created milk provider
       res
         .status(201)
-        .send({ msg: "Milk data submitted successfully", UserMilk });
+        .send({ msg: "Milk data submitted successfully","currentEntry": UserMilk });
     } else {
       res.send("User not avaliable..!");
     }
@@ -64,16 +64,16 @@ const addMilkData = async (req, res) => {
 // get Single users milk data
 
 const getSingleUserMilkData = async (req, res) => {
-  const { userId } = req.params;
+  const { mobile } = req.params;
 
   try {
-    UserMilkData = await MilkModel.find({ userId });
+    UserMilkData = await MilkModel.find({ mobile });
     if (UserMilkData.length == 0) {
-      res.status(201).send({ msg: "user Milk data not present in the db" });
+      res.status(201).send({ msg: "No user milk entry found..!" });
     } else {
       res.status(202).send({
-        "Total Milk Data": UserMilkData.length,
-        MilkData: UserMilkData,
+        "total_entries": UserMilkData.length,
+        "data": UserMilkData,
       });
     }
   } catch (error) {
@@ -89,7 +89,7 @@ const getMilkData = async (req, res) => {
     } else {
       res
         .status(202)
-        .send({ "Total Milk Data": MilkData.length, MilkData: MilkData });
+        .send({ "total_entries": MilkData.length, "data": MilkData });
     }
   } catch (error) {
     res.status(500).send({ msg: error.message });
