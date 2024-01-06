@@ -1,11 +1,12 @@
 import * as types from "./actionTypes";
 
 const initialState={
-    data:[] ||[],
+    data:[],
     isMilkAdded:false,
     isLoading:false,
     isError:false,
-    response:""
+    status:404,
+    response:"Initial"
 }
 export const reducer =(state=initialState,action)=>{
     const {type, payload} =action;
@@ -16,7 +17,7 @@ export const reducer =(state=initialState,action)=>{
             return {...state, isLoading:true}
         
         case types.ADD_MILK_SUCCESS:
-            return {...state,isLoading:false, isMilkAdded:payload.status,response:payload.response}
+            return {...state,isLoading:false, isMilkAdded:true,state:payload.status,response:payload.data }
         
         case types.ADD_MILK_FAILURE:
             return {...state,isError:true,response:payload}

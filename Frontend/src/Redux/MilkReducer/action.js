@@ -32,11 +32,8 @@ export const getMilkFailureAction =()=>{
 export const addMilk =(payload)=>async(dispatch)=>{
 console.log("action milk payload",payload.mobile,payload);
     dispatch(addMilkRequestAction());
-    await axios.post(`http://localhost:8080/api/milk/add/${payload.mobile}`,payload)
-    .then((res)=>{
-       // console.log("action add milk res",res.data);
-        dispatch(addMilkSuccessAction({status:true,response:res.data}));
-    })
+return   await axios.post(`http://localhost:8080/api/milk/add/${payload.mobile}`,payload)
+    
     .catch((res)=>{
         console.log("add milk err",res.data);
         dispatch(addMilkFailureAction(res.data));

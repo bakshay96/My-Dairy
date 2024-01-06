@@ -20,6 +20,7 @@ import {
   Radio,
   Select,
   GridItem,
+  useToast ,
 } from "@chakra-ui/react";
 
 import { GiBuffaloHead, GiCow, GiFarmer, GiGoat } from "react-icons/gi";
@@ -28,7 +29,7 @@ import { getFarmersDetails } from "../../Redux/userReducer/action";
 import { addMilk, addMilkSuccessAction } from "../../Redux/MilkReducer/action";
 
 export default function AddMilk() {
-  
+  const toast = useToast()
   const [value, setValue] = useState("cow");
   const [name, setName] = useState({
     firstName: "",
@@ -77,7 +78,22 @@ export default function AddMilk() {
     e.preventDefault();
    // console.log("handleMilkSubmit",formMilkData);
     const mobile=Number(formMilkData.mobile);
-    dispatch(addMilk(formMilkData));
+    dispatch(addMilk(formMilkData)).then((res)=>{
+      console.log("res add milk",res);
+     
+      if(res.status==201)
+      {
+        dispatch(addMilkSuccessAction(res))
+        toast({
+          title: 'Milk Added Successfully.',
+          description: "We've added your milk to your account for you.",
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+          position:"top"
+        })
+      }
+    })
     setformMilkData({
     mobile: "",
     category: "cow", //should be [cow,buffalo,goat];
