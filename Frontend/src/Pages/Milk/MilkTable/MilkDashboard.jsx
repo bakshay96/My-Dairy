@@ -16,6 +16,7 @@ import {
   User,
   Pagination,
   Progress,
+  Spacer,
 } from "@nextui-org/react";
 import { PlusIcon } from "../../User/UserTable/PlusIcon";
 import { VerticalDotsIcon } from "../../User/UserTable/VerticalDotsIcon";
@@ -71,9 +72,9 @@ export default function MilkDashboard() {
     degree: 0,
     water: 0,
     totalLitters: 0,
-    totalEntries:0,
+    totalEntries: 0,
   });
-  console.log("milks stats",milkStats);
+  console.log("milks stats", milkStats);
 
   const [statUserName, setStatUserName] = React.useState("data not available");
   console.log("milkstats", milkStats);
@@ -83,7 +84,7 @@ export default function MilkDashboard() {
     console.log("handle select", e.target.value, e.target.name);
     const paylaod = e.target.value;
     dispatch(getMilkDetails(e.target.value));
-   
+
     findName(e.target.value, filteredItems);
     getMilkStats();
   };
@@ -114,7 +115,6 @@ export default function MilkDashboard() {
 
     return filteredUsers;
   }, [users, filterValue, statusFilter]);
-
 
   // const handleCalculate=()=>{
   //   console.log("handleCalculate")
@@ -153,16 +153,11 @@ export default function MilkDashboard() {
   // setMilkStats(data);
   // }
   const findName = (value, filteredItems) => {
-
-    let x=usersData.users.forEach((user) => {
-      if (user.mobile == value ) {
-        
+    let x = usersData.users.forEach((user) => {
+      if (user.mobile == value) {
         setStatUserName(user.name);
       }
-      
-     
     });
-    
   };
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
@@ -283,6 +278,28 @@ export default function MilkDashboard() {
             onClear={() => onClear()}
             onValueChange={onSearchChange}
           /> */}
+          <div className="flex justify-between gap-2 items-end">
+
+          <Input
+            type="date"
+            className="max-w-22"
+            label="Select start date"
+            placeholder="Select start Date"
+            labelPlacement="outside"
+            
+            
+          />
+          
+          <Input
+            type="date"
+            className="max-w-22"
+            label="Select end date"
+            placeholder="Select end Date"
+            labelPlacement="outside"
+            
+            
+          />
+          </div>
           <div className="flex gap-3">
             <Dropdown>
               <DropdownTrigger className="hidden sm:flex">
@@ -430,36 +447,39 @@ export default function MilkDashboard() {
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
   const getMilkStats = React.useMemo(() => {
-    let [totalFat,totalSnf,totalWater,totalDegree,totalLitters]=[0,0,0,0,0];
-     const tItems=filteredItems.length;
-    if(filteredItems.length>0 && data.data.length>0)
-    {
-       filteredItems.forEach((item)=>{
-        totalFat+=item.fat;
-        totalSnf+=item.snf;
-        totalDegree+=item.degree;
-        totalWater+=item.water; 
-        totalLitters+=item.litter;
-      })
-        console.log("milkStatsResults",totalFat,totalSnf,totalLitters,totalWater,totalDegree)
-        let totalStats={
-          "fat":roundUpToDecimalPlaces(totalFat/tItems,2),
-          "snf":roundUpToDecimalPlaces(totalSnf/tItems,2),
-          "degree":roundUpToDecimalPlaces(totalDegree/tItems,2),
-          "water": roundUpToDecimalPlaces(totalWater/tItems,2),
-          "totalLitters":roundUpToDecimalPlaces(totalLitters,3),
-          "totalEntries":tItems,
-        }
+    let [totalFat, totalSnf, totalWater, totalDegree, totalLitters] = [
+      0, 0, 0, 0, 0,
+    ];
+    const tItems = filteredItems.length;
+    if (filteredItems.length > 0 && data.data.length > 0) {
+      filteredItems.forEach((item) => {
+        totalFat += item.fat;
+        totalSnf += item.snf;
+        totalDegree += item.degree;
+        totalWater += item.water;
+        totalLitters += item.litter;
+      });
+      console.log(
+        "milkStatsResults",
+        totalFat,
+        totalSnf,
+        totalLitters,
+        totalWater,
+        totalDegree
+      );
+      let totalStats = {
+        fat: roundUpToDecimalPlaces(totalFat / tItems, 2),
+        snf: roundUpToDecimalPlaces(totalSnf / tItems, 2),
+        degree: roundUpToDecimalPlaces(totalDegree / tItems, 2),
+        water: roundUpToDecimalPlaces(totalWater / tItems, 2),
+        totalLitters: roundUpToDecimalPlaces(totalLitters, 3),
+        totalEntries: tItems,
+      };
 
-        setMilkStats(totalStats);
-    }
-    else{
-      console.log("else block")
-      setMilkStats({fat: 0,
-        snf: 0,
-        degree: 0,
-        water: 0,
-        totalLitters: 0,});
+      setMilkStats(totalStats);
+    } else {
+      console.log("else block");
+      setMilkStats({ fat: 0, snf: 0, degree: 0, water: 0, totalLitters: 0 });
     }
     // let avgFat=totalFat/tItems;
     // let avgSnf=totalSnf/tItems;
@@ -471,12 +491,12 @@ export default function MilkDashboard() {
     // "water":avgWater,
     // "litters":totalLitters})
     return milkStats;
-  }, [data,statUserName]);
+  }, [data, statUserName]);
 
   function roundUpToDecimalPlaces(number, decimalPlaces) {
     const multiplier = Math.pow(10, decimalPlaces);
     return Math.floor(number * multiplier) / multiplier;
-}
+  }
 
   useEffect(() => {}, []);
   return (
