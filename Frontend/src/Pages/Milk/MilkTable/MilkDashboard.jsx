@@ -71,6 +71,7 @@ export default function MilkDashboard() {
     degree: 0,
     water: 0,
     totalLitters: 0,
+    totalEntries:0,
   });
   console.log("milks stats",milkStats);
 
@@ -442,11 +443,12 @@ export default function MilkDashboard() {
       })
         console.log("milkStatsResults",totalFat,totalSnf,totalLitters,totalWater,totalDegree)
         let totalStats={
-          "fat":totalFat/tItems,
-          "snf":totalSnf/tItems,
-          "degree":totalDegree/tItems,
-          "water":totalWater/tItems,
-          "totalLitters":totalLitters,
+          "fat":roundUpToDecimalPlaces(totalFat/tItems,2),
+          "snf":roundUpToDecimalPlaces(totalSnf/tItems,2),
+          "degree":roundUpToDecimalPlaces(totalDegree/tItems,2),
+          "water": roundUpToDecimalPlaces(totalWater/tItems,2),
+          "totalLitters":roundUpToDecimalPlaces(totalLitters,3),
+          "totalEntries":tItems,
         }
 
         setMilkStats(totalStats);
@@ -470,6 +472,11 @@ export default function MilkDashboard() {
     // "litters":totalLitters})
     return milkStats;
   }, [data,statUserName]);
+
+  function roundUpToDecimalPlaces(number, decimalPlaces) {
+    const multiplier = Math.pow(10, decimalPlaces);
+    return Math.floor(number * multiplier) / multiplier;
+}
 
   useEffect(() => {}, []);
   return (
@@ -517,6 +524,7 @@ export default function MilkDashboard() {
         <Table aria-label="Example static collection table">
           <TableHeader>
             <TableColumn>Total & Avg</TableColumn>
+            <TableColumn>Total Entries</TableColumn>
             <TableColumn>Avg FAT</TableColumn>
             <TableColumn>Avg SNF</TableColumn>
             <TableColumn>Avg Degree</TableColumn>
@@ -525,6 +533,7 @@ export default function MilkDashboard() {
           <TableBody>
             <TableRow key="1">
               <TableCell>{statUserName}</TableCell>
+              <TableCell>{milkStats.totalEntries}</TableCell>
               <TableCell>{milkStats.fat}</TableCell>
               <TableCell>{milkStats.snf}</TableCell>
               <TableCell>{milkStats.degree}</TableCell>
