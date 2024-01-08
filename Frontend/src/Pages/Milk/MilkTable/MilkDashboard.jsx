@@ -17,6 +17,7 @@ import {
   Pagination,
   Progress,
   Spacer,
+  
 } from "@nextui-org/react";
 import { PlusIcon } from "../../User/UserTable/PlusIcon";
 import { VerticalDotsIcon } from "../../User/UserTable/VerticalDotsIcon";
@@ -28,6 +29,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getMilkDetails } from "../../../Redux/MilkReducer/action";
 import { getFarmersDetails } from "../../../Redux/userReducer/action";
 import { Select, SelectItem } from "@nextui-org/react";
+import { color } from "framer-motion";
 
 const statusColorMap = {
   active: "success",
@@ -51,10 +53,11 @@ export default function MilkDashboard() {
     (store) => store.farmerReducer
   );
   const dispatch = useDispatch();
-  console.log("milkdash", data);
+  //console.log("milkdash", data);
   const users = data.data || [];
   console.log("milk data", data, usersData);
   const [filterValue, setFilterValue] = React.useState("");
+  
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
   const [visibleColumns, setVisibleColumns] = React.useState(
     new Set(INITIAL_VISIBLE_COLUMNS)
@@ -65,6 +68,13 @@ export default function MilkDashboard() {
     column: "age",
     direction: "ascending",
   });
+  const [dateValues, setDateValues] = useState({
+    startDate: '',
+    endDate: '',
+  });
+ // console.log("date values",dateValues)
+  const [minDate, setMinDate] = useState(""); // Set initial min date
+  const [maxDate, setMaxDate] = useState(""); // Set initial max date
   const [page, setPage] = React.useState(1);
   const [milkStats, setMilkStats] = React.useState({
     fat: 0,
@@ -73,20 +83,22 @@ export default function MilkDashboard() {
     water: 0,
     totalLitters: 0,
     totalEntries: 0,
+    startDate: undefined,
+    endDate: undefined,
   });
-  console.log("milks stats", milkStats);
+  //console.log("milks stats", milkStats);
 
   const [statUserName, setStatUserName] = React.useState("data not available");
-  console.log("milkstats", milkStats);
+  //console.log("milkstats", milkStats);
   const hasSearchFilter = Boolean(filterValue);
 
   const handleSelectFarmer = (e) => {
-    console.log("handle select", e.target.value, e.target.name);
+    //console.log("handle select", e.target.value, e.target.name);
     const paylaod = e.target.value;
     dispatch(getMilkDetails(e.target.value));
 
     findName(e.target.value, filteredItems);
-    getMilkStats();
+    
   };
   const headerColumns = React.useMemo(() => {
     if (visibleColumns === "all") return columns;
@@ -116,42 +128,7 @@ export default function MilkDashboard() {
     return filteredUsers;
   }, [users, filterValue, statusFilter]);
 
-  // const handleCalculate=()=>{
-  //   console.log("handleCalculate")
-  // let [totalFat, totalSnf, totalWater, totalDegree, totalLitters] = [
-  //     0, 0, 0, 0, 0,
-  //   ];
-  //   const tItems = filteredItems.length;
-  //   filteredItems.forEach((item) => {
-  //     totalFat += item.fat;
-  //     totalSnf += item.snf;
-  //     totalDegree += item.degree;
-  //     totalWater += item.water;
-  //     totalLitters += item.litter;
-  //   });
-
-  //   console.log(
-  //     "milkStatsResults handleCalculate",
-  //     totalFat,
-  //     totalSnf,
-  //     totalLitters,
-  //     totalWater,
-  //     totalDegree
-  //   );
-  //   let avgFat = totalFat / tItems;
-  //   let avgSnf = totalSnf / tItems;
-  //   let avgDegree = totalDegree / tItems;
-  //   let avgWater = totalWater / tItems;
-  //   let data={
-  //     fat: avgFat,
-  //     snf: avgSnf,
-  //     degree: avgDegree,
-  //     water: avgWater,
-  //     totalLitters,
-  //   }
-  //   console.log("handle stats avg",data);
-  // setMilkStats(data);
-  // }
+  
   const findName = (value, filteredItems) => {
     let x = usersData.users.forEach((user) => {
       if (user.mobile == value) {
@@ -164,9 +141,24 @@ export default function MilkDashboard() {
   const items = React.useMemo(() => {
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage;
+    return filteredItems.slice(start, end).filter((item)=>{
+      const createdDate=new Date(item.createdAt).toISOString().split('T')[0];
+      const createdDateObj= new Date(createdDate);
+      const startDateObj=new Date(dateValues.startDate)
+      const endDateObj=new Date(dateValues.endDate)
+      
+      if(dateValues.startDate !=="" && dateValues.endDate !=="" && createdDateObj >=startDateObj && createdDateObj<= endDateObj)
+      {
+        console.log("pass")
+        return item;
 
-    return filteredItems.slice(start, end);
-  }, [page, filteredItems, rowsPerPage]);
+      }
+      else if(dateValues.startDate =="" || dateValues.endDate =="")
+      {
+        return item;
+      }
+    });
+  }, [page, filteredItems, rowsPerPage,dateValues]);
 
   const sortedItems = React.useMemo(() => {
     return [...items].sort((a, b) => {
@@ -178,6 +170,52 @@ export default function MilkDashboard() {
     });
   }, [sortDescriptor, items]);
 
+  const handleDateChange = (event, dateType) => {
+    const { value } = event.target;
+    
+    // Ensure that the date is in the correct format (YYYY-MM-DD)
+    const formattedDate = new Date(value).toISOString().split('T')[0];
+
+    setDateValues((prevValues) => ({
+      ...prevValues,
+      [dateType]: formattedDate,
+    }));
+    //console.log("date values",dateValues)
+  };
+  
+  // const filterByDate=React.useMemo(()=>{
+  //  return  [... items].filter((item)=>{
+  //     const createdDate=new Date(item.createdAt).toISOString().split('T')[0];
+  //     const createdDateObj= new Date(createdDate);
+      
+      
+  //     if(dateValues.startDate !=="" && dateValues.endDate !=="" && createdDateObj >=new Date(dateValues.startDate) && createdDateObj<=new Date(dateValues.endDate))
+  //     {
+  //       console.log("pass")
+  //       return item;
+
+  //     }
+  //     // console.log("filter by item", dateValues.startDate,item.createdAt)
+  //     // console.log("change db date",dateValues.startDate,new Date(item.createdAt).toISOString().split('T')[0])
+  //   })
+  //   console.log("filter by date",filterData,filteredItems);
+    
+  // },[dateValues,statUserName,users])
+
+  const datePiker = React.useMemo(() => {
+    const currentDate = new Date();
+    //setup min and max date
+    // Subtract 15 days
+    const twentyDaysAgo= new Date(currentDate);
+     twentyDaysAgo.setDate(currentDate.getDate() - 20);
+    setMinDate(new Date(twentyDaysAgo).toISOString().split("T")[0]);
+    setMaxDate(new Date(currentDate).toISOString().split("T")[0]);
+    // Now, fifteenDaysAgo holds the date 15 days ago from the current date
+    //console.log("20 day ago",currentDate,twentyDaysAgo,"new",new Date().toISOString().split("T")[0]);
+    //console.log("max date",maxDate,"min date",minDate)
+  }, []);
+
+ 
   const renderCell = React.useCallback((user, columnKey) => {
     const cellValue = user[columnKey];
 
@@ -278,27 +316,36 @@ export default function MilkDashboard() {
             onClear={() => onClear()}
             onValueChange={onSearchChange}
           /> */}
-          <div className="flex justify-between gap-2 items-end">
 
-          <Input
-            type="date"
-            className="max-w-22"
-            label="Select start date"
-            placeholder="Select start Date"
-            labelPlacement="outside"
+          {/* //filter by date  */}
+          <div className="flex justify-between gap-2 items-end">
+            <Input
+              name="startDate"
+              min={minDate}
+              max={new Date().toISOString().split("T")[0]}
+              type="date"
+              value={dateValues.startDate}
+              onChange={(e) => handleDateChange(e, 'startDate')}
+              className="max-w-22"
+              label="Select start date"
+              placeholder="Select start Date"
+              labelPlacement="outside"
+            />
+
+            <Input
+              name="endDate"
+              min={minDate}
+              max={new Date().toISOString().split("T")[0]}
+              type="date"
+              value={dateValues.endDate}
+              onChange={(e) => handleDateChange(e, 'endDate')}
+              className="max-w-22"
+              label="Select end date"
+              classNames={"bg-red-50"}
+              placeholder="Select end Date"
+              labelPlacement="outside"
+            />
             
-            
-          />
-          
-          <Input
-            type="date"
-            className="max-w-22"
-            label="Select end date"
-            placeholder="Select end Date"
-            labelPlacement="outside"
-            
-            
-          />
           </div>
           <div className="flex gap-3">
             <Dropdown>
@@ -352,9 +399,9 @@ export default function MilkDashboard() {
             </Dropdown>
           </div>
         </div>
-        <div className="flex justify-between gap-1.5 items-center">
+        <div className="flex justify-between gap-1.5 items-center mt-2  p-2">
           <span className="text-default-400 text-small">
-            Total {users.length} users
+            Total {users.length} Entries
           </span>
           {!usersData.users.length ? (
             <Progress
@@ -371,13 +418,20 @@ export default function MilkDashboard() {
               name="mobile"
               onChange={(e) => handleSelectFarmer(e)}
             >
-              {!isLoading &&
-                usersData.users &&
+              {!isLoading && usersData.users ? (
                 usersData.users.map((user) => (
                   <SelectItem key={user.mobile} value={user.mobile}>
                     {user.name}
                   </SelectItem>
-                ))}
+                ))
+              ) : (
+                <Progress
+                  size="sm"
+                  isIndeterminate
+                  aria-label="Loading..."
+                  className="max-w-md"
+                />
+              )}
             </Select>
           )}
 
@@ -459,14 +513,14 @@ export default function MilkDashboard() {
         totalWater += item.water;
         totalLitters += item.litter;
       });
-      console.log(
-        "milkStatsResults",
-        totalFat,
-        totalSnf,
-        totalLitters,
-        totalWater,
-        totalDegree
-      );
+      //console.log(
+      //   "milkStatsResults",
+      //   totalFat,
+      //   totalSnf,
+      //   totalLitters,
+      //   totalWater,
+      //   totalDegree
+      // );
       let totalStats = {
         fat: roundUpToDecimalPlaces(totalFat / tItems, 2),
         snf: roundUpToDecimalPlaces(totalSnf / tItems, 2),
@@ -478,8 +532,8 @@ export default function MilkDashboard() {
 
       setMilkStats(totalStats);
     } else {
-      console.log("else block");
-      setMilkStats({ fat: 0, snf: 0, degree: 0, water: 0, totalLitters: 0 });
+      //console.log("else block");
+      setMilkStats({ fat: 0, snf: 0, degree: 0, water: 0, totalLitters: 0 })
     }
     // let avgFat=totalFat/tItems;
     // let avgSnf=totalSnf/tItems;
@@ -528,6 +582,7 @@ export default function MilkDashboard() {
             </TableColumn>
           )}
         </TableHeader>
+
         <TableBody emptyContent={"No entry found"} items={sortedItems}>
           {(item) => (
             <TableRow key={item._id}>
