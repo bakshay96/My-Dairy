@@ -55,7 +55,7 @@ export default function MilkDashboard() {
   const dispatch = useDispatch();
   //console.log("milkdash", data);
   const users = data.data || [];
-  console.log("milk data", data, usersData);
+  //console.log("milk data", data, usersData);
   const [filterValue, setFilterValue] = React.useState("");
   
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
@@ -173,7 +173,7 @@ export default function MilkDashboard() {
   const handleDateChange = (event, dateType) => {
     const { value } = event.target;
     
-    // Ensure that the date is in the correct format (YYYY-MM-DD)
+    // Ensurem that the date is in the correct format (YYYY-MM-DD)
     const formattedDate = new Date(value).toISOString().split('T')[0];
 
     setDateValues((prevValues) => ({
