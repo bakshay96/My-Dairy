@@ -3,6 +3,8 @@ const adminRouter = express.Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { AdminModel } = require("./admin.model");
+require("dotenv").config();
+
 
 //admin registration
 const adminRegistration= async (req, res) => {
@@ -64,7 +66,7 @@ const adminLogin= async (req, res) => {
     }
 
     // Generate a unique token upon successful login
-    const token = jwt.sign({ userId: admin._id }, "masai", { expiresIn: "3h" });
+    const token = jwt.sign({ userId: admin._id }, process.env.TOKEN_API_SECRET_KEY, { expiresIn: "3h" });
 
     // Respond with the generated token
     res.status(200).send({"msg":"Loign successfully done","token":token});

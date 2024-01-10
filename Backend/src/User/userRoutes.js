@@ -3,10 +3,10 @@ const { userRegistration, getAllUsers, getSingleUser, deleteUser } = require("./
 const { auth } = require("../middleware/auth");
 const UserRouter=express.Router();
 
-UserRouter.post("/register",userRegistration)
-UserRouter.get("/",getAllUsers);
-UserRouter.get('/:userId',getSingleUser);
-UserRouter.delete("/:mobile",deleteUser);
+UserRouter.post("/register",auth,userRegistration)
+UserRouter.get("/",auth,getAllUsers);
+UserRouter.get('/:userId',auth,getSingleUser);
+UserRouter.delete("/:mobile",auth,deleteUser);
 
 module.exports={
   UserRouter
