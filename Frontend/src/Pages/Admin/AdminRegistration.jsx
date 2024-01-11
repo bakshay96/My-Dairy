@@ -26,7 +26,7 @@ import {
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { GiCow, GiFarmer } from "react-icons/gi";
 import { useToast } from '@chakra-ui/react'
-import UpperNavbar from "../../Componets/UpperNavbar";
+import UpperNavbar from "../../Components/UpperNavbar";
 import { signup } from "../../Redux/AuthReducer/action";
 import {Link} from "react-router-dom";
 

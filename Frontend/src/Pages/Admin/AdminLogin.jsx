@@ -14,7 +14,7 @@ import {
     InputRightElement,
   } from '@chakra-ui/react';
 import { useToast } from '@chakra-ui/react'
-import UpperNavbar from '../../Componets/UpperNavbar';
+import UpperNavbar from '../../Components/UpperNavbar';
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate,Link} from "react-router-dom";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
