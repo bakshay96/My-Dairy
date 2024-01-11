@@ -46,7 +46,7 @@ import { NotFound } from "./NotFound";
 
 import MyContext from "./ContextApi/MyContext";
 import AdminRegistration from "./Admin/AdminRegistration";
-import MilkInfo  from "../Componets/MilkInfo";
+import MilkInfo  from "../Components/MilkInfo";
 import UserDashboard from "./User/UserTable/UserDashboard";
 import AddMilk from "./Milk/AddMilk";
 import MilkDashboard from "./Milk/MilkTable/MilkDashboard";
