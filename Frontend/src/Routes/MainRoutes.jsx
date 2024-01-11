@@ -6,7 +6,7 @@ import { NotFound } from "../Pages/NotFound";
 import UserRegistration from "../Pages/User/UserRegistration";
 
 import AdminRegistration from "../Pages/Admin/AdminRegistration";
-import  MilkInfo  from "../Componets/MilkInfo";
+import  MilkInfo  from "../Components/MilkInfo";
 import UserDashboard from "../Pages/User/UserTable/UserDashboard";
 import AdminLoginCard from "../Pages/Admin/AdminLogin";
 import Home from "../Pages/Home/Home";

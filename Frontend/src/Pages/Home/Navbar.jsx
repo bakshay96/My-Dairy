@@ -27,13 +27,17 @@ const Navbar = ({ isLoggedIn, onLoginToggle }) => {
             About
           </Link>
           {isLoggedIn ? (
+            <Link>
             <button className="text-white" onClick={onLoginToggle}>
               Logout
             </button>
+            </Link>
           ) : (
+            <Link to='/admin/signin'>
             <button className="text-white" onClick={onLoginToggle}>
               Login
             </button>
+            </Link>
           )}
         </div>
         {/* Mobile Menu Toggle Button */}
