@@ -3,29 +3,29 @@ import axios from "axios";
 
 import * as types from "./actionTypes";
 
-const signinRequestAction = () => {
+export const signinRequestAction = () => {
   return { type: types.USER_SIGNIN_REQUEST };
 };
 
-const signinSuccessAction = (payload) => {
+export const signinSuccessAction = (payload) => {
   return { type: types.USER_SIGNIN_SUCCESS, payload };
 };
 
-const signinFailureAction = () => {
+export const signinFailureAction = () => {
   return { type: types.USER_SIGNIN_FAILURE };
 };
 
 // SignUp
-const signupRequestAction = () => {
+export const signupRequestAction = () => {
   return { type: types.USER_SIGNUP_REQUEST };
 };
 
-const signupSuccessAction = (payload) => {
+export const signupSuccessAction = (payload) => {
   console.log(payload);
   return { type: types.USER_SIGNUP_SUCCESS, payload };
 };
 
-const signupFailureAction = () => {
+export const signupFailureAction = () => {
   // console.log(payload);
   return { type: types.USER_SIGNUP_FAILURE };
 };
@@ -40,14 +40,7 @@ export const signin = (payload) => async (dispatch) => {
   dispatch(signinRequestAction());
   return await axios
     .post(`http://localhost:8080/api/admin/login`, payload)
-    .then((res) => {
-      console.log("action", res);
-      dispatch(signinSuccessAction(res.data.token));
-    })
-    .catch((res) => {
-      console.log("action catch", res);
-      dispatch(signupFailureAction());
-    });
+    
 };
 
 //admin signup function

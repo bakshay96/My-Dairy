@@ -12,7 +12,7 @@ import AdminLoginCard from "../Pages/Admin/AdminLogin";
 
 import { Layout } from "../Pages/Layout/Layout";
 import About from "../Components/About/About";
-import Github from "../Components/Github/Github";
+
 import Contact from "../Components/Contact/Contact";
 import Home from "../Components/Home/Home";
 import User from "../Components/User/User";
@@ -23,11 +23,11 @@ export const MainRoutes = () => {
       <Routes>
         {/* Provide all routes here */}
         <Route path="/" element={<Layout />}>
-          <Route path="/" element={<Home />} />
+          <Route path="" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="user/:userid" element={<User />} />
-          <Route  path="/github" element={<Github />} />
+          
         </Route>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/add/user" element={<UserRegistration />} />

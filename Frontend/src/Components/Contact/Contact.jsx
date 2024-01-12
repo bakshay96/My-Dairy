@@ -16,11 +16,11 @@ export default function Contact() {
 
                             <div className="flex items-center mt-8 text-gray-600">
                                 <svg
-                                    fill="none"
+                                    fill-rule="none"
                                     stroke="currentColor"
-                                    stroke-linecap="round"
+                                    strokeLinecap="round"
                                     stroke-linejoin="round"
-                                    stroke-width="1.5"
+                                    strokeWidth="1.5"
                                     viewBox="0 0 24 24"
                                     className="w-8 h-8 text-gray-500"
                                 >

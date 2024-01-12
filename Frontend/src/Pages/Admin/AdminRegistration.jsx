@@ -328,7 +328,7 @@ useEffect(()=>{
                   <Text align={"center"}>
                     Already a user?{" "}
                     <Link to={"/admin/signin"} color={"blue.400"}>
-                    <span style={{"color":"teal"}}>Sign in</span>
+                    <span style={{"color":"blue"}}>Sign in</span>
                     </Link>
                   </Text>
                 </Stack>

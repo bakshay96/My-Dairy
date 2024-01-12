@@ -1,8 +1,17 @@
 import React from 'react'
+import {Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, useDisclosure} from "@nextui-org/react";
 import {Link, NavLink} from 'react-router-dom'
 import brandLogo from '../../assets/Logo/project-logo.svg'
+import { useSelector } from 'react-redux';
 
 export default function Header() {
+    const {isOpen, onOpen, onClose} = useDisclosure();
+    const [backdrop, setBackdrop] = React.useState('opaque')
+    const {token,isLoading,isError,isAuth}=useSelector((store)=>store.authReducer);
+    const handleOpen = (backdrop) => {
+        setBackdrop(backdrop)
+        onOpen();
+      }
     return (
         <header className="shadow sticky z-50 top-0" id='header'>
 
@@ -18,13 +27,15 @@ export default function Header() {
                     </Link>
                     <div className="flex items-center lg:order-2">
                         <Link
-                            to="#"
+                            to="/admin/signin"
+                            
                             className="text-gray-800 hover:bg-gray-50 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none"
                         >
-                            Log in
+                           {token? "Log in":"Logout" }
                         </Link>
                         <Link
-                            to="#"
+                            to="/admin/signup"
+                            onPress={() => handleOpen(b)}
                             className="text-white bg-orange-700 hover:bg-orange-800 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none"
                         >
                             Get started

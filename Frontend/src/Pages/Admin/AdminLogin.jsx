@@ -18,7 +18,8 @@ import UpperNavbar from '../../Components/UpperNavbar';
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate,Link} from "react-router-dom";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
-import { signin } from "../../Redux/AuthReducer/action";
+import { signin, signinFailureAction, signinSuccessAction, signupFailureAction } from "../../Redux/AuthReducer/action";
+import logo from "../../assets/Logo/project-logo.svg"
   export default function AdminLoginCard() {
     const [showPassword, setShowPassword] = useState(false);
     const [password, setPassord] = useState("");
@@ -29,7 +30,7 @@ import { signin } from "../../Redux/AuthReducer/action";
     const toast = useToast()
 
     const {token,isLoading,isError,isAuth}=useSelector((store)=>store.authReducer);
-    console.log("auth reducer","token","isLoading","isError","isAuth")
+    //console.log("auth reducer","token","isLoading","isError","isAuth")
     console.log("auth reducer",token,isLoading,isError,isAuth)
 
     const loginHandler =(e)=>{
@@ -49,9 +50,35 @@ import { signin } from "../../Redux/AuthReducer/action";
       }
       else
       {
+        
         let loginData={mobile,password};
-        console.log("login data",loginData);
+        //console.log("login data",loginData);
         dispatch(signin(loginData))
+        .then((res)=>{
+          console.log("res",res)
+          dispatch(signinSuccessAction(res.data.token))
+          toast({
+            title: `${res.status},${res.statusText}`,
+            description: `${res.data.msg}`,
+            position:"top",
+            status: 'success',
+            duration: 4000,
+            isClosable: true,
+          })
+        }).catch((error)=>
+        {
+          console.log("error",error)
+           dispatch(signinFailureAction())
+          toast({
+            title: `${error.response.status},${error.response.statusText} !`,
+            description:  `${error.response.data.error}`,
+            status: 'error',
+            duration: 5000,
+            position:"top",
+            isClosable: true,
+          })
+        })
+        
         
       }
     }
@@ -62,7 +89,7 @@ import { signin } from "../../Redux/AuthReducer/action";
       }
       else
       {
-        navigate("/")
+        navigate("/dashboard")
       }
     },[token])
     return (
@@ -75,7 +102,7 @@ import { signin } from "../../Redux/AuthReducer/action";
             <Heading fontSize={'2xl'}>Sign in to your account</Heading>
             <FormControl id="phone">
               <FormLabel>Phone number</FormLabel>
-              <Input type="tel" name="mobile" value={mobile} onChange={((e)=>setMobile(e.target.value))} placeholder="enter phone number" />
+              <Input type="tel" name="mobile" value={mobile} onChange={((e)=>setMobile(e.target.value))} placeholder="User mobile number" />
             </FormControl>
             <FormControl id="password" isRequired>
                   <FormLabel>Password</FormLabel>
@@ -83,6 +110,7 @@ import { signin } from "../../Redux/AuthReducer/action";
                     <Input
                       type={showPassword ? "text" : "password"}
                       name="password"
+                      placeholder="User password"
                       value={password}
                       onChange={((e)=>setPassord(e.target.value))}
                     />
@@ -113,23 +141,29 @@ import { signin } from "../../Redux/AuthReducer/action";
             </Stack>
             <Stack pt={6}>
               <Text align={'center'}>
-                Don't have a account? <Link to={"/admin/signup"}> <span style={{"color":"teal"}}>Sign up</span></Link>
+                Don't have a account? <Link to={"/admin/signup"}> <span  style={{"color":"blue",}}>Sign up</span></Link>
               </Text>
             </Stack>
           </Stack>
 
           </form>
         </Flex>
-        <Flex flex={1}>
+        <Flex flex={1} justifyContent={"space-around"} >
           <Image
             alt={'Login Image'}
+           
             objectFit={
               "initial"
             }
-            height={"auto"}
+          
+           
+           
+            borderRadius={"1rem"}
+           
             src={
-              'https://img.freepik.com/free-photo/close-up-view-bucket-milking-cows-animal-barn_1150-12778.jpg?size=626&ext=jpg&ga=GA1.1.597326940.1704283377&semt=ais'
+              'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSiHOmgxtkBlcny1wDyolFO895EBNWGnKUY_w&usqp=CAU'
             }
+           
           />
         </Flex>
       </Stack>
