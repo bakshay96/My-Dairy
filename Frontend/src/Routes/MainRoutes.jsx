@@ -16,6 +16,7 @@ import About from "../Components/About/About";
 import Contact from "../Components/Contact/Contact";
 import Home from "../Components/Home/Home";
 import User from "../Components/User/User";
+import PrivateRoute from "./PrivateRoute";
 
 export const MainRoutes = () => {
   return (
@@ -27,14 +28,21 @@ export const MainRoutes = () => {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="user/:userid" element={<User />} />
-          
+          <Route path="/admin/signup" element={<AdminRegistration />} />
+          <Route path="/admin/signin" element={<AdminLoginCard />} />
         </Route>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/add/user" element={<UserRegistration />} />
-        <Route path="/admin/signup" element={<AdminRegistration />} />
-        <Route path="/admin/signin" element={<AdminLoginCard />} />
-        <Route path="/milk_info" element={<MilkInfo />} />
-        <Route path="/user_dashboard" element={<UserDashboard />} />
+
+        <Route path="/dashboard" element={
+          <PrivateRoute>
+            <Dashboard />
+
+          </PrivateRoute>
+        }>
+          
+          <Route path="dashboard/add/user" element={<UserRegistration />} />
+          <Route path="dashboard/milk_info" element={<MilkInfo />} />
+          <Route path="dashboard/user_dashboard" element={<UserDashboard />} />
+        </Route>
 
         <Route path="*" element={<NotFound />} />
       </Routes>

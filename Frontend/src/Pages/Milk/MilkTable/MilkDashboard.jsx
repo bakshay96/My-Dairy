@@ -404,7 +404,7 @@ export default function MilkDashboard() {
           <span className="text-default-400 text-small">
             Total {users.length} Entries
           </span>
-          {isLoading ? (
+          {!usersData.users ? (
             <Progress
               size="sm"
               isIndeterminate

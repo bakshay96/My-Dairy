@@ -130,10 +130,10 @@ export default function UserRegistration({ onClose }) {
         mobile: "",
         email: "",
       });
+      navigate("/dashboard");
     }
     dispatch(addUserSuccessAction(false));
     
-    navigate("/");
   }, [usersData]);
   return (
     <Flex
