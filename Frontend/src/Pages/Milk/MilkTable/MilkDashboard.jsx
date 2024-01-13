@@ -49,13 +49,14 @@ const INITIAL_VISIBLE_COLUMNS = [
 
 export default function MilkDashboard() {
   const { data } = useSelector((store) => store.milkReducer);
+  const {token,isAuth}=useSelector((store)=>store.authReducer);
   const { usersData, isLoading, isError } = useSelector(
     (store) => store.farmerReducer
   );
   const dispatch = useDispatch();
   //console.log("milkdash", data);
   const users = data.data || [];
-  //console.log("milk data", data, usersData);
+ // console.log("milk data", data,"users data", usersData);
   const [filterValue, setFilterValue] = React.useState("");
   
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
@@ -95,7 +96,7 @@ export default function MilkDashboard() {
   const handleSelectFarmer = (e) => {
     //console.log("handle select", e.target.value, e.target.name);
     const paylaod = e.target.value;
-    dispatch(getMilkDetails(e.target.value));
+    dispatch(getMilkDetails({value:paylaod,token}));
 
     findName(e.target.value, filteredItems);
     
@@ -149,7 +150,7 @@ export default function MilkDashboard() {
       
       if(dateValues.startDate !=="" && dateValues.endDate !=="" && createdDateObj >=startDateObj && createdDateObj<= endDateObj)
       {
-        console.log("pass")
+       // console.log("pass")
         return item;
 
       }
@@ -403,7 +404,7 @@ export default function MilkDashboard() {
           <span className="text-default-400 text-small">
             Total {users.length} Entries
           </span>
-          {!usersData.users.length ? (
+          {isLoading ? (
             <Progress
               size="sm"
               isIndeterminate

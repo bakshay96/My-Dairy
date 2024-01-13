@@ -42,7 +42,7 @@ export default function UserRegistration({ onClose }) {
     mobile: "",
     email: "",
   });
-
+  const {token,isAuth}=useSelector((store)=>store.authReducer);
   const { isLoading, isError, usersData, response ,isUserAdded} = useSelector(
     (store) => store.farmerReducer
   );
@@ -94,13 +94,13 @@ export default function UserRegistration({ onClose }) {
 
       let farmerData = { ...formData, name };
       console.log("Farmer", farmerData);
-      dispatch(addFarmer(farmerData))
+      dispatch(addFarmer({value:farmerData,token}))
         .then((res) => {
           console.log("action", res);
           dispatch(addUserSuccessAction(true));
         }).then(()=>{
           
-          dispatch(getFarmersDetails());
+          dispatch(getFarmersDetails({token}));
         })
         .catch((res) => {
           console.log("action catch", res);

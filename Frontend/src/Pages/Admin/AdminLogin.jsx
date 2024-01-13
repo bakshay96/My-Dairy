@@ -56,6 +56,7 @@ import logo from "../../assets/Logo/project-logo.svg"
         dispatch(signin(loginData))
         .then((res)=>{
           console.log("res",res)
+          localStorage.setItem("token",res.data.token)
           dispatch(signinSuccessAction(res.data.token))
           toast({
             title: `${res.status},${res.statusText}`,

@@ -30,13 +30,20 @@ export const signupFailureAction = () => {
   return { type: types.USER_SIGNUP_FAILURE };
 };
 
+
+//SignOut
+export const logoutSuccessAction = () => {
+  // console.log(payload);
+  return { type: types.USER_LOGOUT_SUCCESS, };
+};
+
 //=============Functions currying js ==========================================================================
 const url = "https://milkify.cyclic.app/api";
 const url2 = "https://dudhsankalan-ab.onrender.com/api";
 
 // admin signin function
 export const signin = (payload) => async (dispatch) => {
-  console.log("action payload", payload);
+ // console.log("action payload", payload);
   dispatch(signinRequestAction());
   return await axios
     .post(`http://localhost:8080/api/admin/login`, payload)
@@ -45,13 +52,13 @@ export const signin = (payload) => async (dispatch) => {
 
 //admin signup function
 export const signup = (payload) => async (dispatch) => {
-  console.log("action", payload);
+  //console.log("action", payload);
   dispatch(signupRequestAction());
   try {
     return await axios
       .post(`http://localhost:8080/api/admin/register`, payload)
       .then((res) => {
-        console.log("action", res);
+       // console.log("action", res);
         dispatch(signupSuccessAction(true));
       })
       .catch((res) => {

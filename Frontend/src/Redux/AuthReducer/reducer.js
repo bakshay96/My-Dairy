@@ -1,8 +1,8 @@
 import * as types from "./actionTypes";
 // NOTE: DO NOT MODIFY the intial state structure in this file.
-const initialState = {
+export const initialState = {
   isAuth: false,
-  token: "",
+  token: localStorage.getItem("token") || "",
   isLoading: false,
   isError: false,
   signupStatus:false,
@@ -33,6 +33,9 @@ export const reducer = (state = initialState, action) => {
     
     case types.USER_SIGNUP_FAILURE:
       return {...state, isError:true, isLoading:false,}
+
+    case types.USER_LOGOUT_SUCCESS:
+      return {...state, isAuth:false, token:""}
     
     default:
       return state;

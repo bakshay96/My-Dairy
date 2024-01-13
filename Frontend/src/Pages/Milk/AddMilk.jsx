@@ -46,6 +46,7 @@ export default function AddMilk() {
   });
   const dispatch = useDispatch();
   const { usersData } = useSelector((store) => store.farmerReducer);
+  const {token,isAuth}=useSelector((store)=>store.authReducer);
   const {isMilkAdded,isLoading,isError,response} =useSelector((store)=>store.milkReducer);
 
   // console.log("Milk data users", usersData);
@@ -78,7 +79,7 @@ export default function AddMilk() {
     e.preventDefault();
    // console.log("handleMilkSubmit",formMilkData);
     const mobile=Number(formMilkData.mobile);
-    dispatch(addMilk(formMilkData)).then((res)=>{
+    dispatch(addMilk({value:formMilkData,token})).then((res)=>{
       console.log("res add milk",res);
      
       if(res.status==201)
@@ -106,7 +107,7 @@ export default function AddMilk() {
   };
 
   useEffect(() => {
-    dispatch(getFarmersDetails());
+    dispatch(getFarmersDetails({token}));
     if(isMilkAdded)
     {
       dispatch(addMilkSuccessAction({status:false,response:"initial"}))

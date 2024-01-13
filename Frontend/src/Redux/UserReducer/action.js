@@ -2,6 +2,7 @@
 import axios from "axios";
 import * as types from "./actionTypes" ;
 
+
 export const addUserRequestAction = () => {
   return { type: types.FARMER_USER_REQUEST };
 };
@@ -37,12 +38,16 @@ const url2 = "https://dudhsankalan-ab.onrender.com/api";
 
 
 //add farmer function
-export const addFarmer = (payload) => async (dispatch) => {
+export const addFarmer = ({value,token}) => async (dispatch) => {
   //console.log("action", payload);
   dispatch(addUserRequestAction());
   try {
     return  await axios
-      .post(`http://localhost:8080/api/user/register`, payload)
+      .post(`http://localhost:8080/api/user/register`,value,{
+        headers: {
+          'Authorization': token
+        }
+      })
       
   } catch (error) {
     dispatch(addUserFailureAction(error.message));
@@ -51,17 +56,23 @@ export const addFarmer = (payload) => async (dispatch) => {
 
 //get All Farmer details
 
-export const getFarmersDetails = (payload) => async (dispatch) => {
-  console.log("farmer details action", payload);
+export const getFarmersDetails = ({token}) => async (dispatch) => {
+  //console.log("farmer details action", token);
   dispatch(getUserRequestAction());
   try {
       await axios 
-    .get(`http://localhost:8080/api/user/`)
+    .get(`http://localhost:8080/api/user/`,
+    {
+      headers: {
+        'Authorization':`Bearer ${token}`
+      }
+    })
     .then((res)=>{
+
       dispatch(getUserSuccessAction(res.data));
-      console.log("action user detials",res.data);
+     // console.log("action user detials",res.data);
     }).catch((error)=>{
-      console.log("error",error)
+      //console.log("error",error)
       dispatch(getUserFailureAction());
     })
       
@@ -70,4 +81,3 @@ export const getFarmersDetails = (payload) => async (dispatch) => {
   }
 };
 
-getFarmersDetails();

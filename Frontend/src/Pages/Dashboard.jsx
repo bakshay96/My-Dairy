@@ -1,4 +1,4 @@
-import React, {  useContext,  } from "react";
+import React, {  useContext, useEffect,  } from "react";
 import {
   IconButton,
   Avatar,
@@ -39,17 +39,17 @@ import {
 } from "react-icons/fi";
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 import { FaAddressBook,FaRegAddressCard } from "react-icons/fa";
-
-
 import UserRegistration from "./User/UserRegistration";
 import { NotFound } from "./NotFound";
-
 import MyContext from "./ContextApi/MyContext";
 import AdminRegistration from "./Admin/AdminRegistration";
 import MilkInfo  from "../Components/MilkInfo";
 import UserDashboard from "./User/UserTable/UserDashboard";
 import AddMilk from "./Milk/AddMilk";
 import MilkDashboard from "./Milk/MilkTable/MilkDashboard";
+import { useDispatch, useSelector } from "react-redux";
+import { getFarmersDetails } from "../Redux/userReducer/action";
+import { useNavigate } from "react-router-dom";
 
 
 
@@ -65,9 +65,18 @@ const LinkItems = [
 export default function Dashboard({ children }) {
  
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const {token,isAuth}=useSelector((store)=>store.authReducer);
+  
   const {globalState, setGlobalState} = useContext(MyContext);
   const {active}=globalState;
+  const dispatch=useDispatch();
+  const naviate=useNavigate();
 // console.log("contact",globalState,active)
+useEffect(()=>{
+ 
+    dispatch(getFarmersDetails({token}))
+  
+},[])
   return (
     <>
     <Box minH="100vh" bg={useColorModeValue("gray.100", "gray.900")} border={"5px solid red"}>
@@ -114,6 +123,7 @@ const SidebarContent = ({ onClose, ...rest }) => {
   //const {globalState, setGlobalState} = useContext(MyContext);
     
   //console.log("contet",globalState)
+  const navigate=useNavigate();
  
   return (
     <>
@@ -129,7 +139,7 @@ const SidebarContent = ({ onClose, ...rest }) => {
     >
       <Flex h="20" alignItems="center" mx="8" justifyContent="space-between">
         <Text fontSize="2xl" fontFamily="monospace" fontWeight="bold">
-          <Link to="/" fontSize={"1rem"}><Image w="4rem" borderRadius={"2rem"} alt="Bolo Forms" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJU0J5A2bvyrbWwUo2-Gy0NlB2Vpv7mUXmAkbuk4t-d0RnEvbH72osa0p1wsTZlnm86io&usqp=CAU" /></Link>
+          <Link to="/" fontSize={"1rem"}><Image onClick={()=>navigate("/")} w="4rem" borderRadius={"2rem"} alt="logo" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJU0J5A2bvyrbWwUo2-Gy0NlB2Vpv7mUXmAkbuk4t-d0RnEvbH72osa0p1wsTZlnm86io&usqp=CAU" /></Link>
         </Text>
         <CloseButton display={{ base: "flex", md: "none" }} onClick={onClose} />
       </Flex>
@@ -194,6 +204,12 @@ const {globalState, setGlobalState} = useContext(MyContext);
 
 const MobileNav = ({ onOpen, onClose, ...rest }) => {
   const { colorMode, toggleColorMode } = useColorMode();
+  const token=localStorage.getItem("token");
+  const handleAuth =()=>{
+    localStorage.setItem("token","");
+    console.log("dash auth",token)
+
+  }
   
   return (
     <Flex
@@ -274,7 +290,7 @@ const MobileNav = ({ onOpen, onClose, ...rest }) => {
               <MenuItem>Settings</MenuItem>
               <MenuItem>Billing</MenuItem>
               <MenuDivider />
-              <MenuItem>Sign out</MenuItem>
+              <MenuItem onClick={()=>handleAuth()}>{token!=="" && "Sign out"}</MenuItem>
             </MenuList>
           </Menu>
         </Flex>

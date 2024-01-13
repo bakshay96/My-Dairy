@@ -46,6 +46,7 @@ const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
 
 export default function UserDashboard() {
   const { usersData, isLoading, isError } = useSelector((store) => store.farmerReducer);
+  const {token,isAuth}=useSelector((store)=>store.authReducer);
   const dispatch = useDispatch();
 
   console.log("user data Dashboard", usersData.users, isLoading, isError);
@@ -357,7 +358,7 @@ export default function UserDashboard() {
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
   const getdata = () => {
-    dispatch(getFarmersDetails());
+    dispatch(getFarmersDetails({token}));
    
   };
 
