@@ -6,6 +6,7 @@ export const initialState = {
   isLoading: false,
   isError: false,
   signupStatus:false,
+  adminName:""
 };
 
 export const reducer = (state = initialState, action) => {

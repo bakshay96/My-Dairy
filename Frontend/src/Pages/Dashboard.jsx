@@ -50,6 +50,7 @@ import MilkDashboard from "./Milk/MilkTable/MilkDashboard";
 import { useDispatch, useSelector } from "react-redux";
 import { getFarmersDetails } from "../Redux/userReducer/action";
 import { useNavigate } from "react-router-dom";
+import { logoutSuccessAction } from "../Redux/AuthReducer/action";
 
 
 
@@ -204,13 +205,19 @@ const {globalState, setGlobalState} = useContext(MyContext);
 
 const MobileNav = ({ onOpen, onClose, ...rest }) => {
   const { colorMode, toggleColorMode } = useColorMode();
-  const token=localStorage.getItem("token");
+  
+  const {token}=useSelector((store)=>store.authReducer)
+  const dispatch=useDispatch();
   const handleAuth =()=>{
     localStorage.setItem("token","");
+    dispatch(logoutSuccessAction());
+  
     console.log("dash auth",token)
 
   }
-  
+  useEffect(()=>{
+
+  },[token])
   return (
     <Flex
       ml={{ base: 0, md: 60 }}
