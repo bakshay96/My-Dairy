@@ -64,7 +64,7 @@ export default function MilkDashboard() {
     new Set(INITIAL_VISIBLE_COLUMNS)
   );
   const [statusFilter, setStatusFilter] = React.useState("all");
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [rowsPerPage, setRowsPerPage] = React.useState(20);
   const [sortDescriptor, setSortDescriptor] = React.useState({
     column: "age",
     direction: "ascending",
@@ -161,6 +161,7 @@ export default function MilkDashboard() {
     const end = start + rowsPerPage;
     return filteredItems.slice(start, end);
   }, [page, filteredItems, rowsPerPage]);
+
 
   const sortedItems = React.useMemo(() => {
     return [...items]
@@ -293,11 +294,12 @@ export default function MilkDashboard() {
   const onClear = React.useCallback(() => {
     setFilterValue("");
     setPage(1);
+    getMilkStats=[{ fat: 0, snf: 0, degree: 0, water: 0, totalLitters: 0 }]
   }, []);
 
   const topContent = React.useMemo(() => {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 ">
         <div className="flex justify-between gap-3 items-end">
           {/* <Input
             isClearable
@@ -338,7 +340,7 @@ export default function MilkDashboard() {
             />
           </div>
           <div className="flex gap-3">
-            <Dropdown>
+            {/* <Dropdown>
               <DropdownTrigger className="hidden sm:flex">
                 <Button
                   endContent={<ChevronDownIcon className="text-small" />}
@@ -361,7 +363,7 @@ export default function MilkDashboard() {
                   </DropdownItem>
                 ))}
               </DropdownMenu>
-            </Dropdown>
+            </Dropdown> */}
             <Dropdown>
               <DropdownTrigger className="hidden sm:flex">
                 <Button
@@ -426,7 +428,7 @@ export default function MilkDashboard() {
           )}
 
           <label className="flex items-center text-default-400 text-small">
-            Rows per page:
+            {/* Rows per page:
             <select
               className="bg-transparent outline-none text-default-400 text-small"
               onChange={() => onRowsPerPageChange}
@@ -435,7 +437,7 @@ export default function MilkDashboard() {
               <option value="10">10</option>
               <option value="15">15</option>
               <option value="15">20</option>
-            </select>
+            </select> */}
           </label>
         </div>
       </div>
@@ -449,6 +451,7 @@ export default function MilkDashboard() {
     onSearchChange,
     hasSearchFilter,
     dateValues,
+    
   ]);
 
   const bottomContent = React.useMemo(() => {
