@@ -32,7 +32,6 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 - Redux
 - ExpressJs
 - MongoDB
-- Next UI
 - Chakra-UI
 - NodeJs
 - HTML5
@@ -43,14 +42,12 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 ## Features
 - Homepage - The Landing Page
 - Login/Signup Page 
-- Jwt(tokens)
+- Jwt(tokens) for Authentication
 - Admin user Dashboard
 - Add Farmer
-- Daily milk Dashboard
-- users date/time wise records
+- Daily milk stats Dashboard
+- filter farmer data by date & time
 - total count by range
-- Sort products by prices and ratings
-- Filter user data by time and date
 - sorting
 - Pagination
   
