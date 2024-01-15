@@ -6,7 +6,7 @@ const token=req.headers.authorization;
 //console.log("token",token,req.headers)
 if(token !==""){
     try{
-        console.log("if token",token)
+        //console.log("if token",token)
         const decoded= jwt.verify(token.split(" ")[1],process.env.TOKEN_API_SECRET_KEY);
         if(decoded){
             next();
