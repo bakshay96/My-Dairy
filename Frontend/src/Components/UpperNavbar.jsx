@@ -60,14 +60,14 @@ export default function UpperNavbar() {
                   cursor={"pointer"}
                   minW={0}
                 >
-                  <Avatar
+                  {/* <Avatar
                     size={"sm"}
                     src={
                       "https://web.archive.org/web/20230521174951/https://avatars.dicebear.com/api/male/username.svg"
                     }
-                  />
+                  /> */}
                 </MenuButton>
-                <MenuList alignItems={"center"}>
+                {/* <MenuList alignItems={"center"}>
                   <br />
                   <Center>
                     <Avatar
@@ -86,7 +86,7 @@ export default function UpperNavbar() {
                   <MenuItem>Your Servers</MenuItem>
                   <MenuItem>Account Settings</MenuItem>
                   <MenuItem>Logout</MenuItem>
-                </MenuList>
+                </MenuList> */}
               </Menu>
             </Stack>
           </Flex>
