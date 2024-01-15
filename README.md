@@ -1,5 +1,6 @@
-# <h1>Milkify</h1>
-
+# <h1>Milkify</h1> 
+<a href="https://ibb.co/NFTsWkg"><img align="center" width="10%" src="https://i.ibb.co/3TR7S85/milkify-high-resolution-logo-transparent.png" alt="milkify-high-resolution-logo-transparent" border="0" /></a>
+<h2 align="center">🖥️ Tech Stack</h2>
  
 <h3>This is an Individual project.</h3>
 
@@ -53,9 +54,37 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 - sorting
 - Pagination
   
-## product screens
+## Screen tour of Bewakoof-Clone 🙈 :
 
-  <h4>Service Page</h4>
+
+
+
+<table>
+  <tr>
+    <td><img src="https://i.ibb.co/FDBxbh3/Capture1.png"  alt="home" /></td>
+    <td><img src="https://i.ibb.co/HPWYSFD/Capture2.png"  alt="coupons" /></td>
+  </tr>
+  <tr>
+   
+  </tr>
+  <tr>
+   
+   
+  </tr>
+  <tr>
+  
+  </tr>
+   <tr>
+  
+  </tr>
+  <tr>
+   
+  </tr>
+
+</table>
+
+<br />
+
 
 ## Setting Up Project in local
 
@@ -69,7 +98,7 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 
 #### 2) Starting frontend on localhost
 
-(make sure you are confirming URL of server)
+(make sure you are confirming the URL of the server)
 
     npm dev /*or*/ npm run dev
 
@@ -103,7 +132,29 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 
     if MONGODB_URL is not declared in .env, by default it will connect to the local database
 
-    in case not working try changing MONGODB_URL by creating your own in MongoDB Atlas server
-  
-<h2>Author</h2>
-  <li><a href="https://github.com/bakshay96">@Akshay Bombatkar</a></li>
+    in case not working try changing MONGODB_URL by creating your own in the MongoDB Atlas server
+
+
+  ### Tools used on this project
+
+- Visual Studio Code
+- Vite-JS template
+
+<br />
+
+  ## Contact
+
+If you want to contact me, you can reach me through the below handles. <br />
+
+
+[![linkedin](https://img.shields.io/badge/Akshay_Bombatkar-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](www.linkedin.com/in/akshayb-profile)
+[![GitHub](https://img.shields.io/badge/Akshay_Bombatkar-20232A?style=for-the-badge&logo=Github&logoColor=white)](https://github.com/bakshay96)
+
+
+
+© 2023 Akshay Bombatkar
+
+## Show your support
+
+Give a ⭐️ if you like this project!
+
