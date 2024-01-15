@@ -79,7 +79,7 @@ export default function UserRegistration({ onClose }) {
         title: `401 Field Error..!`,
         description: "Please fill all required fields.",
         status: "warning",
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     } else if (
@@ -150,9 +150,7 @@ export default function UserRegistration({ onClose }) {
               <GiCow />
             </Box>
           </Heading>
-          <Text fontSize={"lg"} color={"gray.600"}>
-            to enjoy all of our cool features ✌️
-          </Text>
+          
         </Stack>
         <Box
           rounded={"lg"}

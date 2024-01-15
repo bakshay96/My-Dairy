@@ -17,7 +17,6 @@ import {
   Pagination,
   Progress,
   Spacer,
-  
 } from "@nextui-org/react";
 import { PlusIcon } from "../../User/UserTable/PlusIcon";
 import { VerticalDotsIcon } from "../../User/UserTable/VerticalDotsIcon";
@@ -48,59 +47,85 @@ const INITIAL_VISIBLE_COLUMNS = [
 ];
 
 export default function MilkDashboard() {
-  const { data } = useSelector((store) => store.milkReducer);
-  const {token,isAuth}=useSelector((store)=>store.authReducer);
-  const { usersData, isLoading, isError } = useSelector(
-    (store) => store.farmerReducer
-  );
+  // store data
+  const { data, isLoading } = useSelector((store) => store.milkReducer);
+  const { token,  } = useSelector((store) => store.authReducer);
+  const { usersData } = useSelector((store) => store.farmerReducer);
+
   const dispatch = useDispatch();
-  //console.log("milkdash", data);
   const users = data.data || [];
- // console.log("milk data", data,"users data", usersData);
+  //console.log("milkdash", data);
+  // console.log("milk data", data,"users data", usersData);
+
+  //  variabales
   const [filterValue, setFilterValue] = React.useState("");
-  
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
   const [visibleColumns, setVisibleColumns] = React.useState(
     new Set(INITIAL_VISIBLE_COLUMNS)
   );
   const [statusFilter, setStatusFilter] = React.useState("all");
-  const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const [sortDescriptor, setSortDescriptor] = React.useState({
     column: "age",
     direction: "ascending",
   });
   const [dateValues, setDateValues] = useState({
-    startDate: '',
-    endDate: '',
+    startDate: "",
+    endDate: "",
   });
- // console.log("date values",dateValues)
   const [minDate, setMinDate] = useState(""); // Set initial min date
   const [maxDate, setMaxDate] = useState(""); // Set initial max date
   const [page, setPage] = React.useState(1);
-  const [milkStats, setMilkStats] = React.useState({
-    fat: 0,
-    snf: 0,
-    degree: 0,
-    water: 0,
-    totalLitters: 0,
-    totalEntries: 0,
-    startDate: undefined,
-    endDate: undefined,
-  });
-  //console.log("milks stats", milkStats);
-
+  const [milkStats, setMilkStats] = React.useState([
+    {
+      fat: 0,
+      snf: 0,
+      degree: 0,
+      water: 0,
+      totalLitters: 0,
+      totalEntries: 0,
+    },
+  ]);
   const [statUserName, setStatUserName] = React.useState("data not available");
+  //console.log("milks stats", milkStats);
+  // console.log("date values",dateValues)
   //console.log("milkstats", milkStats);
   const hasSearchFilter = Boolean(filterValue);
 
   const handleSelectFarmer = (e) => {
-    //console.log("handle select", e.target.value, e.target.name);
+    console.log("handle select", e.target.value, e.target.name, e);
+
     const paylaod = e.target.value;
-    dispatch(getMilkDetails({value:paylaod,token}));
+
+    dispatch(getMilkDetails({ value: paylaod, token }));
 
     findName(e.target.value, filteredItems);
-    
   };
+
+  const findName = (value, filteredItems) => {
+    let x = usersData.users.forEach((user) => {
+      if (user.mobile == value) {
+        setStatUserName(user.name);
+      }
+    });
+  };
+
+  const handleDateChange = (event, dateType) => {
+    console.log(event);
+    event.stopPropagation();
+
+    const { value } = event.target;
+
+    // Ensurem that the date is in the correct format (YYYY-MM-DD)
+    const formattedDate = new Date(value).toISOString().split("T")[0];
+
+    setDateValues((prevValues) => ({
+      ...prevValues,
+      [dateType]: formattedDate,
+    }));
+    console.log("date values", dateValues);
+  };
+
   const headerColumns = React.useMemo(() => {
     if (visibleColumns === "all") return columns;
 
@@ -129,86 +154,52 @@ export default function MilkDashboard() {
     return filteredUsers;
   }, [users, filterValue, statusFilter]);
 
-  
-  const findName = (value, filteredItems) => {
-    let x = usersData.users.forEach((user) => {
-      if (user.mobile == value) {
-        setStatUserName(user.name);
-      }
-    });
-  };
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
   const items = React.useMemo(() => {
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage;
-    return filteredItems.slice(start, end).filter((item)=>{
-      const createdDate=new Date(item.createdAt).toISOString().split('T')[0];
-      const createdDateObj= new Date(createdDate);
-      const startDateObj=new Date(dateValues.startDate)
-      const endDateObj=new Date(dateValues.endDate)
-      
-      if(dateValues.startDate !=="" && dateValues.endDate !=="" && createdDateObj >=startDateObj && createdDateObj<= endDateObj)
-      {
-       // console.log("pass")
-        return item;
-
-      }
-      else if(dateValues.startDate =="" || dateValues.endDate =="")
-      {
-        return item;
-      }
-    });
-  }, [page, filteredItems, rowsPerPage,dateValues]);
+    return filteredItems.slice(start, end);
+  }, [page, filteredItems, rowsPerPage]);
 
   const sortedItems = React.useMemo(() => {
-    return [...items].sort((a, b) => {
-      const first = a[sortDescriptor.column];
-      const second = b[sortDescriptor.column];
-      const cmp = first < second ? -1 : first > second ? 1 : 0;
+    return [...items]
+      .sort((a, b) => {
+        const first = a[sortDescriptor.column];
+        const second = b[sortDescriptor.column];
+        const cmp = first < second ? -1 : first > second ? 1 : 0;
 
-      return sortDescriptor.direction === "descending" ? -cmp : cmp;
-    });
-  }, [sortDescriptor, items]);
+        return sortDescriptor.direction === "descending" ? -cmp : cmp;
+      })
+      .filter((item) => {
+        const createdDate = new Date(item.createdAt)
+          .toISOString()
+          .split("T")[0];
+        const createdDateObj = new Date(createdDate);
+        const startDateObj = new Date(dateValues.startDate);
+        const endDateObj = new Date(dateValues.endDate);
 
-  const handleDateChange = (event, dateType) => {
-    const { value } = event.target;
-    
-    // Ensurem that the date is in the correct format (YYYY-MM-DD)
-    const formattedDate = new Date(value).toISOString().split('T')[0];
-
-    setDateValues((prevValues) => ({
-      ...prevValues,
-      [dateType]: formattedDate,
-    }));
-    //console.log("date values",dateValues)
-  };
-  
-  // const filterByDate=React.useMemo(()=>{
-  //  return  [... items].filter((item)=>{
-  //     const createdDate=new Date(item.createdAt).toISOString().split('T')[0];
-  //     const createdDateObj= new Date(createdDate);
-      
-      
-  //     if(dateValues.startDate !=="" && dateValues.endDate !=="" && createdDateObj >=new Date(dateValues.startDate) && createdDateObj<=new Date(dateValues.endDate))
-  //     {
-  //       console.log("pass")
-  //       return item;
-
-  //     }
-  //     // console.log("filter by item", dateValues.startDate,item.createdAt)
-  //     // console.log("change db date",dateValues.startDate,new Date(item.createdAt).toISOString().split('T')[0])
-  //   })
-  //   console.log("filter by date",filterData,filteredItems);
-    
-  // },[dateValues,statUserName,users])
+        if (
+          dateValues.startDate !== "" &&
+          dateValues.endDate !== "" &&
+          createdDateObj >= startDateObj &&
+          createdDateObj <= endDateObj
+        ) {
+          // console.log("pass")
+          return item;
+        } else if (dateValues.startDate == "" || dateValues.endDate == "") {
+          return item;
+        }
+      });
+  }, [sortDescriptor, items, dateValues]);
+  console.log("sorted item", sortedItems);
 
   const datePiker = React.useMemo(() => {
     const currentDate = new Date();
     //setup min and max date
     // Subtract 15 days
-    const twentyDaysAgo= new Date(currentDate);
-     twentyDaysAgo.setDate(currentDate.getDate() - 20);
+    const twentyDaysAgo = new Date(currentDate);
+    twentyDaysAgo.setDate(currentDate.getDate() - 20);
     setMinDate(new Date(twentyDaysAgo).toISOString().split("T")[0]);
     setMaxDate(new Date(currentDate).toISOString().split("T")[0]);
     // Now, fifteenDaysAgo holds the date 15 days ago from the current date
@@ -216,7 +207,6 @@ export default function MilkDashboard() {
     //console.log("max date",maxDate,"min date",minDate)
   }, []);
 
- 
   const renderCell = React.useCallback((user, columnKey) => {
     const cellValue = user[columnKey];
 
@@ -286,6 +276,7 @@ export default function MilkDashboard() {
   }, [page]);
 
   const onRowsPerPageChange = React.useCallback((e) => {
+    consoe.log("row per page", e);
     setRowsPerPage(Number(e.target.value));
     setPage(1);
   }, []);
@@ -326,7 +317,7 @@ export default function MilkDashboard() {
               max={new Date().toISOString().split("T")[0]}
               type="date"
               value={dateValues.startDate}
-              onChange={(e) => handleDateChange(e, 'startDate')}
+              onChange={(e) => handleDateChange(e, "startDate")}
               className="max-w-22"
               label="Select start date"
               placeholder="Select start Date"
@@ -339,14 +330,12 @@ export default function MilkDashboard() {
               max={new Date().toISOString().split("T")[0]}
               type="date"
               value={dateValues.endDate}
-              onChange={(e) => handleDateChange(e, 'endDate')}
+              onChange={(e) => handleDateChange(e, "endDate")}
               className="max-w-22"
               label="Select end date"
-              classNames={"bg-red-50"}
               placeholder="Select end Date"
               labelPlacement="outside"
             />
-            
           </div>
           <div className="flex gap-3">
             <Dropdown>
@@ -402,9 +391,9 @@ export default function MilkDashboard() {
         </div>
         <div className="flex justify-between gap-1.5 items-center mt-2  p-2">
           <span className="text-default-400 text-small">
-            Total {users.length} Entries
+            Total {sortedItems.length} Entries
           </span>
-          {!usersData.users ? (
+          {usersData == [] ? (
             <Progress
               size="sm"
               isIndeterminate
@@ -445,7 +434,6 @@ export default function MilkDashboard() {
               <option value="5">5</option>
               <option value="10">10</option>
               <option value="15">15</option>
-              <option value="15">18</option>
               <option value="15">20</option>
             </select>
           </label>
@@ -460,6 +448,7 @@ export default function MilkDashboard() {
     users.length,
     onSearchChange,
     hasSearchFilter,
+    dateValues,
   ]);
 
   const bottomContent = React.useMemo(() => {
@@ -484,7 +473,7 @@ export default function MilkDashboard() {
             isDisabled={pages === 1}
             size="sm"
             variant="flat"
-            onPress={onPreviousPage}
+            onClick={onPreviousPage}
           >
             Previous
           </Button>
@@ -492,7 +481,7 @@ export default function MilkDashboard() {
             isDisabled={pages === 1}
             size="sm"
             variant="flat"
-            onPress={onNextPage}
+            onClick={onNextPage}
           >
             Next
           </Button>
@@ -502,26 +491,21 @@ export default function MilkDashboard() {
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
   const getMilkStats = React.useMemo(() => {
+    let stats = [...sortedItems];
     let [totalFat, totalSnf, totalWater, totalDegree, totalLitters] = [
       0, 0, 0, 0, 0,
     ];
-    const tItems = filteredItems.length;
-    if (filteredItems.length > 0 && data.data.length > 0) {
-      filteredItems.forEach((item) => {
+    const tItems = stats.length;
+    //console.log("sort item milk stats", stats);
+    if (stats != []) {
+      stats.forEach((item) => {
         totalFat += item.fat;
         totalSnf += item.snf;
         totalDegree += item.degree;
         totalWater += item.water;
         totalLitters += item.litter;
       });
-      //console.log(
-      //   "milkStatsResults",
-      //   totalFat,
-      //   totalSnf,
-      //   totalLitters,
-      //   totalWater,
-      //   totalDegree
-      // );
+      
       let totalStats = {
         fat: roundUpToDecimalPlaces(totalFat / tItems, 2),
         snf: roundUpToDecimalPlaces(totalSnf / tItems, 2),
@@ -530,34 +514,32 @@ export default function MilkDashboard() {
         totalLitters: roundUpToDecimalPlaces(totalLitters, 3),
         totalEntries: tItems,
       };
-
-      setMilkStats(totalStats);
+      return [totalStats]
+      
     } else {
-      //console.log("else block");
-      setMilkStats({ fat: 0, snf: 0, degree: 0, water: 0, totalLitters: 0 })
+      
+      return [{ fat: 0, snf: 0, degree: 0, water: 0, totalLitters: 0 }]
+      
     }
-    // let avgFat=totalFat/tItems;
-    // let avgSnf=totalSnf/tItems;
-    // let avgDegree=totalDegree/tItems;
-    // let avgWater=totalWater/tItems;
-    // setMilkStats({"fat":avgFat,
-    // "snf":avgSnf,
-    // "degree":avgDegree,
-    // "water":avgWater,
-    // "litters":totalLitters})
-    return milkStats;
-  }, [data, statUserName]);
+    
 
-  function roundUpToDecimalPlaces(number, decimalPlaces) {
-    const multiplier = Math.pow(10, decimalPlaces);
-    return Math.floor(number * multiplier) / multiplier;
-  }
+    //round up function
+    function roundUpToDecimalPlaces(number, decimalPlaces) {
+      const multiplier = Math.pow(10, decimalPlaces);
+      return Math.floor(number * multiplier) / multiplier;
+    }
+    
+   
+  },[dateValues,sortedItems]);
+  // console.log("milk stats",getMilkStats)
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    console.log("milk dash render");
+  }, []);
   return (
     <>
       <Table
-        aria-label="Example table with custom cells, pagination and sorting"
+        aria-label=" table with custom cells, pagination and sorting"
         isHeaderSticky
         bottomContent={bottomContent}
         bottomContentPlacement="outside"
@@ -584,7 +566,12 @@ export default function MilkDashboard() {
           )}
         </TableHeader>
 
-        <TableBody emptyContent={"No entry found"} items={sortedItems}>
+        <TableBody
+          emptyContent={
+            isLoading || items == [] ? "...Loading" : "No entry found"
+          }
+          items={sortedItems}
+        >
           {(item) => (
             <TableRow key={item._id}>
               {(columnKey) => (
@@ -597,7 +584,7 @@ export default function MilkDashboard() {
 
       {/* //Arithmatic table  */}
       <div>
-        <Table aria-label="Example static collection table">
+        <Table aria-label=" static collection table">
           <TableHeader>
             <TableColumn>Total & Avg</TableColumn>
             <TableColumn>Total Entries</TableColumn>
@@ -606,15 +593,23 @@ export default function MilkDashboard() {
             <TableColumn>Avg Degree</TableColumn>
             <TableColumn>Total Milk</TableColumn>
           </TableHeader>
-          <TableBody>
-            <TableRow key="1">
-              <TableCell>{statUserName}</TableCell>
-              <TableCell>{milkStats.totalEntries}</TableCell>
-              <TableCell>{milkStats.fat}</TableCell>
-              <TableCell>{milkStats.snf}</TableCell>
-              <TableCell>{milkStats.degree}</TableCell>
-              <TableCell>{milkStats.totalLitters}</TableCell>
-            </TableRow>
+          <TableBody
+            emptyContent={
+              isLoading || milkStats == [] ? "...Loading" : "No Entry Found"
+            }
+            items={getMilkStats}
+          >
+            {(items) => (
+              <TableRow key={items.totalEntries}>
+                <TableCell>{statUserName}</TableCell>
+                <TableCell>{items.totalEntries}</TableCell>
+                <TableCell>{items.fat}</TableCell>
+                <TableCell>{items.snf}</TableCell>
+                <TableCell>{items.degree}</TableCell>
+                <TableCell>{items.totalLitters}</TableCell>
+              </TableRow>
+            )}
+            
           </TableBody>
         </Table>
       </div>

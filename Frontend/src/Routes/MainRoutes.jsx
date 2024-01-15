@@ -17,6 +17,7 @@ import Contact from "../Components/Contact/Contact";
 import Home from "../Components/Home/Home";
 import User from "../Components/User/User";
 import PrivateRoute from "./PrivateRoute";
+import Test from "../Test";
 
 export const MainRoutes = () => {
   return (
@@ -30,6 +31,7 @@ export const MainRoutes = () => {
           <Route path="user/:userid" element={<User />} />
           <Route path="/admin/signup" element={<AdminRegistration />} />
           <Route path="/admin/signin" element={<AdminLoginCard />} />
+          <Route path="test" element={<Test />} />
         </Route>
 
         <Route path="/dashboard" element={
@@ -45,6 +47,7 @@ export const MainRoutes = () => {
         </Route>
 
         <Route path="*" element={<NotFound />} />
+        
       </Routes>
     </>
   );

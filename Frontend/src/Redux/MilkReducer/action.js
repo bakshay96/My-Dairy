@@ -1,5 +1,6 @@
 import axios from "axios";
 import * as types from "./actionTypes";
+import { localhost } from "../Api/api";
 
 //POST
 export const addMilkRequestAction = () => {
@@ -34,7 +35,7 @@ export const addMilk =({ value, token }) =>async (dispatch) => {
 
     dispatch(addMilkRequestAction());
     return await axios
-      .post(`http://localhost:8080/api/milk/add/${value.mobile}`, value.value, {
+      .post(`${localhost}/api/milk/add/${value.mobile}`, value.value, {
         headers: {
           Authorization: token,
         },
@@ -52,7 +53,7 @@ export const getMilkDetails =({ value, token }) =>async (dispatch) => {
 
     dispatch(getMilkRequestAction());
     await axios
-      .get(`http://localhost:8080/api/milk/get/${value}`,
+      .get(`${localhost}/api/milk/get/${value}`,
       {
         headers: {
           'Authorization':`Bearer ${token}`

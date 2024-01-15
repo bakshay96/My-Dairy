@@ -17,10 +17,10 @@ export const reducer =(state=initialState,action)=>{
             return {...state, isLoading:true}
         
         case types.ADD_MILK_SUCCESS:
-            return {...state,isLoading:false, isMilkAdded:true,state:payload.status,response:payload.data }
+            return {...state,isLoading:false, isMilkAdded:true, }
         
         case types.ADD_MILK_FAILURE:
-            return {...state,isError:true,response:payload}
+            return {...state,isError:true, isLoading:false,}
         
         //GET
         case types.GET_MILK_REQUEST:
@@ -30,7 +30,7 @@ export const reducer =(state=initialState,action)=>{
             return {...state,isLoading:false, data:payload}
         
         case types.GET_MILK_FAILURE:
-            return {...state,isError:true}
+            return {...state, isLoading:false, isError:true}
         
         
         default:

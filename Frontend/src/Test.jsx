@@ -15,11 +15,13 @@ function Test() {
     }));
     console.log(dateValues)
   };
+  const style={color:"teal"}
 
   return (
-    <div>
+    <div style={style} >
       <label>Start Date:</label>
       <input
+      
         type="date"
         value={dateValues.startDate}
         onChange={(e) => handleDateChange(e, 'startDate')}

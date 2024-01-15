@@ -1,4 +1,4 @@
-import React, {  useContext, useEffect,  } from "react";
+import React, {  useContext, useEffect, useState,  } from "react";
 import {
   IconButton,
   Avatar,
@@ -26,6 +26,14 @@ import {
   Spacer,
   border,
   useStatStyles,
+  ModalCloseButton,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalOverlay,
+  Heading,
 } from "@chakra-ui/react";
 import {
   FiHome,
@@ -48,12 +56,12 @@ import UserDashboard from "./User/UserTable/UserDashboard";
 import AddMilk from "./Milk/AddMilk";
 import MilkDashboard from "./Milk/MilkTable/MilkDashboard";
 import { useDispatch, useSelector } from "react-redux";
-import { getFarmersDetails } from "../Redux/userReducer/action";
+import { addUserRequestAction, getFarmersDetails } from "../Redux/userReducer/action";
 import { useNavigate } from "react-router-dom";
 import { logoutSuccessAction } from "../Redux/AuthReducer/action";
+import brandLogo from "../assets/Logo/project-logo.svg";
 
-
-
+import {Spinner} from "@nextui-org/react";
 
 const LinkItems = [
   {id:"1", name: 'Add Milk', icon: FiHome },
@@ -67,19 +75,42 @@ export default function Dashboard({ children }) {
  
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {token,isAuth}=useSelector((store)=>store.authReducer);
-  
+  const {isLoading,userData}=useSelector((store)=>store.farmerReducer);
+  console.log("loading",isLoading,"token",token,userData)
   const {globalState, setGlobalState} = useContext(MyContext);
   const {active}=globalState;
   const dispatch=useDispatch();
   const naviate=useNavigate();
 // console.log("contact",globalState,active)
 useEffect(()=>{
- 
-    dispatch(getFarmersDetails({token}))
+  
+  dispatch(getFarmersDetails({token}))
+  console.log("app render")
   
 },[])
   return (
     <>
+    {
+      isLoading && <Modal isCentered isOpen={(()=>onOpen())} onClose={onClose}>
+      {<ModalOverlay
+      bg='blackAlpha.300'
+      backdropFilter='blur(10px) hue-rotate(90deg)'
+    />}
+    
+      <ModalContent>
+        {/* <ModalHeader>Plase Wait...</ModalHeader> */}
+        {/* <ModalCloseButton /> */}
+        <ModalBody >
+          <Flex justify={"space-around"} align={"center"}>
+
+        <Spinner  color="success" size="lg" label="Loading..." />
+          
+          </Flex>
+        </ModalBody>
+        
+      </ModalContent>
+    </Modal>
+    }
     <Box minH="100vh" bg={useColorModeValue("gray.100", "gray.900")} border={"5px solid red"}>
       <SidebarContent 
         onClose={() => onClose}
@@ -111,6 +142,7 @@ useEffect(()=>{
       </Box>
       
     </Box>
+    
    
     </>
      
@@ -140,7 +172,7 @@ const SidebarContent = ({ onClose, ...rest }) => {
     >
       <Flex h="20" alignItems="center" mx="8" justifyContent="space-between">
         <Text fontSize="2xl" fontFamily="monospace" fontWeight="bold">
-          <Link to="/" fontSize={"1rem"}><Image onClick={()=>navigate("/")} w="4rem" borderRadius={"2rem"} alt="logo" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJU0J5A2bvyrbWwUo2-Gy0NlB2Vpv7mUXmAkbuk4t-d0RnEvbH72osa0p1wsTZlnm86io&usqp=CAU" /></Link>
+          <Link to="/" fontSize={"1rem"}><Image onClick={()=>navigate("/")} w="4rem" borderRadius={"2rem"} alt="logo" src={brandLogo} /></Link>
         </Text>
         <CloseButton display={{ base: "flex", md: "none" }} onClick={onClose} />
       </Flex>
@@ -158,6 +190,10 @@ const SidebarContent = ({ onClose, ...rest }) => {
 
 const NavItem = ({ icon, onClose,id, children, ...rest }) => {
 const {globalState, setGlobalState} = useContext(MyContext);
+const [isClicked, setIsClicked] = useState(false);
+const handleButtonClick = () => {
+  setIsClicked(!isClicked);
+};
   function CloseSidebar(){
    
     //setActive(id) 
@@ -172,9 +208,12 @@ const {globalState, setGlobalState} = useContext(MyContext);
       _focus={{ boxShadow: "none" }}
       >
       <Flex
-        onClick={()=> {setGlobalState((globalState)=>({...globalState, active:id})),onClose}}
+        onClick={()=> {setGlobalState((globalState)=>({...globalState, active:id})),onClose,handleButtonClick}}
        
         align="center"
+        
+        onKeyDown={{bg: "cyan.400",
+        color: "white",}}
         p="4"
         mx="4"
         borderRadius="lg"

@@ -1,4 +1,5 @@
 import * as types from "./actionTypes";
+
 // NOTE: DO NOT MODIFY the intial state structure in this file.
 export const initialState = {
   isAuth: false,
@@ -14,7 +15,10 @@ export const reducer = (state = initialState, action) => {
 
   switch(type)
   {
+    
+   
     //SignIn
+    
     case types.USER_SIGNIN_REQUEST:
       return {...state, isLoading:true};
     

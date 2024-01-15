@@ -1,7 +1,7 @@
 //Write the ActionCreator functions here
 import axios from "axios";
-
 import * as types from "./actionTypes";
+import { url, url2,localhost } from "../Api/api";
 
 export const signinRequestAction = () => {
   return { type: types.USER_SIGNIN_REQUEST };
@@ -38,15 +38,16 @@ export const logoutSuccessAction = () => {
 };
 
 //=============Functions currying js ==========================================================================
-const url = "https://milkify.cyclic.app/api";
-const url2 = "https://dudhsankalan-ab.onrender.com/api";
+// const url = "https://milkify.cyclic.app/api";
+// const url2 = "https://dudhsankalan-ab.onrender.com/api";
+// const localhost="http://localhost:8080"
 
 // admin signin function
 export const signin = (payload) => async (dispatch) => {
  // console.log("action payload", payload);
   dispatch(signinRequestAction());
   return await axios
-    .post(`http://localhost:8080/api/admin/login`, payload)
+    .post(`${localhost}/api/admin/login`, payload)
     
 };
 
@@ -56,7 +57,7 @@ export const signup = (payload) => async (dispatch) => {
   dispatch(signupRequestAction());
   try {
     return await axios
-      .post(`http://localhost:8080/api/admin/register`, payload)
+      .post(`${localhost}/api/admin/register`, payload)
       .then((res) => {
        // console.log("action", res);
         dispatch(signupSuccessAction(true));

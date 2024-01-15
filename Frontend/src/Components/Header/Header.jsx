@@ -21,7 +21,7 @@ export default function Header() {
   );
   console.log("auth header", token, isAuth);
   const dispatch = useDispatch();
-  const handleAuth = () => {
+  const handleAuth = (e) => {
     console.log("auth",token,isAuth)
     if (token !== "") {
       localStorage.setItem("token", "");

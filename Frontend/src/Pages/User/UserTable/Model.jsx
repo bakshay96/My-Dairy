@@ -24,7 +24,7 @@ export default function Model() {
       <div className="flex flex-wrap gap-3">
         <Button
           onPress={() => handleOpen()}
-          color="primary"
+          
           endContent={<PlusIcon />}
         >
           Add Farmer
@@ -64,7 +64,7 @@ export default function Model() {
                   Close
                 </Button>
                 <Button color="primary" onPress={onClose}>
-                  Action
+                 {`< Back `}
                 </Button>
               </ModalFooter>
             </>

@@ -103,12 +103,13 @@ import logo from "../../assets/Logo/project-logo.svg"
             <Heading fontSize={'2xl'}>Sign in to your account</Heading>
             <FormControl id="phone">
               <FormLabel>Phone number</FormLabel>
-              <Input type="tel" name="mobile" value={mobile} onChange={((e)=>setMobile(e.target.value))} placeholder="User mobile number" />
+              <Input autoCapitalize="" type="tel" name="mobile" value={mobile} onChange={((e)=>setMobile(e.target.value))} placeholder="User mobile number" />
             </FormControl>
             <FormControl id="password" isRequired>
                   <FormLabel>Password</FormLabel>
                   <InputGroup>
                     <Input
+                      autoComplete=""
                       type={showPassword ? "text" : "password"}
                       name="password"
                       placeholder="User password"

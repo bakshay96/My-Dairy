@@ -89,7 +89,7 @@ export default function Contact() {
 
                         <form className="p-6 flex flex-col justify-center">
                             <div className="flex flex-col">
-                                <label for="name" className="hidden">
+                                <label  className="hidden">
                                     Full Name
                                 </label>
                                 <input
@@ -102,7 +102,7 @@ export default function Contact() {
                             </div>
 
                             <div className="flex flex-col mt-2">
-                                <label for="email" className="hidden">
+                                <label  className="hidden">
                                     Email
                                 </label>
                                 <input
@@ -115,7 +115,7 @@ export default function Contact() {
                             </div>
 
                             <div className="flex flex-col mt-2">
-                                <label for="tel" className="hidden">
+                                <label  className="hidden">
                                     Number
                                 </label>
                                 <input

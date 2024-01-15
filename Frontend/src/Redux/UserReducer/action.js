@@ -1,7 +1,7 @@
 //Write the ActionCreator functions here
 import axios from "axios";
 import * as types from "./actionTypes" ;
-
+import {localhost, url,url2} from "../Api/api"
 
 export const addUserRequestAction = () => {
   return { type: types.FARMER_USER_REQUEST };
@@ -31,8 +31,8 @@ export const getUserFailureAction = () => {
 
 
 //=============Functions currying js ==========================================================================
-const url = "https://milkify.cyclic.app/api";
-const url2 = "https://dudhsankalan-ab.onrender.com/api";
+// const url = "https://milkify.cyclic.app/api";
+// const url2 = "https://dudhsankalan-ab.onrender.com/api";
 
 // admin signin function
 
@@ -43,7 +43,7 @@ export const addFarmer = ({value,token}) => async (dispatch) => {
   dispatch(addUserRequestAction());
   try {
     return  await axios
-      .post(`http://localhost:8080/api/user/register`,value,{
+      .post(`${localhost}/api/user/register`,value,{
         headers: {
           'Authorization': token
         }
@@ -61,7 +61,7 @@ export const getFarmersDetails = ({token}) => async (dispatch) => {
   dispatch(getUserRequestAction());
   try {
       await axios 
-    .get(`http://localhost:8080/api/user/`,
+    .get(`${localhost}/api/user/`,
     {
       headers: {
         'Authorization':`Bearer ${token}`
