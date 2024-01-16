@@ -31,13 +31,13 @@ export const getMilkFailureAction = () => {
 //================function for api request =====================
 
 export const addMilk =({ value, token }) =>async (dispatch) => {
-    console.log("action milk payload", payload.mobile, payload);
+    console.log("action milk payload", value, token);
 
     dispatch(addMilkRequestAction());
     return await axios
-      .post(`${localhost}/api/milk/add/${value.mobile}`, value.value, {
+      .post(`${localhost}/api/milk/add/${value.mobile}`, value, {
         headers: {
-          Authorization: token,
+          Authorization: `Bearer ${token}`,
         },
       })
 

@@ -294,7 +294,7 @@ export default function MilkDashboard() {
   const onClear = React.useCallback(() => {
     setFilterValue("");
     setPage(1);
-    getMilkStats=[{ fat: 0, snf: 0, degree: 0, water: 0, totalLitters: 0 }]
+  
   }, []);
 
   const topContent = React.useMemo(() => {
