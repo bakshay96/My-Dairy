@@ -1,8 +1,11 @@
 const express = require("express");
+const app=express();
 const { MilkModel, dairyDataSchema } = require("./milk.model");
 const { UserModel } = require("../User/user.model");
-
+const nodemailer=require("nodemailer");
 const mongoose = require("mongoose");
+const {sendMail} =require("../middleware/sendMail")
+
 
 // POST request to create a new milk provider
 //add user milk data
@@ -21,7 +24,8 @@ const addMilkData = async (req, res) => {
     // Create a new milk provider
 
     let isUserValid = await UserModel.find({mobile});
-
+    const [{email,name}]=isUserValid;
+    //console.log("valid user",isUserValid,email);
     //auto shift desider
     const currentHour = new Date().getHours();
     const shift = currentHour < 12 ? "morning" : "evening";
@@ -31,11 +35,11 @@ const addMilkData = async (req, res) => {
     date = date.toLocaleString();
 
     if (isUserValid.length) {
-      let UserMilk = MilkModel({ ...req.body,mobile, shift, date });
+      let UserMilk = MilkModel({ ...req.body,mobile, shift, date});
       await UserMilk.save();
 
       let userObjId = new mongoose.Types.ObjectId(UserMilk.id);
-      console.log("user id :", userObjId);
+      //console.log("user id :", userObjId);
       await UserModel.updateOne(
         {
           mobile: mobile,
@@ -47,16 +51,23 @@ const addMilkData = async (req, res) => {
         }
       );
 
-      // Send a 201 Created response with the created milk provider
-      res
-        .status(201)
-        .send({ msg: "Milk data submitted successfully","currentEntry": UserMilk });
+      const milkdata={...UserMilk,email:email,name:name};
+      req.milkdata=milkdata;
+
+      // call mail middleware
+      sendMail(req,res,()=>{
+        //sres.send("data send successfully")
+        // Send a 201 Created response with the created milk provider
+        res
+          .status(201)
+          .send({ msg: "Milk data submitted successfully","currentEntry": UserMilk });
+      });
     } else {
       res.send("User not avaliable..!");
     }
   } catch (error) {
     // Handle other errors and send a 500 Internal Server Error response
-    console.error(error);
+    //console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -135,14 +146,17 @@ const getAllDairyEntries = async (req, res) => {
 
     return res.status(200).json(response);
   } catch (error) {
-    console.error(error);
+    //console.error(error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+
 
 module.exports = {
   addMilkData,
   getSingleUserMilkData,
   getMilkData,
   getAllDairyEntries,
+  
 };

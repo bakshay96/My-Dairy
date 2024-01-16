@@ -4,6 +4,7 @@ const { connection } = require("./src/connection/db");
 const { UserRouter } = require("./src/User/userRoutes");
 const { AdminRouter } = require("./src/Admin/adminRoutes");
 const { MilkRouter } = require("./src/Milk/milkRoutes");
+const { transporter } = require("./src/connection/mailConnection");
 
 
 require("dotenv").config();
@@ -27,8 +28,16 @@ app.use("/api/milk",MilkRouter)
 app.listen(PORT, async ()=>{
     try {
         await connection
+         
         console.log("DB connected successfully")
         console.log(`Server is running on port ${PORT}`)
+        transporter.verify(function (error, success) {
+            if (error) {
+              console.log(error);
+            } else {
+              console.log("Server is ready to take our messages");
+            }
+          });
     } catch (error) {
         console.error(error);
     }
