@@ -7,6 +7,7 @@ export const initialState = {
   isLoading: false,
   isError: false,
   signupStatus:false,
+  statusCode:100,
   adminName:""
 };
 
@@ -41,6 +42,14 @@ export const reducer = (state = initialState, action) => {
 
     case types.USER_LOGOUT_SUCCESS:
       return {...state, isAuth:false, token:""}
+
+
+      //Message
+    case types.USER_MESSAGE_SUCCESS:
+      return {...state,isLoading:false, statusCode:payload}
+    
+    case types.USER_SIGNUP_FAILURE:
+      return {...state, isError:true, isLoading:false,}
     
     default:
       return state;

@@ -31,6 +31,18 @@ export const signupFailureAction = () => {
 };
 
 
+// send message
+export const sendMessageSuccessAction = (payload) => {
+  console.log(payload);
+  return { type: types.USER_MESSAGE_SUCCESS, payload };
+};
+
+export const sendMessageFailureAction = () => {
+  // console.log(payload);
+  return { type: types.USER_MESSAGE_FAILURE };
+};
+
+
 //SignOut
 export const logoutSuccessAction = () => {
   // console.log(payload);
@@ -68,6 +80,20 @@ export const signup = (payload) => async (dispatch) => {
       });
   } catch (error) {
     dispatch(signupFailureAction());
+  }
+};
+
+
+// send message
+export const sendMail = (payload) => async (dispatch) => {
+  //console.log("action", payload);
+  dispatch(signinRequestAction());
+  try {
+    return await axios
+      .post(`${localhost}/api/admin/message`, payload)
+      
+  } catch (error) {
+    dispatch(sendMessageFailureAction());
   }
 };
 
