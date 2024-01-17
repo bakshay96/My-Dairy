@@ -103,6 +103,8 @@ const message = async (req, res) => {
     }
   });
 };
+
+
 module.exports = {
   adminRegistration,
   adminLogin,
