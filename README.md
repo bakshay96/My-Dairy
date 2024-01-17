@@ -46,7 +46,7 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 - Admin user Dashboard
 - Add Farmer
 - Daily milk stats Dashboard
-- Quick messaging alert for milk data recipet
+- Quick messaging alert
 - filter farmer data by date & time
 - total count by range
 - sorting
