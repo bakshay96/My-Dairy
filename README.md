@@ -187,7 +187,7 @@ If you want to contact me, you can reach me through the below handles. <br />
 
 
 
-© 2023 Akshay Bombatkar
+© 2024 Akshay Bombatkar
 
 ## Show your support
 
