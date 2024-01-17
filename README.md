@@ -56,41 +56,64 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 
 
 
-<table>
- 
+<table> 
   <tr>
     <label>Home Page</label>
     <td><img src="https://i.ibb.co/vjg2Jr3/home-page-1.png" alt="home-page-1" border="0" /></td>
   </tr>
+</table>
 
+<table>
   <tr>
+   <label>Signup Page</label>
     <td><img src="https://i.ibb.co/Bfn2Nhw/admin-signup-page.png" alt="admin-signup-page" border="0"></td>
   </tr>
+</table>
+
+<table>
   <tr>
+   <label>SignIn Page</label>
    <td>
     <img src="https://i.ibb.co/59cr3PG/Admin-signin.png" alt="Admin-signin" border="0">
    </td>
   </tr>
+</table>
+
+<table>
   <tr>
+   <label>Add Milk Page</label>
    <td>
    <img src="https://i.ibb.co/cbtpC34/add-Milk-page.png" alt="add-Milk-page" border="0">
    </td>
   </tr>
+</table>
+
+<table>
   <tr>
+   <label>Farmer dashboard</label>
    <td>
    <img src="https://i.ibb.co/fQqmm4j/Farmer-page.png" alt="Farmer-page" border="0">
    </td>
   </tr>
+</table>
+
+<table>
   <tr>
+   <label>Add new Farmer</label>
    <td>
     <img src="https://i.ibb.co/gMSx1Gm/add-Farmer.png" alt="add-Farmer" border="0">
    </td>
   </tr>
+</table>
+
+<table>
   <tr>
+   <label>Milk Records</label>
    <td>
     <img src="https://i.ibb.co/stNRMBp/milk-stats-pagge.png" alt="milk-stats-pagge" border="0">
    </td>
   </tr>
+</table>
  
 
 </table>
