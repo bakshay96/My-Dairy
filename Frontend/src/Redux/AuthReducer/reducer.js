@@ -2,13 +2,12 @@ import * as types from "./actionTypes";
 
 // NOTE: DO NOT MODIFY the intial state structure in this file.
 export const initialState = {
-  isAuth: false,
-  token: localStorage.getItem("token") || "",
+  token:localStorage.getItem("token") || null,
+  isAuthenticated:localStorage.getItem("token")!==null?true:false,
+  user:null,
   isLoading: false,
   isError: false,
-  signupStatus:false,
-  statusCode:100,
-  adminName:""
+  
 };
 
 export const reducer = (state = initialState, action) => {
@@ -24,7 +23,11 @@ export const reducer = (state = initialState, action) => {
       return {...state, isLoading:true};
     
     case types.USER_SIGNIN_SUCCESS:
-      return {...state, isLoading:false, isAuth:true, token:payload};
+      return {...state,
+        isAuthenticated: true,
+        // user: payload.userName,
+        token: payload
+      };
     
     case types.USER_SIGNIN_FAILURE:
       return {...state, isLoading:false, isError:true};
@@ -41,7 +44,7 @@ export const reducer = (state = initialState, action) => {
       return {...state, isError:true, isLoading:false,}
 
     case types.USER_LOGOUT_SUCCESS:
-      return {...state, isAuth:false, token:""}
+      return {...state,  isAuthenticated:false, token:null,isLoading:false }
 
 
       //Message

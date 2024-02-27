@@ -46,8 +46,8 @@ export default function AdminRegistration() {
     email: "",
     password: "",
   });
-  const data = useSelector((store) => store.authReducer);
-  console.log("auth reducer",data);
+  const  { token, isLoading, isError,  isAuthenticated } = useSelector((store) => store.authReducer);
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -100,7 +100,7 @@ export default function AdminRegistration() {
 
 useEffect(()=>{
   console.log("axios")
-  if(data.signupStatus)
+  if(isAuthenticated)
   {
    
       toast({
@@ -114,7 +114,7 @@ useEffect(()=>{
     
   }
   
-},[data.signupStatus])
+},[isAuthenticated])
 
 
   return (

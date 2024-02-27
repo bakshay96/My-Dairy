@@ -39,13 +39,13 @@ export const getUserFailureAction = () => {
 
 //add farmer function
 export const addFarmer = ({value,token}) => async (dispatch) => {
-  //console.log("action", payload);
+  //console.log("add user action", value,token);
   dispatch(addUserRequestAction());
   try {
     return  await axios
       .post(`${localhost}/api/user/register`,value,{
         headers: {
-          'Authorization': token
+          'Authorization':`Bearer ${token}`,
         }
       })
       

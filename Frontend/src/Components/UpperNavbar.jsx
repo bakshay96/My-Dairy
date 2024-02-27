@@ -42,7 +42,7 @@ export default function UpperNavbar() {
         <Flex h={16} alignItems={"center"} justifyContent={"space-between"}>
           <Box>
             <Link to="/">
-              <img src={logo} className="mr-3 h-12" alt="Logo" />
+              {/* <img src={logo} className="mr-3 h-12" alt="Logo" /> */}
             </Link>
           </Box>
 

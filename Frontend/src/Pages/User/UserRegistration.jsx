@@ -42,11 +42,12 @@ export default function UserRegistration({ onClose }) {
     mobile: "",
     email: "",
   });
-  const {token,isAuth}=useSelector((store)=>store.authReducer);
+
+  const {token,isAuthenticated}=useSelector((store)=>store.authReducer);
   const { isLoading, isError, usersData, response ,isUserAdded} = useSelector(
     (store) => store.farmerReducer
   );
-  console.log("farmer reducer",usersData,isUserAdded ,response);
+ // console.log("farmer reducer",usersData,isUserAdded ,response,token);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   // Handle input changes and update the state
@@ -58,10 +59,10 @@ export default function UserRegistration({ onClose }) {
     });
 
     // Clear validation error when the user types in the field
-    setFormErrors({
-      ...formErrors,
-      [name]: "",
-    });
+    // setFormErrors({
+    //   ...formErrors,
+    //   [name]: "",
+    // });
   };
 
   // Handle form submission
@@ -104,11 +105,17 @@ export default function UserRegistration({ onClose }) {
         })
         .catch((res) => {
           console.log("action catch", res);
-          dispatch(addUserFailureAction(res.data.msg));
+          dispatch(addUserFailureAction(res.data));
         });
 
       // If validation passes, proceed with form submission
       //console.log("Form data",formData)
+      setFormData({firstName: "",
+      lastName: "",
+      gender: "Male", //default
+      village: "",
+      mobile: "",
+      email: "",})
     }
   };
   useEffect(() => {
@@ -134,7 +141,7 @@ export default function UserRegistration({ onClose }) {
     }
     dispatch(addUserSuccessAction(false));
     
-  }, [usersData]);
+  }, [isUserAdded]);
   return (
     <Flex
       minH={"100vh"}

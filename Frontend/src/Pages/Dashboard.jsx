@@ -76,7 +76,7 @@ export default function Dashboard({ children }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {token,isAuth}=useSelector((store)=>store.authReducer);
   const {isLoading,userData}=useSelector((store)=>store.farmerReducer);
-  console.log("loading",isLoading,"token",token,userData)
+  //console.log("loading",isLoading,"token",token,userData)
   const {globalState, setGlobalState} = useContext(MyContext);
   const {active}=globalState;
   const dispatch=useDispatch();
@@ -248,7 +248,8 @@ const MobileNav = ({ onOpen, onClose, ...rest }) => {
   const {token}=useSelector((store)=>store.authReducer)
   const dispatch=useDispatch();
   const handleAuth =()=>{
-    localStorage.setItem("token","");
+  
+    localStorage.setItem("token", null);
     dispatch(logoutSuccessAction());
   
     console.log("dash auth",token)

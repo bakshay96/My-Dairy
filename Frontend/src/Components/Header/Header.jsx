@@ -8,7 +8,7 @@ import {
   Button,
   useDisclosure,
 } from "@nextui-org/react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink,useNavigate } from "react-router-dom";
 import brandLogo from "../../assets/Logo/project-logo.svg";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutSuccessAction } from "../../Redux/AuthReducer/action";
@@ -16,23 +16,40 @@ import { logoutSuccessAction } from "../../Redux/AuthReducer/action";
 export default function Header() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [backdrop, setBackdrop] = React.useState("opaque");
-  const { token, isLoading, isError, isAuth } = useSelector(
+  const { token, isLoading, isError,  isAuthenticated } = useSelector(
     (store) => store.authReducer
   );
-  console.log("auth header", token, isAuth);
+  //console.log("auth header", token, isAuthenticated);
   const dispatch = useDispatch();
-  const handleAuth = (e) => {
-    console.log("auth",token,isAuth)
-    if (token !== "") {
-      localStorage.setItem("token", "");
+  const navigate=useNavigate();
+
+  // handle authication function
+  const handleAuth = () => {
+   
+   // console.log("auth",token,isAuthenticated)
+    if(token!==null)
+    {
+      //console.log("handle auth sdfsf")
+
+      localStorage.setItem("token", null);
       dispatch(logoutSuccessAction());
+      navigate("/admin/signin")
     }
+
+     
+    
+    
   };
+
   const handleOpen = (backdrop) => {
     setBackdrop(backdrop);
     onOpen();
   };
-  useEffect(() => {}, [isAuth,token]);
+  
+  useEffect(()=>{
+
+  },[])
+ 
   return (
     <header className="shadow sticky z-50 top-0" id="header">
       <nav className="bg-white border-gray-200 px-4 lg:px-6 py-2.5">
@@ -42,18 +59,19 @@ export default function Header() {
           </Link>
           <div className="flex items-center lg:order-2">
             <Link
-              to={token == "" && "admin/signin"}
+            
+              to={token ==null?"/admin/signin":"/"}
               onClick={() => handleAuth()}
               className="text-gray-800 hover:bg-gray-50 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none"
             >
-              {token == "" ? "Login" : "Logout"}
+              {token == null ? "Login" : "Logout"}
             </Link>
             <Link
-              to={token=="" ? "/admin/signup":"dashboard"}
+              to={token==null ? "/admin/signup":"dashboard"}
               onPress={() => handleOpen(b)}
               className="text-white bg-orange-700 hover:bg-orange-800 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none"
             >
-             {token==""? "Get started":"Dashboard"}
+             {token==null? "Get started":"Dashboard"}
             </Link>
           </div>
           <div
@@ -99,7 +117,7 @@ export default function Header() {
               </li>
               <li>
                 <NavLink
-                  to="/github"
+                  to="https://github.com/bakshay96"
                   className={({ isActive }) =>
                     `block py-2 pr-4 pl-3 duration-200 ${
                       isActive ? "text-orange-700" : "text-gray-700"
