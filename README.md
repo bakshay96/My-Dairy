@@ -21,7 +21,6 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 ## Credits
 
 - Images  : [google Images](https://www.google.com/]
-- UI      : [Next Ui](https://nextui.org/)
 - Content : [meriDairy.com](https//meridairy.in/)
 - Icons   : [Font Awesome](https://fontawesome.com/)
 - References : [MDN Docs](https://developer.mozilla.org/en-US/) | [W3School](https://www.w3schools.com/)
@@ -46,7 +45,7 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 - Admin user Dashboard
 - Add Farmer
 - Daily milk stats Dashboard
-- Quick messaging alert for milk data recipet
+- Quick messaging alert
 - filter farmer data by date & time
 - total count by range
 - sorting
@@ -188,7 +187,7 @@ If you want to contact me, you can reach me through the below handles. <br />
 
 
 
-© 2023 Akshay Bombatkar
+© 2024 Akshay Bombatkar
 
 ## Show your support
 
