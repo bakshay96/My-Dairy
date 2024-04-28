@@ -2,8 +2,10 @@ import * as types from "./actionTypes";
 
 // NOTE: DO NOT MODIFY the intial state structure in this file.
 export const initialState = {
-  token:localStorage.getItem("token") || null,
+  token:(localStorage.getItem("token")) || false,
   isAuthenticated:localStorage.getItem("token")!==null?true:false,
+  isRegistered:false,
+  signupStatus:null,
   user:null,
   isLoading: false,
   isError: false,
@@ -23,6 +25,7 @@ export const reducer = (state = initialState, action) => {
       return {...state, isLoading:true};
     
     case types.USER_SIGNIN_SUCCESS:
+      localStorage.setItem("token",JSON.stringify(payload))
       return {...state,
         isAuthenticated: true,
         // user: payload.userName,
@@ -35,16 +38,18 @@ export const reducer = (state = initialState, action) => {
     // SignUp
 
     case types.USER_SIGNUP_REQUEST:
-      return {...state,isLoading:true};
+      return {...state,isLoading:true,};
     
     case types.USER_SIGNUP_SUCCESS:
-      return {...state,isLoading:false, signupStatus:payload}
+      return {...state,isLoading:false, isRegistered:true}
     
     case types.USER_SIGNUP_FAILURE:
-      return {...state, isError:true, isLoading:false,}
+      return {...state, isError:true, isLoading:false, isRegistered:false}
 
+      //logout user
     case types.USER_LOGOUT_SUCCESS:
-      return {...state,  isAuthenticated:false, token:null,isLoading:false }
+      localStorage.setItem("token",JSON.stringify(""))
+      return {...state,  isAuthenticated:false,isLoading:false , token:""}
 
 
       //Message

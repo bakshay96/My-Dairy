@@ -1,6 +1,6 @@
 import axios from "axios";
 import * as types from "./actionTypes";
-import { localhost } from "../Api/api";
+import { localhost, url2 } from "../Api/api";
 
 //POST
 export const addMilkRequestAction = () => {
@@ -24,25 +24,25 @@ export const getMilkSuccessAction = (payload) => {
   return { type: types.GET_MILK_SUCCESS, payload };
 };
 
-export const getMilkFailureAction = () => {
-  return { type: types.GET_MILK_FAILURE };
+export const getMilkFailureAction = (payload) => {
+  return { type: types.GET_MILK_FAILURE,payload };
 };
 
 //================function for api request =====================
 
 export const addMilk =({ value, token }) =>async (dispatch) => {
-    console.log("action milk payload", value, token);
+    //console.log("action milk payload", value, token);
 
     dispatch(addMilkRequestAction());
     return await axios
-      .post(`${localhost}/api/milk/add/${value.mobile}`, value, {
+      .post(`${url2}/milk/add/${value.mobile}`, value, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
 
       .catch((res) => {
-        console.log("add milk err", res.data);
+       // console.log("add milk err", res.data);
         dispatch(addMilkFailureAction(res.data));
       });
   };
@@ -53,7 +53,7 @@ export const getMilkDetails =({ value, token }) =>async (dispatch) => {
 
     dispatch(getMilkRequestAction());
     await axios
-      .get(`${localhost}/api/milk/get/${value}`,
+      .get(`${url2}/milk/get/${value}`,
       {
         headers: {
           'Authorization':`Bearer ${token}`

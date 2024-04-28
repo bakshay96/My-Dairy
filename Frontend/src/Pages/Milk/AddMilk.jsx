@@ -49,7 +49,7 @@ export default function AddMilk() {
   const {token,isAuth}=useSelector((store)=>store.authReducer);
 
   const {isMilkAdded,isLoading,isError,response} =useSelector((store)=>store.milkReducer);
-  console.log("token",token)
+  //console.log("token",token)
   // console.log("Milk data users", usersData);
   // console.log("milk reducer",isMilkAdded,isLoading,isError,response)
 
@@ -82,7 +82,7 @@ export default function AddMilk() {
    // console.log("handleMilkSubmit",formMilkData);
     const mobile=Number(formMilkData.mobile);
     dispatch(addMilk({value:formMilkData,token})).then((res)=>{
-      console.log("res add milk",res);
+      //console.log("res add milk",res);
      
       if(res.status==201)
       {

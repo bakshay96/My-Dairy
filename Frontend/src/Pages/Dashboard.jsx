@@ -1,4 +1,4 @@
-import React, {  useContext, useEffect, useState,  } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   IconButton,
   Avatar,
@@ -14,7 +14,6 @@ import {
   DrawerContent,
   Text,
   useDisclosure,
-  
   Menu,
   MenuButton,
   MenuDivider,
@@ -45,175 +44,186 @@ import {
   FiBell,
   FiChevronDown,
 } from "react-icons/fi";
-import { MoonIcon, SunIcon } from '@chakra-ui/icons';
-import { FaAddressBook,FaRegAddressCard } from "react-icons/fa";
+import { MoonIcon, SunIcon } from "@chakra-ui/icons";
+import { FaAddressBook, FaRegAddressCard } from "react-icons/fa";
 import UserRegistration from "./User/UserRegistration";
 import { NotFound } from "./NotFound";
 import MyContext from "./ContextApi/MyContext";
 import AdminRegistration from "./Admin/AdminRegistration";
-import MilkInfo  from "../Components/MilkInfo";
+import MilkInfo from "../Components/MilkInfo";
 import UserDashboard from "./User/UserTable/UserDashboard";
 import AddMilk from "./Milk/AddMilk";
 import MilkDashboard from "./Milk/MilkTable/MilkDashboard";
 import { useDispatch, useSelector } from "react-redux";
-import { addUserRequestAction, getFarmersDetails } from "../Redux/userReducer/action";
-import { useNavigate } from "react-router-dom";
+import {
+  addUserRequestAction,
+  getFarmersDetails,
+} from "../Redux/userReducer/action";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { logoutSuccessAction } from "../Redux/AuthReducer/action";
 import brandLogo from "../assets/Logo/project-logo.svg";
 
-import {Spinner} from "@nextui-org/react";
+import { Spinner } from "@nextui-org/react";
+import { Loader } from "../Components/Loader";
 
 const LinkItems = [
-  {id:"1", name: 'Add Milk', icon: FiHome },
-  {id:"2", name: 'Customers', icon: FaRegAddressCard },
-  {id:"3", name: 'Milk Stats', icon: FiTrendingUp },
-  {id:"4", name: 'Favourites', icon: FiStar },
-  {id:"5", name: 'Settings', icon: FiSettings },
+  { id: "1", name: "Add Milk", icon: FiHome, path: "/dashboard/add_milk"},
+  {
+    id: "2",
+    name: "Customers",
+    icon: FaRegAddressCard,
+    path: "/dashboard/user_dashboard",
+  },
+  { id: "3", name: "Milk Stats", icon: FiTrendingUp, path: "/dashboard/milk_info"},
+  { id: "4", name: "Favourites", icon: FiStar , path:"#" },
+  { id: "5", name: "Settings", icon: FiSettings , path:"#"},
 ];
 
 export default function Dashboard({ children }) {
- 
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const {token,isAuth}=useSelector((store)=>store.authReducer);
-  const {isLoading,userData}=useSelector((store)=>store.farmerReducer);
+  const { token, isAuth } = useSelector((store) => store.authReducer);
+  const { isLoading, userData } = useSelector((store) => store.farmerReducer);
   //console.log("loading",isLoading,"token",token,userData)
-  const {globalState, setGlobalState} = useContext(MyContext);
-  const {active}=globalState;
-  const dispatch=useDispatch();
-  const naviate=useNavigate();
-// console.log("contact",globalState,active)
-useEffect(()=>{
-  
-  dispatch(getFarmersDetails({token}))
-  console.log("app render")
-  
-},[])
+  const { globalState, setGlobalState } = useContext(MyContext);
+  const { active } = globalState;
+  const dispatch = useDispatch();
+  const naviate = useNavigate();
+  // console.log("contact",globalState,active)
+  useEffect(() => {
+    if(token)
+    {
+
+      dispatch(getFarmersDetails({ token }));
+    }
+    console.log("app render");
+  }, []);
   return (
     <>
-    {
-      isLoading && <Modal isCentered isOpen={(()=>onOpen())} onClose={onClose}>
-      {<ModalOverlay
-      bg='blackAlpha.300'
-      backdropFilter='blur(10px) hue-rotate(90deg)'
-    />}
-    
-      <ModalContent>
-        {/* <ModalHeader>Plase Wait...</ModalHeader> */}
-        {/* <ModalCloseButton /> */}
-        <ModalBody >
-          <Flex justify={"space-around"} align={"center"}>
-
-        <Spinner  color="success" size="lg" label="Loading..." />
-          
-          </Flex>
-        </ModalBody>
-        
-      </ModalContent>
-    </Modal>
-    }
-    <Box minH="100vh" bg={useColorModeValue("gray.100", "gray.900")} border={"5px solid red"}>
-      <SidebarContent 
-        onClose={() => onClose}
-        display={{ base: "none", md: "block" }}
-      />
-      <Drawer
-        autoFocus={false}
-        isOpen={isOpen}
-        placement="left"
-        onClose={onClose}
-        returnFocusOnClose={false}
-        onOverlayClick={onClose}
-        size="full"
+      {isLoading && <Loader />}
+      <Box
+        minH="100vh"
+        bg={useColorModeValue("gray.100", "gray.900")}
+        border={"5px solid red"}
       >
-      
-        <DrawerContent>
-          <SidebarContent onClose={onClose} />
-        </DrawerContent>
-      </Drawer>
-      {/* mobilenav */}
-      <MobileNav onOpen={onOpen} onClose={onClose} />
-      <Box ml={{ base: 0, md: 60 }} p="4" >
-        {/* main container */}
-        {children}
-       
-      {
-        active==1?<AddMilk />:active==2?<UserDashboard />:active==3?<MilkDashboard/>:active==4?<NotFound/>:<NotFound/>
-      }
+        <SidebarContent
+          onClose={() => onClose}
+          display={{ base: "none", md: "block" }}
+        />
+        <Drawer
+          autoFocus={false}
+          isOpen={isOpen}
+          placement="left"
+          onClose={onClose}
+          returnFocusOnClose={false}
+          onOverlayClick={onClose}
+          size="full"
+        >
+          <DrawerContent>
+            <SidebarContent onClose={onClose} />
+          </DrawerContent>
+        </Drawer>
+        {/* mobilenav */}
+        <MobileNav onOpen={onOpen} onClose={onClose} />
+        <Box ml={{ base: 0, md: 60 }} p="4">
+          {/* main container */}
+          {children}
+
+          {/* {active == 1 ? (
+            <AddMilk />
+          ) : active == 2 ? (
+            <UserDashboard />
+          ) : active == 3 ? (
+            <MilkDashboard />
+          ) : active == 4 ? (
+            <NotFound />
+          ) : (
+            <NotFound />
+          )} */}
+          <Outlet />
+        </Box>
       </Box>
-      
-    </Box>
-    
-   
     </>
-     
-    
-    
   );
 }
 
-
 const SidebarContent = ({ onClose, ...rest }) => {
   //const {globalState, setGlobalState} = useContext(MyContext);
-    
+
   //console.log("contet",globalState)
-  const navigate=useNavigate();
- 
+  const navigate = useNavigate();
+
   return (
     <>
-    <Box
-      transition="3s ease"
-      bg={useColorModeValue("white", "gray.900")}
-      borderRight="1px"
-      borderRightColor={useColorModeValue("gray.200", "gray.700")}
-      w={{ base: "full", md: 60 }}
-      pos="fixed"
-      h="full"
-      {...rest}
-    >
-      <Flex h="20" alignItems="center" mx="8" justifyContent="space-between">
-        <Text fontSize="2xl" fontFamily="monospace" fontWeight="bold">
-          <Link to="/" fontSize={"1rem"}><Image onClick={()=>navigate("/")} w="4rem" borderRadius={"2rem"} alt="logo" src={brandLogo} /></Link>
-        </Text>
-        <CloseButton display={{ base: "flex", md: "none" }} onClick={onClose} />
-      </Flex>
-      {LinkItems.map((link) => (
-        <NavItem key={link.name} icon={link.icon} id={link.id}  onClose={onClose} >
-          {link.name}
-        </NavItem>
-      ))}
-    </Box>
-    
+      <Box
+        transition="3s ease"
+        bg={useColorModeValue("white", "gray.900")}
+        borderRight="1px"
+        borderRightColor={useColorModeValue("gray.200", "gray.700")}
+        w={{ base: "full", md: 60 }}
+        pos="fixed"
+        h="full"
+        {...rest}
+      >
+        <Flex h="20" alignItems="center" mx="8" justifyContent="space-between">
+          <Text fontSize="2xl" fontFamily="monospace" fontWeight="bold">
+            <Link to="/" fontSize={"1rem"}>
+              <Image
+                onClick={() => navigate("/")}
+                w="4rem"
+                borderRadius={"2rem"}
+                alt="logo"
+                src={brandLogo}
+              />
+            </Link>
+          </Text>
+          <CloseButton
+            display={{ base: "flex", md: "none" }}
+            onClick={onClose}
+          />
+        </Flex>
+        {LinkItems.map((link) => (
+         
+          <NavItem
+            key={link.name}
+            icon={link.icon}
+            id={link.id}
+            onClose={onClose}
+            path={link.path}
+          >
+            {link.name}
+          </NavItem>
+        
+        ))}
+      </Box>
     </>
   );
 };
 
-
-const NavItem = ({ icon, onClose,id, children, ...rest }) => {
-const {globalState, setGlobalState} = useContext(MyContext);
-const [isClicked, setIsClicked] = useState(false);
-const handleButtonClick = () => {
-  setIsClicked(!isClicked);
-};
-  function CloseSidebar(){
-   
-    //setActive(id) 
-  
- // closeSomething(onClose)
-   
+const NavItem = ({ icon, onClose, id,path, children, ...rest }) => {
+ 
+  const { globalState, setGlobalState } = useContext(MyContext);
+  const [isClicked, setIsClicked] = useState(false);
+  const handleButtonClick = () => {
+    setIsClicked(!isClicked);
+  };
+  function CloseSidebar() {
+    //setActive(id)
+    // closeSomething(onClose)
   }
   return (
-    <Link
-      href="#"
+    <NavLink
+      to={`${path}`}
       style={{ textDecoration: "none" }}
       _focus={{ boxShadow: "none" }}
-      >
+    >
       <Flex
-        onClick={()=> {setGlobalState((globalState)=>({...globalState, active:id})),onClose,handleButtonClick}}
-       
+        onClick={() => {
+          setGlobalState((globalState) => ({ ...globalState, active: id })),
+            onClose,
+            handleButtonClick;
+        }}
         align="center"
-        
-        onKeyDown={{bg: "cyan.400",
-        color: "white",}}
+        onKeyDown={{ bg: "cyan.400", color: "white" }}
         p="4"
         mx="4"
         borderRadius="lg"
@@ -237,27 +247,27 @@ const handleButtonClick = () => {
         )}
         {children}
       </Flex>
-    </Link>
+    </NavLink>
   );
 };
 
-
 const MobileNav = ({ onOpen, onClose, ...rest }) => {
   const { colorMode, toggleColorMode } = useColorMode();
-  
-  const {token}=useSelector((store)=>store.authReducer)
-  const dispatch=useDispatch();
-  const handleAuth =()=>{
-  
-    localStorage.setItem("token", null);
+
+  const { token } = useSelector((store) => store.authReducer);
+  const dispatch = useDispatch();
+  const navigate=useNavigate();
+  const handleAuth = () => {
     dispatch(logoutSuccessAction());
-  
-    console.log("dash auth",token)
 
-  }
-  useEffect(()=>{
-
-  },[token])
+    //console.log("dash auth",token)
+  };
+  useEffect(() => {
+    if(!token)
+    {
+      navigate("/admin/signin")
+    }
+  }, [token]);
   return (
     <Flex
       ml={{ base: 0, md: 60 }}
@@ -284,7 +294,13 @@ const MobileNav = ({ onOpen, onClose, ...rest }) => {
         fontFamily="monospace"
         fontWeight="bold"
       >
-       <Link to="/"><Image w="3rem" borderRadius={"1.5rem"}  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJU0J5A2bvyrbWwUo2-Gy0NlB2Vpv7mUXmAkbuk4t-d0RnEvbH72osa0p1wsTZlnm86io&usqp=CAU" /></Link>
+        <Link to="/">
+          <Image
+            w="3rem"
+            borderRadius={"1.5rem"}
+            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJU0J5A2bvyrbWwUo2-Gy0NlB2Vpv7mUXmAkbuk4t-d0RnEvbH72osa0p1wsTZlnm86io&usqp=CAU"
+          />
+        </Link>
       </Text>
 
       <HStack spacing={{ base: "0", md: "6" }}>
@@ -294,13 +310,12 @@ const MobileNav = ({ onOpen, onClose, ...rest }) => {
           aria-label="open menu"
           icon={<FiBell />}
         />
-      <Button onClick={toggleColorMode}>
-                {colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
-              </Button>
-          
+        <Button onClick={toggleColorMode}>
+          {colorMode === "light" ? <MoonIcon /> : <SunIcon />}
+        </Button>
+
         <Flex alignItems={"center"}>
           <Menu>
-          
             <MenuButton
               py={2}
               transition="all 0.3s"
@@ -337,7 +352,9 @@ const MobileNav = ({ onOpen, onClose, ...rest }) => {
               <MenuItem>Settings</MenuItem>
               <MenuItem>Billing</MenuItem>
               <MenuDivider />
-              <MenuItem onClick={()=>handleAuth()}>{token!=="" && "Sign out"}</MenuItem>
+              <MenuItem onClick={() => handleAuth()}>
+                {token !== "" && "Sign out"}
+              </MenuItem>
             </MenuList>
           </Menu>
         </Flex>

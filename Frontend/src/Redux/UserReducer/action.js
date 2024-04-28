@@ -25,14 +25,13 @@ export const getUserSuccessAction = (payload) => {
   return { type: types.GET_FARMER_SUCCESS, payload };
 };
 
-export const getUserFailureAction = () => {
-  return { type: types.GET_FARMER_FAILURE };
+export const getUserFailureAction = (payload) => {
+  return { type: types.GET_FARMER_FAILURE,payload };
 };
 
 
 //=============Functions currying js ==========================================================================
-// const url = "https://milkify.cyclic.app/api";
-// const url2 = "https://dudhsankalan-ab.onrender.com/api";
+
 
 // admin signin function
 
@@ -43,7 +42,7 @@ export const addFarmer = ({value,token}) => async (dispatch) => {
   dispatch(addUserRequestAction());
   try {
     return  await axios
-      .post(`${localhost}/api/user/register`,value,{
+      .post(`${url2}/user/register`,value,{
         headers: {
           'Authorization':`Bearer ${token}`,
         }
@@ -61,7 +60,7 @@ export const getFarmersDetails = ({token}) => async (dispatch) => {
   dispatch(getUserRequestAction());
   try {
       await axios 
-    .get(`${localhost}/api/user/`,
+    .get(`${url2}/user/`,
     {
       headers: {
         'Authorization':`Bearer ${token}`
@@ -72,12 +71,12 @@ export const getFarmersDetails = ({token}) => async (dispatch) => {
       dispatch(getUserSuccessAction(res.data));
      // console.log("action user detials",res.data);
     }).catch((error)=>{
-      //console.log("error",error)
-      dispatch(getUserFailureAction());
+      dispatch(getUserFailureAction(error));
     })
-      
+    
   } catch (error) {
-    dispatch(getUserFailureAction());
+    console.log("error usre action",error)
+    dispatch(getUserFailureAction(error));
   }
 };
 

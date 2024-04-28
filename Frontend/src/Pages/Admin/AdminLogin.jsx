@@ -57,7 +57,7 @@ import { Loader } from "../../Components/Loader";
         dispatch(signin(loginData))
         .then((res)=>{
           //console.log("login response",res)
-          localStorage.setItem("token",res.data.token)
+          
           dispatch(signinSuccessAction(res.data.token))
           navigate("/dashboard")
           toast({

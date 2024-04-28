@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Header from '../../Components/Header/Header'
 import Footer from "../../Components/Footer/Footer"
 import { Outlet } from 'react-router-dom'
 
-export const Layout = () => {
+const Layout = () => {
+  
   return (
     <>
     <Header/>
@@ -12,3 +13,4 @@ export const Layout = () => {
     </>
   )
 }
+export default Layout;

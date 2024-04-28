@@ -5,6 +5,7 @@ const initialState={
     isMilkAdded:false,
     isLoading:false,
     isError:false,
+    errorMessage:null,
     status:404,
     response:"Initial"
 }
@@ -13,6 +14,8 @@ export const reducer =(state=initialState,action)=>{
 
     switch(type)
     {
+        //add milk
+
         case types.ADD_MILK_REQUEST:
             return {...state, isLoading:true}
         
@@ -22,7 +25,7 @@ export const reducer =(state=initialState,action)=>{
         case types.ADD_MILK_FAILURE:
             return {...state,isError:true, isLoading:false,}
         
-        //GET
+        //GET Milk data
         case types.GET_MILK_REQUEST:
             return {...state, isLoading:true}
         
@@ -30,7 +33,7 @@ export const reducer =(state=initialState,action)=>{
             return {...state,isLoading:false, data:payload}
         
         case types.GET_MILK_FAILURE:
-            return {...state, isLoading:false, isError:true}
+            return {...state, isLoading:false, isError:true,errorMessage:payload}
         
         
         default:

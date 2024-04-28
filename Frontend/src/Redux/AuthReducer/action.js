@@ -50,28 +50,26 @@ export const logoutSuccessAction = () => {
 };
 
 //=============Functions currying js ==========================================================================
-// const url = "https://milkify.cyclic.app/api";
-// const url2 = "https://dudhsankalan-ab.onrender.com/api";
-// const localhost="http://localhost:8080"
+ 
 
 // admin signin function
 export const signin = (payload) => async (dispatch) => {
  // console.log("action payload", payload);
   dispatch(signinRequestAction());
   return await axios
-    .post(`${localhost}/api/admin/login`, payload)
+    .post(`${url2}/admin/login`, payload)
     
 };
 
 //admin signup function
 export const signup = (payload) => async (dispatch) => {
-  //console.log("action", payload);
+  console.log("action", payload);
   dispatch(signupRequestAction());
   try {
     return await axios
-      .post(`${localhost}/api/admin/register`, payload)
+      .post(`${url2}/admin/register`, payload)
       .then((res) => {
-       // console.log("action", res);
+        console.log("action", res);
         dispatch(signupSuccessAction(true));
       })
       .catch((res) => {
@@ -90,7 +88,7 @@ export const sendMail = (payload) => async (dispatch) => {
   dispatch(signinRequestAction());
   try {
     return await axios
-      .post(`${localhost}/api/admin/message`, payload)
+      .post(`${url2}/admin/message`, payload)
       
   } catch (error) {
     dispatch(sendMessageFailureAction());

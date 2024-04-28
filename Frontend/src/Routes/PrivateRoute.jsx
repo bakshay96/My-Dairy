@@ -1,21 +1,22 @@
-import {useContext} from "react";
-import { useSelector } from "react-redux";
-import {Navigate} from "react-router-dom";
+import React, { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom';
 
-function PrivateRoute({children}) {
-    const {token, isLoading, isError, isAuthenticated} = useSelector(
-        (store) => store.authReducer
-      );
-     // console.log("private route",token,isAuthenticated)
-
-    if(token==null || isAuthenticated==false)
+export const PrivateRoute = ({children}) => {
+    let token = JSON.parse(localStorage.getItem("token")) || false;
+    const Navigate=useNavigate();
+ useEffect(()=>{
+    if (! token) {
+         Navigate("/admin/signin");
+      }
+ },[token])
+ return(
+    <>
     {
-        return <Navigate to="/admin/signin" />
+        children
     }
-    else{
+    </>
+ )
+  
 
-        return children;
-    }
+
 }
-
-export default PrivateRoute;

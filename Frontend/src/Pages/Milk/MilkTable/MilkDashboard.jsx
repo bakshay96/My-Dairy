@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -16,7 +18,8 @@ import {
   User,
   Pagination,
   Progress,
-  Spacer,
+  
+  
 } from "@nextui-org/react";
 import { PlusIcon } from "../../User/UserTable/PlusIcon";
 import { VerticalDotsIcon } from "../../User/UserTable/VerticalDotsIcon";
@@ -29,6 +32,8 @@ import { getMilkDetails } from "../../../Redux/MilkReducer/action";
 import { getFarmersDetails } from "../../../Redux/userReducer/action";
 import { Select, SelectItem } from "@nextui-org/react";
 import { color } from "framer-motion";
+import { Heading } from "@chakra-ui/react";
+import { Loader } from "../../../Components/Loader";
 
 const statusColorMap = {
   active: "success",
@@ -46,7 +51,7 @@ const INITIAL_VISIBLE_COLUMNS = [
   "actions",
 ];
 
-export default function MilkDashboard() {
+function MilkDashboard() {
   // store data
   const { data, isLoading } = useSelector((store) => store.milkReducer);
   const { token,  } = useSelector((store) => store.authReducer);
@@ -55,7 +60,7 @@ export default function MilkDashboard() {
   const dispatch = useDispatch();
   const users = data.data || [];
   //console.log("milkdash", data);
-  // console.log("milk data", data,"users data", usersData);
+  //console.log("milk data", data,"users data", usersData);
 
   //  variabales
   const [filterValue, setFilterValue] = React.useState("");
@@ -93,7 +98,7 @@ export default function MilkDashboard() {
   const hasSearchFilter = Boolean(filterValue);
 
   const handleSelectFarmer = (e) => {
-    console.log("handle select", e.target.value, e.target.name, e);
+    //console.log("handle select", e.target.value, e.target.name, e);
 
     const paylaod = e.target.value;
 
@@ -111,7 +116,7 @@ export default function MilkDashboard() {
   };
 
   const handleDateChange = (event, dateType) => {
-    console.log(event);
+   // console.log(event);
     event.stopPropagation();
 
     const { value } = event.target;
@@ -123,7 +128,7 @@ export default function MilkDashboard() {
       ...prevValues,
       [dateType]: formattedDate,
     }));
-    console.log("date values", dateValues);
+    //console.log("date values", dateValues);
   };
 
   const headerColumns = React.useMemo(() => {
@@ -193,7 +198,7 @@ export default function MilkDashboard() {
         }
       });
   }, [sortDescriptor, items, dateValues]);
-  console.log("sorted item", sortedItems);
+  //console.log("sorted item", sortedItems);
 
   const datePiker = React.useMemo(() => {
     const currentDate = new Date();
@@ -541,6 +546,7 @@ export default function MilkDashboard() {
   }, []);
   return (
     <>
+    {users.length?
       <Table
         aria-label=" table with custom cells, pagination and sorting"
         isHeaderSticky
@@ -571,7 +577,7 @@ export default function MilkDashboard() {
 
         <TableBody
           emptyContent={
-            isLoading || items == [] ? "...Loading" : "No entry found"
+            isLoading || items == [] || items.length==0 ? "...Loading" : "No entry found"
           }
           items={sortedItems}
         >
@@ -584,9 +590,15 @@ export default function MilkDashboard() {
           )}
         </TableBody>
       </Table>
+      :
+      <div style={{display:"flex",flexDirection:"columns", }}>
+       
+        <Heading  color={"tomato"} m={"auto"}>{usersData.err} <p style={{fontSize:"20px",color:"blue"}}>Please try again..!</p></Heading>
+      </div>
+}
 
       {/* //Arithmatic table  */}
-      <div>
+      <div>{users.length?
         <Table aria-label=" static collection table">
           <TableHeader>
             <TableColumn>Total & Avg</TableColumn>
@@ -604,18 +616,22 @@ export default function MilkDashboard() {
           >
             {(items) => (
               <TableRow key={items.totalEntries}>
-                <TableCell>{statUserName}</TableCell>
-                <TableCell>{items.totalEntries}</TableCell>
-                <TableCell>{items.fat}</TableCell>
-                <TableCell>{items.snf}</TableCell>
-                <TableCell>{items.degree}</TableCell>
-                <TableCell>{items.totalLitters}</TableCell>
+                <TableCell>{statUserName ||0}</TableCell>
+                <TableCell>{items.totalEntries || 0}</TableCell>
+                <TableCell>{items.fat || 0}</TableCell>
+                <TableCell>{items.snf || 0}</TableCell>
+                <TableCell>{items.degree || 0}</TableCell>
+                <TableCell>{items.totalLitters || 0}</TableCell>
               </TableRow>
             )}
             
           </TableBody>
         </Table>
+        :""
+          }
       </div>
     </>
   );
 }
+
+export default MilkDashboard;

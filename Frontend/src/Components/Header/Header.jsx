@@ -19,6 +19,7 @@ export default function Header() {
   const { token, isLoading, isError,  isAuthenticated } = useSelector(
     (store) => store.authReducer
   );
+  
   //console.log("auth header", token, isAuthenticated);
   const dispatch = useDispatch();
   const navigate=useNavigate();
@@ -27,11 +28,9 @@ export default function Header() {
   const handleAuth = () => {
    
    // console.log("auth",token,isAuthenticated)
-    if(token!==null)
+    if(token)
     {
       //console.log("handle auth sdfsf")
-
-      localStorage.setItem("token", null);
       dispatch(logoutSuccessAction());
       navigate("/admin/signin")
     }
@@ -48,30 +47,31 @@ export default function Header() {
   
   useEffect(()=>{
 
-  },[])
+  },[token])
  
   return (
     <header className="shadow sticky z-50 top-0" id="header">
       <nav className="bg-white border-gray-200 px-4 lg:px-6 py-2.5">
         <div className="flex flex-wrap justify-between items-center mx-auto max-w-screen-xl">
-          <Link to="/" className="flex items-center">
+          <NavLink to="/" className="flex items-center">
             <img src={brandLogo} className="mr-3 h-14" alt="Logo" />
-          </Link>
+          </NavLink>
           <div className="flex items-center lg:order-2">
-            <Link
+            <NavLink
             
-              to={token ==null?"/admin/signin":"/"}
+              to={token?"/":"/admin/signin"}
               onClick={() => handleAuth()}
               className="text-gray-800 hover:bg-gray-50 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none"
             >
-              {token == null ? "Login" : "Logout"}
-            </Link>
+              {token ? "Logout" : "Login"}
+
+            </NavLink>
             <Link
-              to={token==null ? "/admin/signup":"dashboard"}
+              to={!token ? "/admin/signup":"dashboard"}
               onPress={() => handleOpen(b)}
               className="text-white bg-orange-700 hover:bg-orange-800 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none"
             >
-             {token==null? "Get started":"Dashboard"}
+             {token? "Dashboard":"Get Started"}
             </Link>
           </div>
           <div

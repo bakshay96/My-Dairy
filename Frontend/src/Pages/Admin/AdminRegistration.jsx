@@ -29,6 +29,7 @@ import { useToast } from '@chakra-ui/react'
 import UpperNavbar from "../../Components/UpperNavbar";
 import { signup } from "../../Redux/AuthReducer/action";
 import {Link} from "react-router-dom";
+import { Loader } from "../../Components/Loader";
 
 export default function AdminRegistration() {
   const toast = useToast()
@@ -45,8 +46,9 @@ export default function AdminRegistration() {
     mobile: "",
     email: "",
     password: "",
+    confirmPassword:"",
   });
-  const  { token, isLoading, isError,  isAuthenticated } = useSelector((store) => store.authReducer);
+  const  {isLoading, isError,  isRegistered} = useSelector((store) => store.authReducer);
   
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -71,7 +73,7 @@ export default function AdminRegistration() {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      console.log("pass",formData.password=null, formData.confirmPassword=null)
+      console.log("pass",formData.password, formData.confirmPassword)
       toast({
         position:"top",
         title: `Password doesn't match`,
@@ -87,8 +89,9 @@ export default function AdminRegistration() {
       delete formData.confirmPassword;
 
       let adminData = { ...formData, name };
-      console.log("Admin", adminData);
-      dispatch(signup(adminData)).then((res)=>{
+     // console.log("Admin", adminData);
+      dispatch(signup(adminData))
+      .then((res)=>{
         console.log("admin reg response",res);
       })
      
@@ -99,8 +102,8 @@ export default function AdminRegistration() {
 };
 
 useEffect(()=>{
-  console.log("axios")
-  if(isAuthenticated)
+ // console.log("axios")
+  if(isRegistered)
   {
    
       toast({
@@ -110,16 +113,30 @@ useEffect(()=>{
         duration:5000,
         isClosable: true,
       })
-      navigate("/signin")
+      navigate("/admin/signin")
     
   }
+  else if(isError)
+  {
+    toast({
+      title: 'Server Error.',
+      description: "Sorry !,we will no created your account due to server Error.",
+      status: 'error',
+      duration:5000,
+      isClosable: true,
+    })
+    navigate("/")
+  }
   
-},[isAuthenticated])
+},[isRegistered,isError])
 
 
   return (
     <>
       <UpperNavbar />
+      {
+        isLoading?<Loader/>:
+     
       <Flex
         minH={"100vh"}
         align={"center"}
@@ -337,6 +354,7 @@ useEffect(()=>{
           </Box>
         </Stack>
       </Flex>
+      }
     </>
   );
 }
