@@ -8,7 +8,7 @@ export const initialState = {
   signupStatus:null,
   user:null,
   isLoading: false,
-  isError: false,
+  isError: true,
   
 };
 
@@ -22,12 +22,13 @@ export const reducer = (state = initialState, action) => {
     //SignIn
     
     case types.USER_SIGNIN_REQUEST:
-      return {...state, isLoading:true};
+      return {...state, isLoading:true,isError:false};
     
     case types.USER_SIGNIN_SUCCESS:
       localStorage.setItem("token",JSON.stringify(payload))
       return {...state,
-        isAuthenticated: true,
+        isAuthenticate: true,
+        isError:false,
         // user: payload.userName,
         token: payload
       };
@@ -38,23 +39,23 @@ export const reducer = (state = initialState, action) => {
     // SignUp
 
     case types.USER_SIGNUP_REQUEST:
-      return {...state,isLoading:true,};
+      return {...state,isLoading:true,isError:false};
     
     case types.USER_SIGNUP_SUCCESS:
-      return {...state,isLoading:false, isRegistered:true}
+      return {...state,isLoading:false, isError:false,isRegistered:true}
     
     case types.USER_SIGNUP_FAILURE:
       return {...state, isError:true, isLoading:false, isRegistered:false}
 
       //logout user
     case types.USER_LOGOUT_SUCCESS:
-      localStorage.setItem("token",JSON.stringify(""))
-      return {...state,  isAuthenticated:false,isLoading:false , token:""}
+      localStorage.setItem("token",null)
+            return {...state,  isAuthenticated:false,isLoading:false , token:""}
 
 
       //Message
     case types.USER_MESSAGE_SUCCESS:
-      return {...state,isLoading:false, statusCode:payload}
+      return {...state,isLoading:false, statusCode:payload,isError:false}
     
     case types.USER_SIGNUP_FAILURE:
       return {...state, isError:true, isLoading:false,}

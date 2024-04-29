@@ -36,7 +36,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { getFarmersDetails } from "../../../Redux/userReducer/action";
 import SelectFarmer from "../../Milk/SelectFarmer";
 import { getMilkDetails } from "../../../Redux/MilkReducer/action";
-
+import { useToast } from '@chakra-ui/react'
+import {
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+} from '@chakra-ui/react'
+import { ErrorHandler } from "../../../Components/ErrorHandler";
 const statusColorMap = {
   Active: "success",
   paused: "danger",
@@ -46,11 +53,11 @@ const statusColorMap = {
 const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
 
 export default function UserDashboard() {
-  const { usersData, isLoading, isError } = useSelector((store) => store.farmerReducer);
+  const { usersData, isLoading, isError, errorMessage } = useSelector((store) => store.farmerReducer);
   const {token,isAuth}=useSelector((store)=>store.authReducer);
   const dispatch = useDispatch();
 
-  //console.log("user data Dashboard", usersData.users, isLoading, isError);
+  console.log("user data Dashboard", usersData.users, isLoading, isError,errorMessage);
   let users =usersData.users || [];
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
@@ -371,6 +378,7 @@ export default function UserDashboard() {
 
   return (
     <>
+    {errorMessage && ! usersData.users && <ErrorHandler status={"error"} message={errorMessage} />}
     <Table
       aria-label="Example table with custom cells, pagination and sorting"
       isHeaderSticky

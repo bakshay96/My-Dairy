@@ -65,6 +65,7 @@ import brandLogo from "../assets/Logo/project-logo.svg";
 
 import { Spinner } from "@nextui-org/react";
 import { Loader } from "../Components/Loader";
+import { ErrorHandler } from "../Components/ErrorHandler";
 
 const LinkItems = [
   { id: "1", name: "Add Milk", icon: FiHome, path: "/dashboard/add_milk"},
@@ -82,8 +83,8 @@ const LinkItems = [
 export default function Dashboard({ children }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { token, isAuth } = useSelector((store) => store.authReducer);
-  const { isLoading, userData } = useSelector((store) => store.farmerReducer);
-  //console.log("loading",isLoading,"token",token,userData)
+  const { isLoading, userData,isError,errorMessage } = useSelector((store) => store.farmerReducer);
+  console.log("loading",isLoading,"token",token,userData,errorMessage)
   const { globalState, setGlobalState } = useContext(MyContext);
   const { active } = globalState;
   const dispatch = useDispatch();
@@ -139,6 +140,9 @@ export default function Dashboard({ children }) {
           ) : (
             <NotFound />
           )} */}
+          {
+            errorMessage && (userData==undefined) ? <ErrorHandler status={"error"} message={errorMessage} />:""
+          }
           <Outlet />
         </Box>
       </Box>

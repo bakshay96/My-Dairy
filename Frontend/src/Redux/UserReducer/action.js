@@ -67,10 +67,18 @@ export const getFarmersDetails = ({token}) => async (dispatch) => {
       }
     })
     .then((res)=>{
+      if(res.data.err)
+      {
+        dispatch(getUserFailureAction(res.data.err))
+      }
+      else
+      {
 
-      dispatch(getUserSuccessAction(res.data));
-     // console.log("action user detials",res.data);
+        dispatch(getUserSuccessAction(res.data));
+      }
+      console.log("action user detials",res.data);
     }).catch((error)=>{
+      console.log(error)
       dispatch(getUserFailureAction(error));
     })
     

@@ -60,7 +60,7 @@ function MilkDashboard() {
   const dispatch = useDispatch();
   const users = data.data || [];
   //console.log("milkdash", data);
-  //console.log("milk data", data,"users data", usersData);
+  console.log("milk data", data,"users data", usersData);
 
   //  variabales
   const [filterValue, setFilterValue] = React.useState("");
@@ -543,10 +543,10 @@ function MilkDashboard() {
 
   useEffect(() => {
     console.log("milk dash render");
-  }, []);
+  }, [token,usersData]);
   return (
     <>
-    {users.length?
+    {usersData.users.length?
       <Table
         aria-label=" table with custom cells, pagination and sorting"
         isHeaderSticky
@@ -598,7 +598,7 @@ function MilkDashboard() {
 }
 
       {/* //Arithmatic table  */}
-      <div>{users.length?
+      <div>{usersData.users.length?
         <Table aria-label=" static collection table">
           <TableHeader>
             <TableColumn>Total & Avg</TableColumn>
