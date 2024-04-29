@@ -146,7 +146,8 @@ export const MainRoutes = () => {
           path="*"
           element={
             <Suspense fallback={<Loader1 />}>
-              <NotFound />
+              <Layout />
+              <Home />
             </Suspense>
           }
         />
