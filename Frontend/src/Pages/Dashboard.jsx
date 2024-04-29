@@ -97,7 +97,7 @@ export default function Dashboard({ children }) {
       dispatch(getFarmersDetails({ token }));
     }
     console.log("app render");
-  }, []);
+  }, [token]);
   return (
     <>
       {isLoading && <Loader />}
