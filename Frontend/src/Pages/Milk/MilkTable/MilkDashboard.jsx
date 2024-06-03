@@ -577,7 +577,7 @@ function MilkDashboard() {
 
         <TableBody
           emptyContent={
-            isLoading || items == [] || items.length==0 ? "...Loading" : "No entry found"
+            isLoading  ? "...Loading" : data.data?? "No entry found"
           }
           items={sortedItems}
         >

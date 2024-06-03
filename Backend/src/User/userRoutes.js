@@ -6,7 +6,7 @@ const UserRouter=express.Router();
 UserRouter.post("/register",auth,userRegistration)
 UserRouter.get("/",auth,getAllUsers);
 UserRouter.get('/:userId',auth,getSingleUser);
-UserRouter.delete("/:mobile",auth,deleteUser);
+UserRouter.delete("/delete/:mobile",auth,deleteUser);
 
 module.exports={
   UserRouter

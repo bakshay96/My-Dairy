@@ -78,12 +78,12 @@ export const getFarmersDetails = ({token}) => async (dispatch) => {
       }
       console.log("action user detials",res.data);
     }).catch((error)=>{
-      console.log(error)
+      //console.log(error)
       dispatch(getUserFailureAction(error));
     })
     
   } catch (error) {
-    console.log("error usre action",error)
+    //console.log("error usre action",error)
     dispatch(getUserFailureAction(error));
   }
 };

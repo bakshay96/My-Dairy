@@ -1,14 +1,16 @@
+
 import * as types from "./actionTypes";
 
 // NOTE: DO NOT MODIFY the intial state structure in this file.
 export const initialState = {
   token:(localStorage.getItem("token")) || false,
   isAuthenticated:localStorage.getItem("token")!==null?true:false,
-  isRegistered:false,
+  isRegistered:null,
   signupStatus:null,
   user:null,
   isLoading: false,
-  isError: true,
+  isError: null,
+  status:null,
   
 };
 
@@ -42,15 +44,19 @@ export const reducer = (state = initialState, action) => {
       return {...state,isLoading:true,isError:false};
     
     case types.USER_SIGNUP_SUCCESS:
-      return {...state,isLoading:false, isError:false,isRegistered:true}
+      return {...state,isLoading:false, isError:false,isRegistered:true,status:payload}
     
     case types.USER_SIGNUP_FAILURE:
-      return {...state, isError:true, isLoading:false, isRegistered:false}
+      return {...state, isError:true, isLoading:false, isRegistered:false,status:payload}
 
       //logout user
     case types.USER_LOGOUT_SUCCESS:
       localStorage.setItem("token",null)
             return {...state,  isAuthenticated:false,isLoading:false , token:""}
+
+      //Reest 
+      case types.RESET_REQUEST:
+          return {...state, isRegistered:payload, isError:null}
 
 
       //Message

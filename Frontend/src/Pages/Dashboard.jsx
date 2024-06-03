@@ -91,20 +91,20 @@ export default function Dashboard({ children }) {
   const { isLoading, userData, isError, errorMessage } = useSelector(
     (store) => store.farmerReducer
   );
-  console.log("loading", isLoading, "token", token, userData, errorMessage);
+  //console.log("loading", isLoading, "token", token, userData, errorMessage);
   const { globalState, setGlobalState } = useContext(MyContext);
   const { active } = globalState;
   const dispatch = useDispatch();
   const naviate = useNavigate();
   const location = useLocation();
-  console.log("curent path", location.pathname);
+  //console.log("curent path", location.pathname);
   // console.log("contact",globalState,active)
   useEffect(() => {
     if (token) {
       dispatch(getFarmersDetails({ token }));
     }
     console.log("app render");
-  }, [token]);
+  }, []);
   return (
     <>
       {isLoading && <Loader />}

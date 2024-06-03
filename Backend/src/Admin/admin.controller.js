@@ -71,7 +71,7 @@ const adminLogin = async (req, res) => {
     const token = jwt.sign(
       { userId: admin._id },
       process.env.TOKEN_API_SECRET_KEY,
-      { expiresIn: "3h" }
+      { expiresIn: "2h" }
     );
 
     // Respond with the generated token
@@ -82,16 +82,33 @@ const adminLogin = async (req, res) => {
   }
 };
 
+
+
 const message = async (req, res) => {
   const { name, email, message } = req.body;
 
 
-  const mailOptions = {
-    from: process.env.SMTP_EAMIL, // Replace with your email
-    to: `${email}`, // Replace with the recipient's email
-    subject: "Milkify Message ",
-    text: `Hi i'am ${name}\n${message}`,
+ 
+
+mailOptions = {
+    from: email, // Replace with your email
+    to: "care.abtech@gmail.com", // Replace with the recipient's email
+    subject: "Milkify User Message",
+    //text: `Hi.. My Name is ${name}\n User Email -${email}\n ${message} \n Best Regards\n ${name}`,
+    html: `
+      <html>
+        <body>
+          <h2>Milkify User Message !</h2>
+          <p>Hi my is ${name}</p>
+          <p>${message}</p>
+          <h3>User Name : <b>${name} </b></h3>
+          <p>User Email Id :${email} </p>
+          <p>Best regards,<br/>${name}</p>
+        </body>
+      </html>
+    `,
   }
+   
 
   // Send the email
   transporter.sendMail(mailOptions, (error, info) => {
@@ -102,6 +119,8 @@ const message = async (req, res) => {
       
     }
   });
+
+  
 };
 
 
@@ -109,4 +128,5 @@ module.exports = {
   adminRegistration,
   adminLogin,
   message,
+  
 };

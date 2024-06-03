@@ -21,13 +21,13 @@ export const signupRequestAction = () => {
 };
 
 export const signupSuccessAction = (payload) => {
-  console.log(payload);
+  //console.log(payload);
   return { type: types.USER_SIGNUP_SUCCESS, payload };
 };
 
-export const signupFailureAction = () => {
-  // console.log(payload);
-  return { type: types.USER_SIGNUP_FAILURE };
+export const signupFailureAction = (payload) => {
+   console.log(payload);
+  return { type: types.USER_SIGNUP_FAILURE ,payload};
 };
 
 
@@ -49,6 +49,12 @@ export const logoutSuccessAction = () => {
   return { type: types.USER_LOGOUT_SUCCESS, };
 };
 
+//RESET_REQUEST
+
+export const resetRequestAction =(payload) =>{
+  return {type: types.RESET_REQUEST,payload};
+}
+
 //=============Functions currying js ==========================================================================
  
 
@@ -63,21 +69,22 @@ export const signin = (payload) => async (dispatch) => {
 
 //admin signup function
 export const signup = (payload) => async (dispatch) => {
-  console.log("action", payload);
+ // console.log("action", payload);
   dispatch(signupRequestAction());
   try {
     return await axios
       .post(`${url2}/admin/register`, payload)
       .then((res) => {
-        console.log("action", res);
-        dispatch(signupSuccessAction(true));
+       //console.log("action", res);
+        dispatch(signupSuccessAction(res));
       })
-      .catch((res) => {
-        console.log("action catch", res);
-        dispatch(signupFailureAction());
-      });
-  } catch (error) {
-    dispatch(signupFailureAction());
+      // .catch((res) => {
+      //   console.log("action catch", res);
+      //   dispatch(signupFailureAction(res));
+      // });
+  }catch (error) {
+    dispatch(signupFailureAction(error));
+    console.log(error)
   }
 };
 
