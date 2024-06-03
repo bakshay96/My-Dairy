@@ -94,7 +94,7 @@ mailOptions = {
     from: email, // Replace with your email
     to: "care.abtech@gmail.com", // Replace with the recipient's email
     subject: "Milkify User Message",
-    //text: `Hi.. My Name is ${name}\n User Email -${email}\n ${message} \n Best Regards\n ${name}`,
+    
     html: `
       <html>
         <body>

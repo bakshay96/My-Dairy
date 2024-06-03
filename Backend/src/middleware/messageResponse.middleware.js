@@ -10,7 +10,6 @@ const messageResponse = (req, res,next) => {
     from: process.env.SMTP_EAMIL, // Replace with your email
     to: `${email}`, // Replace with the recipient's email
     subject: "Team Milkify (Automated - No Replies) sent you a message ",
-   // text: `Hi.. ${name}\n Thank you for showing interest in Milkify web app.\n We will reaching out to you soon..\n Best Regards\n Milkify care.}`,
      html: `
       <html>
         <body>
