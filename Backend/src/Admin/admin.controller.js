@@ -84,7 +84,44 @@ const adminLogin = async (req, res) => {
 
 
 
+const message = async (req, res) => {
+  const { name, email, message } = req.body;
 
+
+ 
+
+    mailOptions = {
+        from: email, // Replace with your email
+        to: "process.env.SMTP_EAMIL", // Replace with the recipient's email
+        subject: "Milkify User Message",
+        
+        html: `
+          <html>
+            <body>
+              <h2>Milkify User Message !</h2>
+              <p>Hi my is ${name}</p>
+              <p>${message}</p>
+              <h3>User Name : <b>${name} </b></h3>
+              <p>User Email Id :${email} </p>
+              <p>Best regards,<br/>${name}</p>
+            </body>
+          </html>
+        `,
+      }
+      
+
+      // Send the email
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          return res.status(500).send(error.toString());
+        } else {
+          res.status(201).send(`Message send successfully! Email sent. ${info.response}`);
+          
+        }
+      });
+
+      
+};
 
 
 module.exports = {
