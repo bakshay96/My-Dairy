@@ -4,9 +4,10 @@ const { auth } = require("../middleware/auth");
 const UserRouter=express.Router();
 
 UserRouter.post("/register",auth,userRegistration)
-UserRouter.get("/",auth,getAllUsers);
+UserRouter.get("/",getAllUsers);
 UserRouter.get('/:userId',auth,getSingleUser);
 UserRouter.delete("/delete/:mobile",auth,deleteUser);
+
 
 module.exports={
   UserRouter

@@ -1,14 +1,22 @@
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
+const { AdminModel } = require("../Admin/admin.model");
 require("dotenv").config();
 
-const auth=(req,res,next)=>{
-const token=req.headers.authorization;
+
+const auth=async(req,res,next)=>{
+const token=req.header('Authorization')?.split(' ')[1];
 //console.log("token",token,req.headers)
-if(token !==""){
+if (!token) {
+    return res.status(401).json({ message: 'No token, authorization denied' });
+}
+
     try{
-        //console.log("if token",token)
-        const decoded= jwt.verify(token.split(" ")[1],process.env.TOKEN_API_SECRET_KEY);
+        console.log("if token",token)
+        const decoded= jwt.verify(token,process.env.TOKEN_API_SECRET_KEY);
+       // console.log(decoded)
         if(decoded){
+            req.user=await AdminModel.findById(decoded.userId).select('-password')
+            console.log(req.user)
             next();
         }else{
             res.send({"msg":"please Login"})  
@@ -16,10 +24,9 @@ if(token !==""){
     }catch(err){
         res.send({"err":err.message})
     }
-}else{
-    res.send({"msg":"User don't have authorization"})   
+     
 }
-}
+
 
 module.exports={
     auth

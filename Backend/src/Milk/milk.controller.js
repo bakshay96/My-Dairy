@@ -40,6 +40,7 @@ const addMilkData = async (req, res) => {
 
       let userObjId = new mongoose.Types.ObjectId(UserMilk.id);
       //console.log("user id :", userObjId);
+      //console.log("user milk",UserMilk);
       await UserModel.updateOne(
         {
           mobile: mobile,
@@ -68,9 +69,10 @@ const addMilkData = async (req, res) => {
   } catch (error) {
     // Handle other errors and send a 500 Internal Server Error response
     //console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: error.message});
   }
 };
+
 
 // get Single users milk data
 
@@ -79,14 +81,12 @@ const getSingleUserMilkData = async (req, res) => {
 
   try {
     UserMilkData = await MilkModel.find({ mobile });
-    if (UserMilkData.length == 0) {
-      res.status(201).send({ msg: "No user milk entry found..!" });
-    } else {
+    
       res.status(202).send({
         "total_entries": UserMilkData.length,
         "data": UserMilkData,
       });
-    }
+    
   } catch (error) {
     res.status(500).send({ msg: error.message });
   }

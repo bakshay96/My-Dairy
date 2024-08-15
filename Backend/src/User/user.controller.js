@@ -154,10 +154,13 @@ const deleteUser=async(req,res)=>{
 
 
 
+
+
   module.exports={
     userRegistration,
     getAllUsers,
     getSingleUser,
-    deleteUser
+    deleteUser,
+    
   }
   

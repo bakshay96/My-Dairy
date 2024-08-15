@@ -48,7 +48,7 @@ const milkSchema = new mongoose.Schema(
     // },
     // adminOwner:{
     //     type:mongoose.Schema.Types.ObjectId,
-    //     ref:"Admin",
+    //     ref:"admin",
     //     required:true
     // }
   },
