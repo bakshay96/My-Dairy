@@ -110,7 +110,7 @@ const adminLogin = async (req, res) => {
 
 // current user
 const getCurrentUser = async (req, res) => {
-  console.log(req.body)
+  console.log("user",req.user)
 	try {
 		res.status(201).json({user:req.user ,"msg":"user logged in successfully "});
 	} catch (error) {

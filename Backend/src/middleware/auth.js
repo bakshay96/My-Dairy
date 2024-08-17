@@ -13,10 +13,10 @@ if (!token) {
     try{
         console.log("if token",token)
         const decoded= jwt.verify(token,process.env.TOKEN_API_SECRET_KEY);
-       // console.log(decoded)
+       // console.log("auth decoded",decoded)
         if(decoded){
-            req.user=await AdminModel.findById(decoded.userId).select('-password')
-            console.log(req.user)
+            req.user=await AdminModel.findById(decoded.id).select('-password')
+           // console.log("auth user",req.user)
             next();
         }else{
             res.send({"msg":"please Login"})  
