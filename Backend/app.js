@@ -12,10 +12,11 @@ const PORT=process.env.PORT || 3030;
 
 const app=express();
 app.use(cors({
-  origin: '*', // Allow any origin
+  origin: 'https://milkify.netlify.app', // Allow only this origin
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], // Allow specific methods
   
 }));
+app.options('*', cors()); 
 
 app.use(express.json());
 
