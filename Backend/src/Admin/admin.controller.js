@@ -77,7 +77,7 @@ const registerAdmin = async (req, res) => {
   try {
       let admin = await AdminModel.findOne({ mobile });
       if (admin) {
-          return res.status(400).json({ message: 'Admin already exists' });
+          return res.status(200).json({ message: 'Admin already exists' });
       }
       const salt = await bcrypt.genSalt(10);
 		const hashedPassword = await bcrypt.hash(password, salt);
@@ -104,14 +104,14 @@ const adminLogin = async (req, res) => {
     const admin = await AdminModel.findOne({ mobile });
 
     if (!admin) {
-      return res.status(401).json({ error: "Invalid credentials"});
+      return res.status(200).json({ error: "Invalid credentials"});
     }
 
     // Compare the provided password with the hashed password in the database
     const passwordMatch = await bcrypt.compare(password, admin.password);
 
     if (!passwordMatch) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(201).json({ error: "Invalid email or password" });
     }
 
     // Generate a unique token upon successful login
@@ -134,7 +134,7 @@ const adminLogin = async (req, res) => {
       });
   } catch (error) {
     // Handle errors and respond with an error message
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -143,9 +143,9 @@ const adminLogin = async (req, res) => {
 const getCurrentUser = async (req, res) => {
   console.log("user",req.user)
 	try {
-		res.status(201).json({admin:req.admin ,"message":"user logged in successfully "});
+		res.status(200).json({admin:req.admin ,"message":"user logged in successfully "});
 	} catch (error) {
-		res.status(404).send({"message":error.message,error:error.message})
+		res.status(500).send({"message":error.message,error:error.message})
 }
 };
 
@@ -155,7 +155,7 @@ const logoutUser = async (req, res, next) => {
 		// req.session.destroy();
 		return res.status(200).json({ message: "Logout successful!" });
 	} catch (error) {
-		res.status(404).send({"msg":error})
+		res.status(500).send({"msg":error})
 	}
 };
 

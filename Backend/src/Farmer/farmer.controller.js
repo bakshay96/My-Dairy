@@ -16,7 +16,7 @@ exports.createFarmer = async (req, res) => {
 
 		if (isFarmer) {
 			// User already exists, send a 409 Conflict response
-			return res.status(400).json({ message: "farmer already exists with same mobile number. " });
+			return res.status(200).json({ message: "farmer already exists with same mobile number. " });
 		}
 
 		
@@ -112,7 +112,7 @@ exports.getSingleFarmer = async (req, res) => {
 exports.updateFarmer = async (req, res) => {
     try {
         const farmer = await farmerModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({message:"success",farmer});
+        res.status(200).json({message:"success",farmer});
     } catch (error) {
         console.error(err.message);
         res.status(500).send({"message":'Server Error',error:error.message});
@@ -127,7 +127,7 @@ exports.deleteFarmer = async (req, res) => {
 				adminId: req.admin.id,
 			});
 
-        res.json({ message: 'Farmer deleted',farmer:deleteFarmer });
+        res.status(200).json({ message: 'Farmer deleted',farmer:deleteFarmer });
     } catch (error) {
         
         res.status(500).send({"message":'Server Error',error:error.message});

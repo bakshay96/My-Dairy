@@ -16,7 +16,7 @@ exports.addMilkData = async (req, res) => {
 		const Farmer = await farmerModel.find({ _id: id, adminId: req.admin.id });
 
 		if (!Farmer) {
-			return res.status(400).json({ message: "User not found..!" });
+			return res.status(200).json({ message: "User not found..!" });
 		}
 		const [{ name, email, mobile }] = Farmer;
     console.log("farmer",name,email,mobile)
@@ -51,7 +51,7 @@ exports.addMilkData = async (req, res) => {
     //console.log("milk collection",farmerMilkCollection)
 
 		const milkdata = { ...farmerMilkCollection, name, email };
-    console.log("milk data",milkdata)
+    
 		req.milkdata = milkdata;
 
 		// call mail middleware
@@ -75,7 +75,7 @@ exports.getSingleFarmerMilkData = async (req, res) => {
 	try {
 		UserMilkData = await MilkModel.find({ farmerId:id, adminId: req.admin.id });
 
-		res.status(202).send({
+		res.status(200).send({
 			total_entries: UserMilkData.length,
 			data: UserMilkData,
 		});
@@ -90,7 +90,7 @@ exports.getfarmerMilkCollections = async (req, res) => {
 	try {
 		const milkcollections= await MilkModel.find({ adminId: req.admin.id });
 		
-			res.status(202).json({ count: milkcollections.length, milkcollections });
+			res.status(200).json({ count: milkcollections.length, milkcollections });
 		
 	} catch (error) {
 		res.status(500).json({ message:"Server error",error: error.message });
@@ -143,7 +143,7 @@ exports.getfarmerMilkCollectionWithPagination = async (req, res) => {
 exports.updateMilkCollection = async (req, res) => {
   try {
       const milkCollection = await MilkModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
-      res.json({message:"data updated",data:milkCollection});
+      res.status(200).json({message:"data updated",data:milkCollection});
   } catch (error) {
      
       res.status(500).json({message:'Server Error',error:error.message});
