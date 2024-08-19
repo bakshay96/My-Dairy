@@ -5,7 +5,7 @@ require("dotenv").config();
 
 const sendMail= (req, res,next) => {
     // Extract user data from the request body
-    console.log("data",req.milkdata);
+   // console.log("data",req.milkdata);
     const {snf,fat,litter,shift,date,mobile,category,water,degree}=req.milkdata._doc;
     const {email,name}=req.milkdata
     

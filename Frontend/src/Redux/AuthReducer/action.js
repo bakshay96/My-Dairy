@@ -43,51 +43,106 @@ export const sendMessageFailureAction = () => {
 };
 
 
-//SignOut
+//loginout 
+export const logoutRequestAction = () => {
+  // console.log(payload);
+  return { type: types.USER_LOGOUT_REQUEST, };
+};
 export const logoutSuccessAction = () => {
   // console.log(payload);
   return { type: types.USER_LOGOUT_SUCCESS, };
 };
 
-//RESET_REQUEST
+export const logoutFailureAction = (payload) => {
+  // console.log(payload);
+  return { type: types.USER_LOGOUT_FAILURE, payload};
+};
 
-export const resetRequestAction =(payload) =>{
-  return {type: types.RESET_REQUEST,payload};
+
+// current user
+
+export const getCurrentUserRequestAction =() =>{
+  return {type: types.CURRENT_USER_REQUEST};
+}
+
+export const getCurrentUserSuccessAction =(payload) =>{
+  return {type: types.CURRENT_USER_SUCCESS,payload};
+}
+
+export const getCurrentUserFailureAction =() =>{
+  return {type: types.CURRENT_USER_FAILURE};
 }
 
 //=============Functions currying js ==========================================================================
  
 
-// admin signin function
+// admin login function
 export const signin = (payload) => async (dispatch) => {
- // console.log("action payload", payload);
+  //console.log("action payload", payload);
   dispatch(signinRequestAction());
   return await axios
     .post(`${url2}/admin/login`, payload)
     
 };
 
-//admin signup function
+//admin register function
 export const signup = (payload) => async (dispatch) => {
- // console.log("action", payload);
+  console.log("action", payload);
   dispatch(signupRequestAction());
   try {
     return await axios
       .post(`${url2}/admin/register`, payload)
       .then((res) => {
-       //console.log("action", res);
+       console.log("action", res);
         dispatch(signupSuccessAction(res));
       })
-      // .catch((res) => {
-      //   console.log("action catch", res);
-      //   dispatch(signupFailureAction(res));
-      // });
+      
   }catch (error) {
     dispatch(signupFailureAction(error));
     console.log(error)
   }
 };
 
+
+// get current user
+
+export const currentUser =(token) =>async(dispatch) =>{
+  
+  dispatch(getCurrentUserRequestAction())
+  console.log("token current user",token)
+  try {
+     let res=await axios.get(`${url2}/admin/me`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      console.log(res.data);
+      dispatch(getCurrentUserSuccessAction(res.data))
+  } catch (error) {
+    dispatch(getCurrentUserFailureAction())
+    console.log(error.response)
+  }
+}
+
+
+
+
+// logout current user
+
+export const logout =() =>async (dispatch) =>{
+  dispatch(logoutRequestAction())
+  try {
+    setTimeout(()=>{
+      localhost.setTimeout("token",null);
+      dispatch(logoutSuccessAction())
+    },1000)
+    
+  } catch (error) {
+    dispatch(logoutFailureAction(error))
+  }
+}
 
 // send message
 export const sendMail = (payload) => async (dispatch) => {
@@ -98,8 +153,11 @@ export const sendMail = (payload) => async (dispatch) => {
       .post(`${url2}/admin/message`, payload)
       
   } catch (error) {
-    dispatch(sendMessageFailureAction());
+    dispatch(sendMessageFailureAction(error));
   }
 };
+
+
+
 
 

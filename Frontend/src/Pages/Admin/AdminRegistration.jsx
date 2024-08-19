@@ -27,9 +27,10 @@ import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { GiCow, GiFarmer } from "react-icons/gi";
 import { useToast } from "@chakra-ui/react";
 import UpperNavbar from "../../Components/UpperNavbar";
-import { resetRequestAction, signup } from "../../Redux/AuthReducer/action";
+import {  signup } from "../../Redux/AuthReducer/action";
 import { Link } from "react-router-dom";
 import { Loader } from "../../Components/Loader";
+import { register } from "../../Redux/Slices/authSlice";
 
 export default function AdminRegistration() {
 	const toast = useToast();
@@ -48,11 +49,9 @@ export default function AdminRegistration() {
 		password: "",
 		confirmPassword: "",
 	});
-	const { isLoading, isError, isRegistered, status} = useSelector(
-		(store) => store.authReducer
-	);
+	const {user,token, loading,error} = useSelector((state) => state.auth);
   //console.log(isLoading,isError,isRegistered,)
-  //console.log("Form error",formErrors)
+ 
 
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
@@ -74,7 +73,7 @@ export default function AdminRegistration() {
 
 	// Handle form submission
 	const handleSubmit = async (e) => {
-   // console.log("form data",formData)
+   
 		e.preventDefault();
 		if (
 			! formData.firstName ||
@@ -94,14 +93,14 @@ export default function AdminRegistration() {
 				duration: 3000,
 				isClosable: true,
 			});
-     // console.log("form data",formData)
+     
       return;
 		}
     else
     {
 
         if (formData.password !== formData.confirmPassword) {
-          //console.log("pass",formData.password, formData.confirmPassword)
+          
           toast({
             position: "top-right",
             title: `Password doesn't match`,
@@ -120,15 +119,24 @@ export default function AdminRegistration() {
 			delete formData.confirmPassword;
 
 			let adminData = { ...formData, name };
-			 //console.log("Admin", adminData);
-			dispatch(signup(adminData)).then((res) => {
-				//console.log("admin reg response", res);
+			 
+			dispatch(register(adminData)).then((res) => {
+				
+				if(res.payload.user)
+				{
+					
+					console.log("going to towards dashboard")
+					navigate("/dashboard")
+				}
+				else{
+					navigate("/")
+				}
 			});
 
 
 
 			// If validation passes, proceed with form submission
-			//console.log("Form data",formData)
+			
       //clear form formData
       setFormData({firstName: "",
 		lastName: "",
@@ -146,46 +154,23 @@ export default function AdminRegistration() {
       toast({
             position: "top-right",
             title: `Error`,
-            description: `${error}`,
+            description: `${error.message}`,
             status: "error",
-            duration: 3000,
+            duration: 2000,
             isClosable: true,
           });
     }
 	};
 
 	useEffect(() => {
-		// console.log("axios")
-		if (isRegistered) {
-			toast({
-				title: "Account created.",
-				description: "We've created your account for you.",
-				status: "success",
-				duration: 5000,
-				isClosable: true,
-        position:"top-right",
-			});
-     		 dispatch(resetRequestAction(!isRegistered))
-			navigate("/admin/signin");
-
-		} else if (isError) {
-			toast({
-				title: `${status.code}`,
-				description: `${status.message}`,
-				status: "failure",
-				duration: 5000,
-				isClosable: true,
-        		position:"top-right"
-			});
-			dispatch(resetRequestAction(false))
-			navigate("/");
-		}
-	}, [isRegistered,isError]);
+		
+		
+	}, []);
 
 	return (
 		<>
 			<UpperNavbar />
-			{isLoading ? (
+			{loading ? (
 				<Loader />
 			) : (
 				<Flex
@@ -389,7 +374,7 @@ export default function AdminRegistration() {
 												bg: "blue.500",
 											}}
 										>
-											SignUp
+										{loading?"singnin....":"SignUp"}
 										</Button>
 									</Stack>
 									<Stack pt={6}>

@@ -44,6 +44,8 @@ import {
   AlertDescription,
 } from '@chakra-ui/react'
 import { ErrorHandler } from "../../../Components/ErrorHandler";
+import { toast } from "react-toastify";
+import { DeleteFarmerAccount } from "../../../Redux/Slices/farmerSlice";
 const statusColorMap = {
   Active: "success",
   paused: "danger",
@@ -53,12 +55,12 @@ const statusColorMap = {
 const INITIAL_VISIBLE_COLUMNS = ["name", "role", "status", "actions"];
 
 export default function UserDashboard() {
-  const { usersData, isLoading, isError, errorMessage } = useSelector((store) => store.farmerReducer);
-  const {token,isAuth}=useSelector((store)=>store.authReducer);
+  const { farmerData, loading, error,status } = useSelector((state) => state.farmer);
+  const {token,user}=useSelector((state)=>state.auth);
   const dispatch = useDispatch();
 
-  console.log("user data Dashboard", usersData.users, isLoading, isError,errorMessage);
-  let users =usersData.users || [];
+  //console.log("user data Dashboard", farmerData, loading, error);
+  let users =farmerData || [];
   const [filterValue, setFilterValue] = React.useState("");
   const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
   const [visibleColumns, setVisibleColumns] = React.useState(
@@ -70,6 +72,19 @@ export default function UserDashboard() {
     column: "age",
     direction: "ascending",
   });
+  const handleDeleteFarmer=(user)=>{
+    const id=user._id;
+    
+    dispatch(DeleteFarmerAccount({id,token})).then((res)=>{
+      if(res.payload.deletedCount)
+      {
+        
+        dispatch(getFarmersDetails(token))
+
+      }
+      
+    })
+  }
   const [page, setPage] = React.useState(1);
 
   const hasSearchFilter = Boolean(filterValue);
@@ -180,11 +195,15 @@ export default function UserDashboard() {
                   </Tooltip>
                 </DropdownItem>
                 <DropdownItem>
+                  <div onClick={()=>handleDeleteFarmer(user)}>
                   <Tooltip color="danger" content="Delete user">
-                    <span className="text-lg text-danger cursor-pointer active:opacity-50">
+                    <span  className="text-lg text-danger cursor-pointer active:opacity-50">
                       <DeleteIcon />
+                      
                     </span>
                   </Tooltip>
+
+                  </div>
                 </DropdownItem>
               </DropdownMenu>
             </Dropdown>
@@ -378,7 +397,7 @@ export default function UserDashboard() {
 
   return (
     <>
-    {errorMessage && ! usersData.users && <ErrorHandler status={"error"} message={errorMessage} />}
+    {status && ! farmerData && <ErrorHandler status={"error"} message={status} />}
     <Table
       aria-label="Example table with custom cells, pagination and sorting"
       isHeaderSticky

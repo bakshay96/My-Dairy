@@ -8,17 +8,19 @@ require("dotenv").config();
 
 //admin registration
 const adminRegistration = async (req, res) => {
+	const { name, village, shopName, mobile, password } = req.body;
   try {
+
     // Extract admin registration data from the request body
-    const { name, village, shopName, mobile, password } = req.body;
-console.log(req.body)
+    //console.log(req.body)
     // Check if an admin with the same email already exists
-    const existingAdmin = await AdminModel.findOne({ mobile });
-    if (existingAdmin) {
+    const isAdmin = await AdminModel.findOne({ mobile });
+    if (isAdmin) {
       return res
-        .status(409)
-        .json({ msg: "Admin with this mobile already exists" });
-    } else {
+        .status(400)
+        .json({ msg: "Admin  already exists" });
+    } 
+	else {
       bcrypt.hash(password, 5, async (error, hash) => {
         try {
           if (error) {
@@ -30,14 +32,17 @@ console.log(req.body)
               password: hash,
               key: password,
             });
-            const user = await newAdmin.save();
-            console.log("user",user)
-            const payload= {id:user._id};
+
+            const admin = await newAdmin.save();
+            console.log("admin",admin)
+            const payload= {id:admin.id};
+            console.log("payload",payload)
+
             // Respond with the saved admin
             jwt.sign(
               payload,
               process.env.TOKEN_API_SECRET_KEY,
-              { expiresIn: "24h" },
+              { expiresIn: "12h" },
               (err, token) => 
               {
                 if (err) throw err;
@@ -65,6 +70,30 @@ console.log(req.body)
   }
 };
 
+
+
+const registerAdmin = async (req, res) => {
+  const { name, email, password ,mobile} = req.body;
+  try {
+      let admin = await AdminModel.findOne({ mobile });
+      if (admin) {
+          return res.status(400).json({ message: 'Admin already exists' });
+      }
+      const salt = await bcrypt.genSalt(10);
+		const hashedPassword = await bcrypt.hash(password, salt);
+      admin = new AdminModel({ ...req.body,key:password,password:hashedPassword});
+      await admin.save();
+
+      const payload = { id: admin.id };
+      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '12h' });
+
+      res.status(200).json({ message: "Registration successfull", token,admin:{name:admin.name,"email":admin.email,mobile:admin.mobile,id:admin.id}});
+  } catch (error) {
+     
+      res.status(500).json({message:'Server Error',error:error.message});
+  }
+};
+
 // admin login
 const adminLogin = async (req, res) => {
   try {
@@ -75,7 +104,7 @@ const adminLogin = async (req, res) => {
     const admin = await AdminModel.findOne({ mobile });
 
     if (!admin) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Invalid credentials"});
     }
 
     // Compare the provided password with the hashed password in the database
@@ -86,20 +115,22 @@ const adminLogin = async (req, res) => {
     }
 
     // Generate a unique token upon successful login
+    const payload={id:admin.id}
     const token = jwt.sign(
-      { userId: admin._id },
-      process.env.TOKEN_API_SECRET_KEY,
-      { expiresIn: "24h" }
+      payload,
+      process.env.JWT_SECRET,
+      { expiresIn: "6h" }
     );
 
     // Respond with the generated token
     res.status(200).send({ 
-      msg: "Loign successfully done",
+      message: "Loign successfull",
        token,
-       user:{
-        username:admin.name,
+      admin:{
+        name:admin.name,
         mobile:admin.mobile,
-        id:admin._id }
+        email:admin.email,
+        id:admin.id }
       });
   } catch (error) {
     // Handle errors and respond with an error message
@@ -112,9 +143,9 @@ const adminLogin = async (req, res) => {
 const getCurrentUser = async (req, res) => {
   console.log("user",req.user)
 	try {
-		res.status(201).json({user:req.user ,"msg":"user logged in successfully "});
+		res.status(201).json({admin:req.admin ,"message":"user logged in successfully "});
 	} catch (error) {
-		res.status(404).send({"msg":error})
+		res.status(404).send({"message":error.message,error:error.message})
 }
 };
 
@@ -176,6 +207,7 @@ module.exports = {
   adminLogin,
   message,
   getCurrentUser,
-  logoutUser
+  logoutUser,
+  registerAdmin
   
 };

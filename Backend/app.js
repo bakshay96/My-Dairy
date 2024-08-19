@@ -1,7 +1,7 @@
 const express=require("express");
 const cors=require("cors");
 const { connection } = require("./src/connection/db");
-const { UserRouter } = require("./src/User/userRoutes");
+const { farmerRouter } = require("./src/Farmer/farmerRoutes");
 const { AdminRouter } = require("./src/Admin/adminRoutes");
 const { MilkRouter } = require("./src/Milk/milkRoutes");
 const { transporter } = require("./src/connection/mailConnection");
@@ -21,7 +21,7 @@ app.get("/", async (req, res) => {
 
 
 app.use("/api/admin",AdminRouter);
-app.use("/api/user",UserRouter);
+app.use("/api/farmer",farmerRouter);
 app.use("/api/milk",MilkRouter)
 
 //server

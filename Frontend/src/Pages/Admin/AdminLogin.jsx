@@ -14,6 +14,7 @@ import {
 	InputRightElement,
 } from "@chakra-ui/react";
 import { useToast } from "@chakra-ui/react";
+import { toast } from "react-toastify";
 import UpperNavbar from "../../Components/UpperNavbar";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, Link } from "react-router-dom";
@@ -26,6 +27,7 @@ import {
 } from "../../Redux/AuthReducer/action";
 import logo from "../../assets/Logo/project-logo.svg";
 import { Loader } from "../../Components/Loader";
+import { login } from "../../Redux/Slices/authSlice";
 export default function AdminLoginCard() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [password, setPassord] = useState("");
@@ -33,26 +35,18 @@ export default function AdminLoginCard() {
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const location = useLocation();
-	const toast = useToast();
+	const xtoast = useToast();
 
-	const { token, isLoading, isError, isAuthenticated } = useSelector(
-		(store) => store.authReducer
-	);
-	//console.log("auth reducer","token","isLoading","isError","isAuth")
-	//console.log("auth reducer",token,isLoading,isError,isAuthenticated)
+	const { token, user, loading,error} = useSelector((state) => state.auth);
 
+	
+
+	
 	const loginHandler = async (e) => {
 		e.preventDefault();
-
+		
 		if (!password || !mobile) {
-			toast({
-				title: "404 Field Alert",
-				description: "Please fill all required fields.",
-				status: "error",
-				duration: 4000,
-				isClosable: true,
-				position: "top-right",
-			});
+			toast.info("All * mark filds are required...!")
 			setPassord("");
 			setMobile("");
 			return;
@@ -60,53 +54,41 @@ export default function AdminLoginCard() {
 
 		try {
 			let loginData = { mobile, password };
-			//console.log("login data",loginData);
-			dispatch(signin(loginData))
+			
+			dispatch(login(loginData))
 				.then((res) => {
-					//console.log("login response",res)
+					
+					if(res.payload.admin)
+					{
 
-					dispatch(signinSuccessAction(res.data.token));
-					navigate("/dashboard");
-					toast({
-						title: `${res.status},${res.statusText}`,
-						description: `${res.data.msg}`,
-						position: "top",
-						status: "success",
-						duration: 4000,
-						isClosable: true,
-					});
+						navigate("/dashboard");
+					}
+					
 				})
 				.catch((error) => {
-					//console.log("error",error)
-					toast({
-						title: `${error.response.status},${error.response.statusText} !`,
-						description: `${error.response.data.error}`,
-						status: "error",
-						duration: 5000,
-						position: "top",
-						isClosable: true,
-					});
-					dispatch(signinFailureAction());
+					
+					navigate("/")
+					
 				});
 		} catch (error) {
-			toast({
-				title: `${error.response.status},${error.response.statusText} !`,
-				description: `${error.response.data.error}`,
-				status: "error",
-				duration: 5000,
-				position: "top",
-				isClosable: true,
-			});
-			dispatch(signinFailureAction());
+			// xtoast({
+			// 	title: `${error.response.status},${error.response.statusText} !`,
+			// 	description: `${error.response.data.error}`,
+			// 	status: "error",
+			// 	duration: 5000,
+			// 	position: "top",
+			// 	isClosable: true,
+			// });
+			
 		}
 	};
 
-	useEffect(() => {}, []);
+	
 
 	return (
 		<>
 			<UpperNavbar />
-			{isLoading ? (
+			{loading ? (
 				<Flex justifyContent={"center"}>
 					<Heading fontSize={"25px"}>...Loading</Heading>
 				</Flex>

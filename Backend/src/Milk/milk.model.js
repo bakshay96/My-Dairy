@@ -2,9 +2,20 @@ const mongoose = require("mongoose");
 
 const milkSchema = new mongoose.Schema(
   {
+    adminId: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Admin",
+			required: true,
+		},
+    farmerId: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Farmer",
+			required: true,
+		},
     mobile: {
       type: Number,
-      required: true,
+      default:0,
+      
     },
     shift:{    
         type:String,   // auto update based on time
@@ -42,20 +53,12 @@ const milkSchema = new mongoose.Schema(
       type: String,
       required:[true,"date Required"] // Automatically set to the current date and time
     },
-    // milkOwner:{
-    //     type:mongoose.Schema.Types.ObjectId,
-    //     ref:"user"
-    // },
-    // adminOwner:{
-    //     type:mongoose.Schema.Types.ObjectId,
-    //     ref:"admin",
-    //     required:true
-    // }
+    
   },
   { timestamps: true }
 );
 
-const MilkModel = mongoose.model("milk", milkSchema);
+const MilkModel = mongoose.model("Milk", milkSchema);
 
 module.exports = {
   MilkModel,

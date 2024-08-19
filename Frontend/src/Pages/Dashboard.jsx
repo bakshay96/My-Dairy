@@ -46,26 +46,23 @@ import {
 } from "react-icons/fi";
 import { MoonIcon, SunIcon } from "@chakra-ui/icons";
 import { FaAddressBook, FaBluetooth, FaRegAddressCard } from "react-icons/fa";
-import UserRegistration from "./User/UserRegistration";
+// import UserRegistration from "./User/UserRegistration";
 import { NotFound } from "./NotFound";
+// import AdminRegistration from "./Admin/AdminRegistration";
+// import MilkInfo from "../Components/MilkInfo";
+// import UserDashboard from "./User/UserTable/UserDashboard";
+// import AddMilk from "./Milk/AddMilk";
+// import MilkDashboard from "./Milk/MilkTable/MilkDashboard";
 import MyContext from "./ContextApi/MyContext";
-import AdminRegistration from "./Admin/AdminRegistration";
-import MilkInfo from "../Components/MilkInfo";
-import UserDashboard from "./User/UserTable/UserDashboard";
-import AddMilk from "./Milk/AddMilk";
-import MilkDashboard from "./Milk/MilkTable/MilkDashboard";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  addUserRequestAction,
-  getFarmersDetails,
-} from "../Redux/userReducer/action";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { logoutSuccessAction } from "../Redux/AuthReducer/action";
 import brandLogo from "../assets/Logo/project-logo.svg";
 
 import { Spinner } from "@nextui-org/react";
 import { Loader } from "../Components/Loader";
 import { ErrorHandler } from "../Components/ErrorHandler";
+import { getFarmersDetails } from "../Redux/Slices/farmerSlice";
+import { existingUser, logout } from "../Redux/Slices/authSlice";
 
 const LinkItems = [
   { id: "1", name: "Add Milk", icon: FiHome, path: "/dashboard/add_milk" },
@@ -87,11 +84,9 @@ const LinkItems = [
 
 export default function Dashboard({ children }) {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { token, isAuth } = useSelector((store) => store.authReducer);
-  const { isLoading, userData, isError, errorMessage } = useSelector(
-    (store) => store.farmerReducer
-  );
-  //console.log("loading", isLoading, "token", token, userData, errorMessage);
+  const { token, user} = useSelector((state) => state.auth);
+  const { userData,loading,error} = useSelector((state) => state.farmer);
+  //console.log("farmer state", loading, error, userData);
   const { globalState, setGlobalState } = useContext(MyContext);
   const { active } = globalState;
   const dispatch = useDispatch();
@@ -99,19 +94,24 @@ export default function Dashboard({ children }) {
   const location = useLocation();
   //console.log("curent path", location.pathname);
   // console.log("contact",globalState,active)
+  // if(!user)
+  // {
+  //   console.log("not user data there")
+  //   naviate("/")
+  // }
   useEffect(() => {
-    if (token) {
-      dispatch(getFarmersDetails({ token }));
+    if (user) {
+      dispatch(getFarmersDetails(token));
     }
     console.log("app render");
-  }, []);
+  }, [user]);
   return (
     <>
-      {isLoading && <Loader />}
+      {loading && <Loader />}
       <Box
         minH="100vh"
         bg={useColorModeValue("gray.100", "gray.900")}
-        border={"5px solid red"}
+        border={"1px solid red"}
       >
         <SidebarContent
           onClose={() => onClose}
@@ -147,8 +147,8 @@ export default function Dashboard({ children }) {
           ) : (
             <NotFound />
           )} */}
-          {errorMessage && userData == undefined ? (
-            <ErrorHandler status={"error"} message={errorMessage} />
+          {error ? (
+            <ErrorHandler status={"error"} message={error} />
           ) : (
             ""
           )}
@@ -241,7 +241,7 @@ const SidebarContent = ({ onClose, ...rest }) => {
           <NavItem
           bg={location.pathname==link.path?"cyan.500":""}
           color={location.pathname==link.path?"white.400":"teal"}
-
+          onClick={onClose}
             key={link.name}
             icon={link.icon}
             id={link.id}
@@ -312,19 +312,19 @@ const NavItem = ({ icon, onClose, id, path, children, ...rest }) => {
 const MobileNav = ({ onOpen, onClose, ...rest }) => {
   const { colorMode, toggleColorMode } = useColorMode();
 
-  const { token } = useSelector((store) => store.authReducer);
+  const { token,user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const handleAuth = () => {
-    dispatch(logoutSuccessAction());
+    dispatch(logout(token));
 
-    //console.log("dash auth",token)
+   
   };
   useEffect(() => {
-    if (!token) {
+    if (!user) {
       navigate("/admin/signin");
     }
-  }, [token]);
+  }, [token,user]);
   return (
     <Flex
       ml={{ base: 0, md: 60 }}
@@ -391,7 +391,7 @@ const MobileNav = ({ onOpen, onClose, ...rest }) => {
                   spacing="1px"
                   ml="2"
                 >
-                  <Text fontSize="sm">AB</Text>
+                  <Text fontSize="sm">{user && user.name || "AB"}</Text>
                   <Text fontSize="xs" color="gray.600">
                     Admin
                   </Text>
@@ -405,12 +405,12 @@ const MobileNav = ({ onOpen, onClose, ...rest }) => {
               bg={useColorModeValue("white", "gray.900")}
               borderColor={useColorModeValue("gray.200", "gray.700")}
             >
-              <MenuItem>Profile</MenuItem>
+              {/* <MenuItem>Profile</MenuItem>
               <MenuItem>Settings</MenuItem>
-              <MenuItem>Billing</MenuItem>
+              <MenuItem>Billing</MenuItem> */}
               <MenuDivider />
               <MenuItem onClick={() => handleAuth()}>
-                {token !== "" && "Sign out"}
+                {user? "Sign out":""}
               </MenuItem>
             </MenuList>
           </Menu>

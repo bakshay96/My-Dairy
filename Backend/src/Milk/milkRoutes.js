@@ -1,13 +1,19 @@
 const express=require("express");
-const { addMilkData, getSingleUserMilkData, getMilkData, getAllDairyEntries } = require("./milk.controller");
-const { auth } = require("../middleware/auth");
-const {sendMail}=require("../middleware/sendMail")
+
+
+const {sendMail}=require("../middleware/sendMail");
+const authMiddleware = require("../middleware/authMiddleware");
+const { getSingleFarmerMilkData, getfarmerMilkCollections, getfarmerMilkCollectionWithPagination, updateMilkCollection, addMilkData, deleteMilkCollection } = require("./milk.controller");
 const MilkRouter=express.Router();
 
 
-MilkRouter.post("/add/:mobile",auth,addMilkData,sendMail);
-MilkRouter.get("/get/:mobile",auth,getSingleUserMilkData);
-MilkRouter.get("/get",auth,getAllDairyEntries)
+MilkRouter.post("/:id",authMiddleware,addMilkData,sendMail);
+MilkRouter.get("/:id",authMiddleware,getSingleFarmerMilkData);
+MilkRouter.get("/",authMiddleware,getfarmerMilkCollections)
+MilkRouter.get("/get",authMiddleware,getfarmerMilkCollectionWithPagination);
+MilkRouter.patch("/:id",authMiddleware,updateMilkCollection)
+MilkRouter.delete("/:id",authMiddleware,deleteMilkCollection);
+
 
 
 module.exports={

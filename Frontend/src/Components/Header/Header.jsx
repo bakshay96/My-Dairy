@@ -11,27 +11,30 @@ import {
 import { Link, NavLink,useNavigate } from "react-router-dom";
 import brandLogo from "../../assets/Logo/project-logo.svg";
 import { useDispatch, useSelector } from "react-redux";
-import { logoutSuccessAction } from "../../Redux/AuthReducer/action";
+import { existingUser, logout } from "../../Redux/Slices/authSlice";
+
+
 
 export default function Header() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [backdrop, setBackdrop] = React.useState("opaque");
-  const { token, isLoading, isError,  isAuthenticated } = useSelector(
-    (store) => store.authReducer
-  );
+  const { token, user,loading,error } = useSelector((state) => state.auth);
   
-  //console.log("auth header", token, isAuthenticated);
+  //console.log("auth header", token, user,loading,error);
   const dispatch = useDispatch();
   const navigate=useNavigate();
 
   // handle authication function
+
+  
+  
   const handleAuth = () => {
    
-   // console.log("auth",token,isAuthenticated)
-    if(token)
+    if(token !="null" || user)
     {
-      //console.log("handle auth sdfsf")
-      dispatch(logoutSuccessAction());
+      
+     
+      dispatch(logout(token));
       navigate("/admin/signin")
     }
 
@@ -46,8 +49,21 @@ export default function Header() {
   };
   
   useEffect(()=>{
-
-  },[token])
+    if(!user && token!="null")
+      {
+        dispatch(existingUser(token))
+        .then((res)=>{
+          if(res.payload.admin)
+          {
+            console.log("going to dashboard")
+            navigate("/dashboard")
+          }
+          
+         
+        })
+        console.log("login auto")
+      }
+  },[user,token])
  
   return (
     <header className="shadow sticky z-50 top-0" id="header">
@@ -59,19 +75,19 @@ export default function Header() {
           <div className="flex items-center lg:order-2">
             <NavLink
             
-              to={token?"/":"/admin/signin"}
+              to={user?"/":"/admin/signin"}
               onClick={() => handleAuth()}
               className="text-gray-800 hover:bg-gray-50 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none"
             >
-              {token ? "Logout" : "Login"}
+              {user ? "Logout" : "Login"}
 
             </NavLink>
             <Link
-              to={!token ? "/admin/signup":"dashboard"}
+              to={user ?"/Dashboard": "/admin/signup"}
               onPress={() => handleOpen(b)}
               className="text-white bg-orange-700 hover:bg-orange-800 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 mr-2 focus:outline-none"
             >
-             {token? "Dashboard":"Get Started"}
+             {user? "Dashboard":"Get Started"}
             </Link>
           </div>
           <div

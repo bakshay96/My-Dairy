@@ -24,12 +24,7 @@ import { GiCow, GiFarmer } from "react-icons/gi";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import {
-  addFarmer,
-  addUserFailureAction,
-  addUserSuccessAction,
-  getFarmersDetails,
-} from "../../Redux/userReducer/action";
+import { addFarmer, getFarmersDetails } from "../../Redux/Slices/farmerSlice";
 
 export default function UserRegistration({ onClose }) {
   const toast = useToast();
@@ -43,9 +38,9 @@ export default function UserRegistration({ onClose }) {
     email: "",
   });
 
-  const {token,isAuthenticated}=useSelector((store)=>store.authReducer);
-  const { isLoading, isError, usersData, response ,isUserAdded} = useSelector(
-    (store) => store.farmerReducer
+  const {token, user}=useSelector((state)=>state.auth);
+  const {usersData,loading,error} = useSelector(
+    (state) => state.farmer
   );
  // console.log("farmer reducer",usersData,isUserAdded ,response,token);
   const dispatch = useDispatch();
@@ -94,18 +89,18 @@ export default function UserRegistration({ onClose }) {
       delete formData.lastName;
 
       let farmerData = { ...formData, name };
-      console.log("Farmer", farmerData);
+      //console.log("Farmer", farmerData);
       dispatch(addFarmer({value:farmerData,token}))
         .then((res) => {
-          console.log("action", res);
-          dispatch(addUserSuccessAction(true));
+          //console.log("action", res);
+          
         }).then(()=>{
           
-          dispatch(getFarmersDetails({token}));
+          dispatch(getFarmersDetails(token));
         })
         .catch((res) => {
-          console.log("action catch", res);
-          dispatch(addUserFailureAction(res.data));
+         // console.log("action catch", res);
+          
         });
 
       // If validation passes, proceed with form submission
@@ -119,7 +114,7 @@ export default function UserRegistration({ onClose }) {
     }
   };
   useEffect(() => {
-    if (isUserAdded) {
+    if (loading) {
       toast({
         position: "top-right",
         title: "Account created.",
@@ -139,9 +134,9 @@ export default function UserRegistration({ onClose }) {
       });
       navigate("/dashboard");
     }
-    dispatch(addUserSuccessAction(false));
     
-  }, [isUserAdded]);
+    
+  }, [usersData]);
   return (
     <Flex
       minH={"100vh"}
@@ -270,7 +265,7 @@ export default function UserRegistration({ onClose }) {
                 />
               </FormControl>
               <Stack spacing={10} pt={2}>
-                {isLoading ? (
+                {loading ? (
                   <Button
                     size="lg"
                     bg={"blue.400"}
@@ -298,7 +293,7 @@ export default function UserRegistration({ onClose }) {
                       bg: "blue.500",
                     }}
                   >
-                    Add Milk Provider
+                   {loading?"Submiting...":"Add Milk Provider"}
                   </Button>
                 )}
               </Stack>

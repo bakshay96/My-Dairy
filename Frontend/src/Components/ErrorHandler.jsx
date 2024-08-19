@@ -24,7 +24,7 @@ export const ErrorHandler = ({ status, message }) => {
         toast({
             position: 'top-right',
             title: `${message}`,
-            description:"Session Expired..!",
+            description:"Aert",
             status: 'error',
             duration: 2000,
             isClosable: true,

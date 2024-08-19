@@ -28,12 +28,14 @@ import { ChevronDownIcon } from "../../User/UserTable//ChevronDownIcon";
 import { columns, statusOptions } from "../../User/UserTable/data";
 import { capitalize } from "../../User/UserTable/utils";
 import { useDispatch, useSelector } from "react-redux";
-import { getMilkDetails } from "../../../Redux/MilkReducer/action";
-import { getFarmersDetails } from "../../../Redux/userReducer/action";
+
+
 import { Select, SelectItem } from "@nextui-org/react";
 import { color } from "framer-motion";
 import { Heading } from "@chakra-ui/react";
 import { Loader } from "../../../Components/Loader";
+import { getMilkDetails } from "../../../Redux/Slices/milkSlice";
+import { toast } from "react-toastify";
 
 const statusColorMap = {
   active: "success",
@@ -53,14 +55,15 @@ const INITIAL_VISIBLE_COLUMNS = [
 
 function MilkDashboard() {
   // store data
-  const { data, isLoading } = useSelector((store) => store.milkReducer);
-  const { token,  } = useSelector((store) => store.authReducer);
-  const { usersData } = useSelector((store) => store.farmerReducer);
-
+  const { data,loading,error } = useSelector((state) => state.milk);
+  const { token, user } = useSelector((state) => state.auth);
+  const { farmerData } = useSelector((state) => state.farmer);
+//console.log("milk data",data,loading,error)
   const dispatch = useDispatch();
-  const users = data.data || [];
-  //console.log("milkdash", data);
-  console.log("milk data", data,"users data", usersData);
+  const users = data==null?[]:data;
+  
+ // console.log("milkdash", users);
+  //console.log("milk data", data,"users data", farmerData);
 
   //  variabales
   const [filterValue, setFilterValue] = React.useState("");
@@ -75,8 +78,8 @@ function MilkDashboard() {
     direction: "ascending",
   });
   const [dateValues, setDateValues] = useState({
-    startDate: "",
-    endDate: "",
+    startDate:'',
+    endDate: '',
   });
   const [minDate, setMinDate] = useState(""); // Set initial min date
   const [maxDate, setMaxDate] = useState(""); // Set initial max date
@@ -92,43 +95,45 @@ function MilkDashboard() {
     },
   ]);
   const [statUserName, setStatUserName] = React.useState("data not available");
-  //console.log("milks stats", milkStats);
-  // console.log("date values",dateValues)
-  //console.log("milkstats", milkStats);
+  
   const hasSearchFilter = Boolean(filterValue);
-
+  const handleDeleteFarmer =()=>{
+    toast("User deleted")
+  }
   const handleSelectFarmer = (e) => {
-    //console.log("handle select", e.target.value, e.target.name, e);
+   
+    const payload = e.target.value;
+   
 
-    const paylaod = e.target.value;
-
-    dispatch(getMilkDetails({ value: paylaod, token }));
+    dispatch(getMilkDetails({ value: payload, token }));
 
     findName(e.target.value, filteredItems);
   };
 
   const findName = (value, filteredItems) => {
-    let x = usersData.users.forEach((user) => {
-      if (user.mobile == value) {
+   
+    let x = farmerData.forEach((user) => {
+      if (user._id == value) {
         setStatUserName(user.name);
       }
     });
   };
 
   const handleDateChange = (event, dateType) => {
-   // console.log(event);
+   
     event.stopPropagation();
 
     const { value } = event.target;
 
     // Ensurem that the date is in the correct format (YYYY-MM-DD)
     const formattedDate = new Date(value).toISOString().split("T")[0];
+  
 
     setDateValues((prevValues) => ({
       ...prevValues,
       [dateType]: formattedDate,
     }));
-    //console.log("date values", dateValues);
+
   };
 
   const headerColumns = React.useMemo(() => {
@@ -141,6 +146,7 @@ function MilkDashboard() {
 
   const filteredItems = React.useMemo(() => {
     let filteredUsers = [...users];
+    
 
     if (hasSearchFilter) {
       filteredUsers = filteredUsers.filter((user) =>
@@ -158,6 +164,8 @@ function MilkDashboard() {
 
     return filteredUsers;
   }, [users, filterValue, statusFilter]);
+
+ 
 
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
@@ -178,12 +186,36 @@ function MilkDashboard() {
         return sortDescriptor.direction === "descending" ? -cmp : cmp;
       })
       .filter((item) => {
-        const createdDate = new Date(item.createdAt)
-          .toISOString()
-          .split("T")[0];
-        const createdDateObj = new Date(createdDate);
-        const startDateObj = new Date(dateValues.startDate);
-        const endDateObj = new Date(dateValues.endDate);
+        const createdDateObj = new Date(item.createdAt).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true // Use true for 12-hour format with AM/PM
+        });
+          // .toISOString()
+          // .split("T")[0];
+       // const createdDateObj = new Date(createdDate);
+        const startDateObj = new Date(dateValues.startDate).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true // Use true for 12-hour format with AM/PM
+        });
+        const endDateObj = new Date(dateValues.endDate).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true // Use true for 12-hour format with AM/PM
+        });
 
         if (
           dateValues.startDate !== "" &&
@@ -191,15 +223,14 @@ function MilkDashboard() {
           createdDateObj >= startDateObj &&
           createdDateObj <= endDateObj
         ) {
-          // console.log("pass")
+          
           return item;
         } else if (dateValues.startDate == "" || dateValues.endDate == "") {
           return item;
         }
       });
   }, [sortDescriptor, items, dateValues]);
-  //console.log("sorted item", sortedItems);
-
+ 
   const datePiker = React.useMemo(() => {
     const currentDate = new Date();
     //setup min and max date
@@ -208,9 +239,7 @@ function MilkDashboard() {
     twentyDaysAgo.setDate(currentDate.getDate() - 20);
     setMinDate(new Date(twentyDaysAgo).toISOString().split("T")[0]);
     setMaxDate(new Date(currentDate).toISOString().split("T")[0]);
-    // Now, fifteenDaysAgo holds the date 15 days ago from the current date
-    //console.log("20 day ago",currentDate,twentyDaysAgo,"new",new Date().toISOString().split("T")[0]);
-    //console.log("max date",maxDate,"min date",minDate)
+    
   }, []);
 
   const renderCell = React.useCallback((user, columnKey) => {
@@ -400,7 +429,7 @@ function MilkDashboard() {
           <span className="text-default-400 text-small">
             Total {sortedItems.length} Entries
           </span>
-          {usersData == [] ? (
+          {farmerData == [] ? (
             <Progress
               size="sm"
               isIndeterminate
@@ -412,12 +441,13 @@ function MilkDashboard() {
               size={"sm"}
               label="Select an farmer"
               className="max-w-xs"
-              name="mobile"
+              name="farmerId"
+              
               onChange={(e) => handleSelectFarmer(e)}
             >
-              {!isLoading && usersData.users ? (
-                usersData.users.map((user) => (
-                  <SelectItem key={user.mobile} value={user.mobile}>
+              {!loading && farmerData ? (
+                farmerData.map((user) => (
+                  <SelectItem key={user._id} value={user._id}>
                     {user.name}
                   </SelectItem>
                 ))
@@ -452,7 +482,7 @@ function MilkDashboard() {
     statusFilter,
     visibleColumns,
     onRowsPerPageChange,
-    users.length,
+    users?users.length:0,
     onSearchChange,
     hasSearchFilter,
     dateValues,
@@ -504,7 +534,7 @@ function MilkDashboard() {
       0, 0, 0, 0, 0,
     ];
     const tItems = stats.length;
-    //console.log("sort item milk stats", stats);
+    
     if (stats != []) {
       stats.forEach((item) => {
         totalFat += item.fat;
@@ -539,14 +569,14 @@ function MilkDashboard() {
     
    
   },[dateValues,sortedItems]);
-  // console.log("milk stats",getMilkStats)
+ 
 
   useEffect(() => {
     console.log("milk dash render");
-  }, [token,usersData]);
+  }, [token,farmerData]);
   return (
     <>
-    {usersData.users.length?
+    {farmerData.length?
       <Table
         aria-label=" table with custom cells, pagination and sorting"
         isHeaderSticky
@@ -577,7 +607,7 @@ function MilkDashboard() {
 
         <TableBody
           emptyContent={
-            isLoading  ? "...Loading" : data.data?? "No entry found"
+            loading  ? "...Loading" : data && data.length==0?"Entry not found":"farmer not selected"
           }
           items={sortedItems}
         >
@@ -593,24 +623,24 @@ function MilkDashboard() {
       :
       <div style={{display:"flex",flexDirection:"columns", }}>
        
-        <Heading  color={"tomato"} m={"auto"}>{usersData.err} <p style={{fontSize:"20px",color:"blue"}}>Please try again..!</p></Heading>
+        <Heading  color={"tomato"} m={"auto"}>{farmerData.err} <p style={{fontSize:"20px",color:"blue"}}>Please try again..!</p></Heading>
       </div>
 }
 
       {/* //Arithmatic table  */}
-      <div>{usersData.users.length?
+      <div>{farmerData.length?
         <Table aria-label=" static collection table">
           <TableHeader>
             <TableColumn>Total & Avg</TableColumn>
             <TableColumn>Total Entries</TableColumn>
             <TableColumn>Avg FAT</TableColumn>
             <TableColumn>Avg SNF</TableColumn>
-            <TableColumn>Avg Degree</TableColumn>
-            <TableColumn>Total Milk</TableColumn>
+            <TableColumn>Avg Degree / %</TableColumn>
+            <TableColumn>Total Milk / L</TableColumn>
           </TableHeader>
           <TableBody
             emptyContent={
-              isLoading || milkStats == [] ? "...Loading" : "No Entry Found"
+              loading || milkStats == [] ? "...Loading" : "No Entry Found"
             }
             items={getMilkStats}
           >
@@ -620,8 +650,8 @@ function MilkDashboard() {
                 <TableCell>{items.totalEntries || 0}</TableCell>
                 <TableCell>{items.fat || 0}</TableCell>
                 <TableCell>{items.snf || 0}</TableCell>
-                <TableCell>{items.degree || 0}</TableCell>
-                <TableCell>{items.totalLitters || 0}</TableCell>
+                <TableCell>{items.degree || 0} </TableCell>
+                <TableCell>{items.totalLitters || 0  }</TableCell>
               </TableRow>
             )}
             

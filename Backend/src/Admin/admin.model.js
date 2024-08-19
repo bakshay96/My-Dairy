@@ -10,7 +10,6 @@ const adminSchema = new mongoose.Schema(
     },
     gender: {
       type: String,
-      
       default: "Male",
       enum: ["Male", "Female", "Other"],
       message: "Gender should be required.",
@@ -64,7 +63,7 @@ const adminSchema = new mongoose.Schema(
   }
 );
 
-const AdminModel = mongoose.model("admin", adminSchema);
+const AdminModel = mongoose.model("Admin", adminSchema);
 
 module.exports = {
   AdminModel,

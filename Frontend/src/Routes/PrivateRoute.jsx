@@ -1,14 +1,15 @@
 import React, { useEffect } from 'react'
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 export const PrivateRoute = ({children}) => {
-    let token = JSON.parse(localStorage.getItem("token")) || false;
+   const {user,token} =useSelector((state)=>state.auth)
     const Navigate=useNavigate();
  useEffect(()=>{
-    if (! token) {
+    if (!user) {
          Navigate("/admin/signin");
       }
- },[token])
+ },[token,user])
  return(
     <>
     {

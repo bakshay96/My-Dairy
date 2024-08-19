@@ -1,15 +1,19 @@
-import { applyMiddleware, combineReducers, legacy_createStore } from "redux";
-import {thunk} from "redux-thunk";
-import { reducer as authReducer } from "./AuthReducer/reducer";
-import {reducer as farmerReducer} from "./UserReducer/reducer";
-import { reducer as milkReducer } from "./MilkReducer/reducer";
+// src/redux/store.js
+import { configureStore } from '@reduxjs/toolkit';
+import { authSlice } from './Slices/authSlice';
+import { milkSlice } from './Slices/milkSlice';
+import { farmerSlice } from './Slices/farmerSlice';
 
+const authReducer=authSlice.reducer;
+const milkReducer=milkSlice.reducer;
+const farmerReducer=farmerSlice.reducer;
 
+export const store = configureStore({
+  reducer: {
+    auth:authReducer,
+    milk:milkReducer,
+    farmer:farmerReducer
 
-let rootReducer = combineReducers({authReducer,farmerReducer,milkReducer});
-
-export const store = legacy_createStore(rootReducer, applyMiddleware(thunk));
-
-
-// `http://localhost:${process.env.REACT_APP_JSON_SERVER_PORT}/milkify`
-// http://localhost:8080/app
+    
+  },
+});

@@ -25,8 +25,8 @@ import {
 
 import { GiBuffaloHead, GiCow, GiFarmer, GiGoat } from "react-icons/gi";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
-import { getFarmersDetails } from "../../Redux/userReducer/action";
-import { addMilk, addMilkSuccessAction } from "../../Redux/MilkReducer/action";
+import { addMilk } from "../../Redux/Slices/milkSlice";
+import { getFarmersDetails } from "../../Redux/Slices/farmerSlice";
 
 export default function AddMilk() {
   const toast = useToast()
@@ -36,36 +36,38 @@ export default function AddMilk() {
     lastName: "",
   });
   const [formMilkData, setformMilkData] = useState({
-    mobile: "",
+   farmerId:null,
     category: "cow", //should be [cow,buffalo,goat];
     fat: 0,
     snf: 0,
     water: 0 || 0,
     litter: 0,
     degree:0,
+    id:""
+    
   });
   const dispatch = useDispatch();
-  const { usersData } = useSelector((store) => store.farmerReducer);
-  const {token,isAuth}=useSelector((store)=>store.authReducer);
+  const { farmerData } = useSelector((state) => state.farmer);
+  const {token,user}=useSelector((state)=>state.auth);
 
-  const {isMilkAdded,isLoading,isError,response} =useSelector((store)=>store.milkReducer);
-  //console.log("token",token)
-  // console.log("Milk data users", usersData);
-  // console.log("milk reducer",isMilkAdded,isLoading,isError,response)
+  const {data,loading,error} =useSelector((state)=>state.milk);
+  
 
   const handleChange = (e) => {
-   // console.log(e.target.name, e.target.value);
+    console.log(e.target.name, e.target.value);
     const { name, value } = e.target;
-    
+   
     // get user name
-    if(name=="mobile")
+    if(name=="farmerId")
     {
-      usersData.users.forEach((user)=>{
-        if(user.mobile===value)
+      farmerData.forEach((user)=>{
+        if(user._id===value)
         {
+         
           let [firstName,lastName]=user.name.split(" ");
-         // console.log(firstName,lastName);
+          
           setName({firstName,lastName});
+          setformMilkData.farmerId=value;
         }
       })
 
@@ -79,14 +81,14 @@ export default function AddMilk() {
   // add milk
   const handleMilkSubmit = (e) => {
     e.preventDefault();
-   // console.log("handleMilkSubmit",formMilkData);
-    const mobile=Number(formMilkData.mobile);
+  
+   
     dispatch(addMilk({value:formMilkData,token})).then((res)=>{
-      //console.log("res add milk",res);
+      console.log("res add milk",res);
      
       if(res.status==201)
       {
-        dispatch(addMilkSuccessAction(res))
+        
         toast({
           title: 'Milk Added Successfully.',
           description: "We've added your milk to your account for you.",
@@ -98,7 +100,7 @@ export default function AddMilk() {
       }
     })
     setformMilkData({
-    mobile: "",
+   farmerId:null,
     category: "cow", //should be [cow,buffalo,goat];
     fat: 0,
     snf: 0,
@@ -109,12 +111,17 @@ export default function AddMilk() {
   };
 
   useEffect(() => {
-    dispatch(getFarmersDetails({token}));
-    if(isMilkAdded)
-    {
-      dispatch(addMilkSuccessAction({status:false,response:"initial"}))
-    }
-  }, [isMilkAdded]);
+    
+
+      dispatch(getFarmersDetails(token)).then((res)=>{
+       
+      });
+    
+    // if(isMilkAdded)
+    // {
+    //   dispatch(addMilkSuccessAction({status:false,response:"initial"}))
+    // }
+  }, []);
   return (
     <Flex
       minH={"100vh"}
@@ -157,7 +164,7 @@ export default function AddMilk() {
                 </FormLabel>
                 <Select
                   id="farmer"
-                  name="mobile"
+                  name="farmerId"
                   autoComplete="Farmer"
                   placeholder="Select Farmer"
                   focusBorderColor="brand.400"
@@ -167,9 +174,9 @@ export default function AddMilk() {
                   rounded="md"
                   onChange={(e) => handleChange(e)}
                 >
-                  {usersData.users&&usersData.users.map((user) => {
+                  {farmerData && farmerData&&farmerData.map((user) => {
                     return (
-                      <option value={user.mobile} key={user.mobile}>
+                      <option value={user._id} key={user._id}>
                         {user.name}
                       </option>
                     );
@@ -260,7 +267,7 @@ export default function AddMilk() {
               </FormControl>
 
               <Stack spacing={10} pt={2}>
-                {isLoading ? (
+                {loading ? (
                   <Button
                     size="lg"
                     bg={"blue.400"}
