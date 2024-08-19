@@ -11,10 +11,13 @@ require("dotenv").config();
 const PORT=process.env.PORT || 3030;
 
 const app=express();
+
+// CORS configuration
 app.use(cors({
-  origin: 'https://milkify.netlify.app', // Allow only this origin
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], // Allow specific methods
-  
+  origin: 'https://milkify.netlify.app', //  frontend domain
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+  credentials: true // Allow credentials like cookies
 }));
 app.options('*', cors()); 
 
