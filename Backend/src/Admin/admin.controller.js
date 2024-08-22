@@ -11,8 +11,7 @@ const adminRegistration = async (req, res) => {
 	const { name, village, shopName, mobile, password } = req.body;
   try {
 
-    // Extract admin registration data from the request body
-    //console.log(req.body)
+    
     // Check if an admin with the same email already exists
     const isAdmin = await AdminModel.findOne({ mobile });
     if (isAdmin) {
@@ -34,9 +33,9 @@ const adminRegistration = async (req, res) => {
             });
 
             const admin = await newAdmin.save();
-            console.log("admin",admin)
+            
             const payload= {id:admin.id};
-            console.log("payload",payload)
+            
 
             // Respond with the saved admin
             jwt.sign(
@@ -141,7 +140,7 @@ const adminLogin = async (req, res) => {
 
 // current user
 const getCurrentUser = async (req, res) => {
-  console.log("user",req.user)
+ 
 	try {
 		res.status(200).json({admin:req.admin ,"message":"user logged in successfully "});
 	} catch (error) {

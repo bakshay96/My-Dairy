@@ -12,6 +12,7 @@ const PORT=process.env.PORT || 3030;
 
 const app=express();
 
+
 // CORS configuration
 app.use(cors({
   origin: 'https://milkify.netlify.app', //  frontend domain
@@ -19,6 +20,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
   credentials: true // Allow credentials like cookies
 }));
+
 app.options('*', cors()); 
 
 app.use(express.json());

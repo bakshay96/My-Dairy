@@ -19,7 +19,7 @@ exports.addMilkData = async (req, res) => {
 			return res.status(200).json({ message: "User not found..!" });
 		}
 		const [{ name, email, mobile }] = Farmer;
-    console.log("farmer",name,email,mobile)
+   
 		//auto shift desider
 		const currentHour = new Date().getHours();
 		const shift = currentHour < 12 ? "morning" : "evening";
@@ -73,7 +73,9 @@ exports.getSingleFarmerMilkData = async (req, res) => {
 	const { id } = req.params;
 
 	try {
-		UserMilkData = await MilkModel.find({ farmerId:id, adminId: req.admin.id });
+		UserMilkData = await MilkModel.find({ farmerId:id, adminId: req.admin.id })
+		.populate('farmerId', 'name email mobile') // Populating farmer information
+            .exec();
 
 		res.status(200).send({
 			total_entries: UserMilkData.length,
@@ -105,7 +107,7 @@ exports.getfarmerMilkCollectionWithPagination = async (req, res) => {
 		const page = parseInt(req.query.page) || 1;
 		const pageSize = parseInt(req.query.pageSize) || 3
     const sort=req.query.sort || "asc";
-    console.log(req.query)
+  
 
 		// Calculate the skip value based on the page and pageSize
 		const skip = (page - 1) * pageSize;

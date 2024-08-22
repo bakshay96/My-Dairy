@@ -23,11 +23,8 @@ exports.createFarmer = async (req, res) => {
     // Create a new milk provider Farmer
     const farmer= new farmerModel({...req.body,adminId: req.admin.id});
     const newfarmer=await farmer.save();
-		
 
-		console.log("farmer", newfarmer);
-
-		res
+		     res
 			.status(200)
 			.send({ msg: "New farmer added successfully", newfarmer });
 	} catch (error) {
@@ -62,7 +59,7 @@ exports.getAllFarmerWithPagination = async (req, res) => {
 
 		// Calculate the skip value based on the page and pageSize
 		const skip = (page - 1) * pageSize;
-		console.log(req.user);
+		
 		// Query the database with pagination
 		const usersEntries = await farmerModel
 			.find({})
@@ -86,7 +83,7 @@ exports.getAllFarmerWithPagination = async (req, res) => {
 
 		return res.status(200).json(response);
 	} catch (error) {
-		console.error(error);
+		
 		return res.status(500).json({ error: "Internal Server Error" });
 	}
 };
@@ -127,32 +124,10 @@ exports.deleteFarmer = async (req, res) => {
 				adminId: req.admin.id,
 			});
 
-        res.status(200).json({ message: 'Farmer deleted',farmer:deleteFarmer });
+        res.status(200).json({ message: 'Farmer deleted',farmer:deleteFarmer,id:req.params.id});
     } catch (error) {
         
         res.status(500).send({"message":'Server Error',error:error.message});
     }
 };
-// exports.deleteFarmer = async (req, res) => {
-// 	const { id } = req.params;
-// 	user = await farmerModel.find({_id:id, adminId: req.admin.id });
-// 	try {
-// 		if (user.length == 0) {
-// 			res.status(404).send({ msg: "User not found..!" });
-// 		} else {
-// 			let data = await farmerModel.deleteOne({
-// 				mobile: mobile,
-// 				adminId: req.user.id,
-// 			});
-// 			res
-// 				.status(200)
-// 				.send({
-// 					msg: `User associated with ${mobile} number has been deleted..!`,
-// 					data,
-// 				});
-// 		}
-// 	} catch (error) {
-// 		res.status(400).send({ msg: error.message });
-// 	}
-// };
 
