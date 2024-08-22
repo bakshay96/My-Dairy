@@ -15,7 +15,7 @@ const app=express();
 
 // CORS configuration
 app.use(cors({
-  origin: 'https://milkify.netlify.app', //  frontend domain
+  origin: process.env.origin, //  frontend domain
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed methods
   allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
   credentials: true // Allow credentials like cookies
