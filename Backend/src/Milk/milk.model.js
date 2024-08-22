@@ -48,6 +48,19 @@ const milkSchema = new mongoose.Schema(
       required: [true, "FAT Required"],
       default: 0.0,
     },
+    fatRate:{
+      type:Number,
+      required:true
+    },
+    
+    rate: {
+      type: Number,
+      required: true
+  },
+  calculatedAmount: {
+      type: Number,
+      required: true
+  },
     date: {
                     // auto set
       type: String,

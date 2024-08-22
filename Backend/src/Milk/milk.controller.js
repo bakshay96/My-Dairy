@@ -4,11 +4,12 @@ const { farmerModel } = require("../Farmer/farmer.model");
 const nodemailer = require("nodemailer");
 const mongoose = require("mongoose");
 const { sendMail } = require("../middleware/sendMail");
+const { rateSettingModel } = require("./RateSetting/rateSetting.model");
 
 
 //add farmer milk data 
 exports.addMilkData = async (req, res) => {
-
+	const {category,fat,litter} =req.body;
 	const { id } = req.params;
 	try {
 		
@@ -39,13 +40,27 @@ exports.addMilkData = async (req, res) => {
 
 		const date = formattedDateTime;
 
+
+		// Fetch rate settings for the given milk category
+        const rateSetting = await rateSettingModel.findOne({ adminId: req.admin.id, milkCategory:category });
+        if (!rateSetting) {
+            return res.status(400).json({ msg: `Rate settings for ${category} not found` });
+        }
+
+		const fatRate =rateSetting.ratePerFat;
+        const rate = fat * rateSetting.ratePerFat; // Basic rate calculation per litter;
+        const calculatedAmount = rate * parseFloat(litter); // Calculate final totalAmount
+
 		const farmerMilkCollection =  MilkModel({
+			adminId: req.admin.id,
+			farmerId: id,
 			...req.body,
 			shift,
 			date,
-			adminId: req.admin.id,
-			farmerId: id,
-      mobile
+			fatRate,
+			rate,
+			calculatedAmount,
+            mobile,
 		});
 		const farmerdata=await farmerMilkCollection.save();
     //console.log("milk collection",farmerMilkCollection)
@@ -144,8 +159,25 @@ exports.getfarmerMilkCollectionWithPagination = async (req, res) => {
 //update farmer milk data
 exports.updateMilkCollection = async (req, res) => {
   try {
-      const milkCollection = await MilkModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+	const {category,fat,litter}=req.body;
+	
+	// Fetch rate settings for the given milk category
+	const rateSetting = await rateSettingModel.findOne({ adminId: req.admin.id, milkCategory:category });
+	if (!rateSetting) {
+		return res.status(400).json({ msg: `Rate settings for ${category} not found` });
+	}
+
+	const fatRate =rateSetting.ratePerFat;
+	const rate = fat * rateSetting.ratePerFat; // Basic rate calculation per litter;
+	const calculatedAmount = rate * parseFloat(litter); // Calculate final totalAmount
+
+	const newMilkCollection =req.body;
+	const newUpdatedMilkCollection={...newMilkCollection,fatRate,rate,calculatedAmount};
+
+      const milkCollection = await MilkModel.findByIdAndUpdate(req.params.id, newUpdatedMilkCollection, { new: true });
+
       res.status(200).json({message:"data updated",data:milkCollection});
+	  
   } catch (error) {
      
       res.status(500).json({message:'Server Error',error:error.message});

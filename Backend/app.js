@@ -5,6 +5,7 @@ const { farmerRouter } = require("./src/Farmer/farmerRoutes");
 const { AdminRouter } = require("./src/Admin/adminRoutes");
 const { MilkRouter } = require("./src/Milk/milkRoutes");
 const { transporter } = require("./src/connection/mailConnection");
+const rateRouter = require("./src/Milk/RateSetting/rateSettingRoutes");
 
 
 require("dotenv").config();
@@ -14,14 +15,15 @@ const app=express();
 
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.origin, //  frontend domain
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
-  credentials: true // Allow credentials like cookies
-}));
+// app.use(cors({
+//   origin: process.env.origin, //  frontend domain
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed methods
+//   allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+//   credentials: true // Allow credentials like cookies
+// }));
 
-app.options('*', cors()); 
+app.use(cors());
+ app.options('*', cors()); 
 
 app.use(express.json());
 
@@ -34,6 +36,7 @@ app.get("/", async (req, res) => {
 app.use("/api/admin",AdminRouter);
 app.use("/api/farmer",farmerRouter);
 app.use("/api/milk",MilkRouter)
+app.use("/api/rate",rateRouter);
 
 //server
 app.listen(PORT, async ()=>{
