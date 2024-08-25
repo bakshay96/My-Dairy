@@ -49,7 +49,7 @@ exports.addMilkData = async (req, res) => {
 
 		const fatRate =rateSetting.ratePerFat;
         const rate = fat * rateSetting.ratePerFat; // Basic rate calculation per litter;
-        const calculatedAmount = rate * parseFloat(litter); // Calculate final totalAmount
+        const calculatedAmount = rate * parseFloat(litter).toFixed(3); // Calculate final totalAmount
 
 		const farmerMilkCollection =  MilkModel({
 			adminId: req.admin.id,
@@ -90,7 +90,10 @@ exports.getSingleFarmerMilkData = async (req, res) => {
 	try {
 		UserMilkData = await MilkModel.find({ farmerId:id, adminId: req.admin.id })
 		.populate('farmerId', 'name email mobile') // Populating farmer information
-            .exec();
+        .populate('adminId', 'name email mobile shopName') // Populating admin information
+        .exec();
+		
+		const Admin=
 
 		res.status(200).send({
 			total_entries: UserMilkData.length,
@@ -169,7 +172,7 @@ exports.updateMilkCollection = async (req, res) => {
 
 	const fatRate =rateSetting.ratePerFat;
 	const rate = fat * rateSetting.ratePerFat; // Basic rate calculation per litter;
-	const calculatedAmount = rate * parseFloat(litter); // Calculate final totalAmount
+	const calculatedAmount = rate * parseFloat(litter).toFixed(3); // Calculate final totalAmount
 
 	const newMilkCollection =req.body;
 	const newUpdatedMilkCollection={...newMilkCollection,fatRate,rate,calculatedAmount};
@@ -190,7 +193,7 @@ exports.deleteMilkCollection = async (req, res) => {
      const deletedmilkData= await MilkModel.findByIdAndDelete(req.params.id);
       res.status(200).json({ message: 'Milk Collection deleted',data:deletedmilkData});
   } catch (error) {
-      console.error(err.message);
+      //console.error(err.message);
       res.status(500).json({message:'Server Error',error:error.message});
   }
 };

@@ -53,7 +53,10 @@ const adminRegistration = async (req, res) => {
                      token,
                      user:{id: user._id,
                      username: user.user,
-                     mobile: user.mobile}
+                     mobile: user.mobile,
+
+                    }
+
                     });
               }
             );
@@ -86,7 +89,7 @@ const registerAdmin = async (req, res) => {
       const payload = { id: admin.id };
       const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '12h' });
 
-      res.status(200).json({ message: "Registration successfull", token,admin:{name:admin.name,"email":admin.email,mobile:admin.mobile,id:admin.id}});
+      res.status(200).json({ message: "Registration successfull", token,admin:{name:admin.name,"email":admin.email,mobile:admin.mobile,id:admin.id,shopName:admin.shopName}});
   } catch (error) {
      
       res.status(500).json({message:'Server Error',error:error.message});
@@ -129,6 +132,7 @@ const adminLogin = async (req, res) => {
         name:admin.name,
         mobile:admin.mobile,
         email:admin.email,
+        shopName:admin.shopName,
         id:admin.id }
       });
   } catch (error) {

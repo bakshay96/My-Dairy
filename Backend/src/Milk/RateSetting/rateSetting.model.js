@@ -24,6 +24,12 @@ const RateSettingSchema = new mongoose.Schema({
     time: {
         type: Date,
         default: Date.now
+    },
+    status:{
+        type:String,
+        enum:['Active','Inactive'],
+        default:'Active',
+        required:true,
     }
 },{
     timestamps:true,
