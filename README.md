@@ -21,7 +21,6 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 ## Credits
 
 - Images  : [google Images](https://www.google.com/]
-- Content : [meriDairy.com](https//meridairy.in/)
 - Icons   : [Font Awesome](https://fontawesome.com/)
 - References : [MDN Docs](https://developer.mozilla.org/en-US/) | [W3School](https://www.w3schools.com/)
 
