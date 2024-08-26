@@ -1,5 +1,5 @@
 # <h1>Milkify</h1> 
-<a href="https://ibb.co/NFTsWkg"><img align="center" width="10%" src="https://i.ibb.co/3TR7S85/milkify-high-resolution-logo-transparent.png" alt="milkify-high-resolution-logo-transparent" border="0" /></a>
+<a href="https://ibb.co/NFTsWkg"><img align="center" width="10%" src="https://res.cloudinary.com/ddjink5zz/image/upload/v1724657192/milkify-high-resolution-logo-transparent_vcewqm.png" alt="milkify-high-resolution-logo-transparent" border="0" /></a>
 <h2 align="center">🖥️ Tech Stack</h2>
  
 <h3>This is an Individual project.</h3>
