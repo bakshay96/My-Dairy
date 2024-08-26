@@ -146,10 +146,10 @@ export const authSlice = createSlice({
 
 			.addCase(existingUser.rejected, (state, action) => {
 				state.pending = false;
-        //console.log(action)
+        		//console.log(action)
 				state.error = action.payload;
 				//console.log("action",action);
-				toast.error(action.error?action.error.code:"auto login fail..");
+				toast.error("Thanks for choosing Milkify..");
 			});
 	},
 });

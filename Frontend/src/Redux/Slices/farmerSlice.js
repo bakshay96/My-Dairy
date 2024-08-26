@@ -60,7 +60,7 @@ export const farmerSlice =createSlice({
         })
 
         .addCase(addFarmer.rejected , (state,action)=>{
-           
+        //    console.log(action);
             state.loading=false;
             state.error=true;
             state.status=action.payload.error;
@@ -79,7 +79,7 @@ export const farmerSlice =createSlice({
         .addCase(getFarmersDetails.fulfilled, (state,action)=>{
             state.loading=false;
             state.farmerData=action.payload.farmers;
-            console.log(state.farmerData)
+            //console.log(state.farmerData)
             toast.success(action.payload.message || "fetched farmers data")
         })
 

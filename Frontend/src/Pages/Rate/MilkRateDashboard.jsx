@@ -11,6 +11,7 @@ import {
 	useToast,
 	useColorModeValue,
 	IconButton,
+	border,
 } from "@chakra-ui/react";
 import { DeleteIcon } from "@chakra-ui/icons";
 import MilkRateModal from "./MilkRateModal";
@@ -89,24 +90,24 @@ const MilkRateDashboard = () => {
 	const handleDelete = async (id) => {
 		try {
 			//console.log(id)
-		  dispatch(deleteMilkRates({ token, id }));
-	
-		  toast({
-			title: "Milk rate deleted successfully!",
-			status: "success",
-			duration: 3000,
-			isClosable: true,
-		  });
+			dispatch(deleteMilkRates({ token, id }));
+
+			toast({
+				title: "Milk rate deleted successfully!",
+				status: "success",
+				duration: 3000,
+				isClosable: true,
+			});
 		} catch (error) {
-		  //console.log(error);
-		  toast({
-			title: "Failed to delete milk rate",
-			status: "error",
-			duration: 3000,
-			isClosable: true,
-		  });
+			//console.log(error);
+			toast({
+				title: "Failed to delete milk rate",
+				status: "error",
+				duration: 3000,
+				isClosable: true,
+			});
 		}
-	  };
+	};
 
 	const filteredRates = (rates || []).filter((rate) => {
 		if (filterCategory === "all") return true;
@@ -120,12 +121,15 @@ const MilkRateDashboard = () => {
 
 	const getRandomColor = () => {
 		const colors = [
-			"red.200",
-			"blue.200",
-			"green.200",
-			"yellow.200",
-			"purple.200",
-			"orange.200",
+			"red.300",
+			"blue.300",
+			"green.300",
+			"yellow.300",
+			"purple.300",
+			"orange.300",
+			"teal.300",
+			"cyan.300",
+			'pink.300',
 		];
 		return colors[Math.floor(Math.random() * colors.length)];
 	};
@@ -162,6 +166,8 @@ const MilkRateDashboard = () => {
 					<option value="all">All Categories</option>
 					<option value="cow">Cow</option>
 					<option value="buffalo">Buffalo</option>
+					<option value="sheep">Sheep</option>
+					<option value="goat">Goat</option>
 				</Select>
 
 				<Select
@@ -189,50 +195,56 @@ const MilkRateDashboard = () => {
 							const updatedAt = new Date(rate.updatedAt).toLocaleString();
 							return (
 								<Box
-                key={rate._id}
-                borderWidth="1px"
-                borderRadius="md"
-                p={5}
-                bg={getRandomColor()}
-                color={useColorModeValue("gray.800", "white")}
-                boxShadow="md"
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDrop={(e) => handleDrop(e, index)}
-                onDragOver={allowDrop}
-                draggable
-                position="relative"
-              >
-                {/* Delete Icon */}
-                <IconButton
-                  icon={<DeleteIcon />}
-                  aria-label="Delete Rate"
-                  size="sm"
-                  position="absolute"
-                  top="4px"
-                  right="4px"
-                  onClick={() => handleDelete(rate._id)}
-                />
+									key={rate._id}
+									borderWidth="1px"
+									borderRadius="md"
+									p={5}
+									bg={getRandomColor()}
+									color={useColorModeValue("gray.800", "white")}
+									boxShadow="md"
+									onDragStart={(e) => handleDragStart(e, index)}
+									onDrop={(e) => handleDrop(e, index)}
+									onDragOver={allowDrop}
+									draggable
+									position="relative"
+								>
+									{/* Delete Icon */}
+									<IconButton
+										icon={<DeleteIcon />}
+										aria-label="Delete Rate"
+										size="sm"
+										position="absolute"
+										top="4px"
+										right="4px"
+										onClick={() => handleDelete(rate._id)}
+									/>
 
-                <Text fontWeight="bold" fontSize="lg">
-                  {rate.milkCategory.toUpperCase()}
-                </Text>
-                <Text>Rate: ₹ {rate.ratePerFat}/Fat</Text>
-                {/* Highlight status based on active/inactive */}
-                <Text color={rate.status ? "green.500" : "red.500"}>
-                  Status: {rate.status ? "Active" : "Inactive"}
-                </Text>
-                <Text>Created At: {createdAt}</Text>
-                <Text>Updated At: {updatedAt}</Text>
-                <Flex justifyContent="space-between" mt={4}>
-									<Button
-										colorScheme="teal"
-										onClick={() => handleEditCard(rate)}
-									>
-										Edit
-									</Button>
-									<Text fontWeight="bold" fontSize="md" color={rate.status ? "green.600" : "red.600"}>{rate.status ? "Active" : "Inactive"}</Text>
-								</Flex>
-              </Box>
+									<Text fontWeight="bold" fontSize="lg">
+										{rate.milkCategory.toUpperCase()}
+									</Text>
+									<Text>Rate: ₹ {rate.ratePerFat}/Fat</Text>
+									{/* Highlight status based on active/inactive */}
+									{/* <Text color={rate.status ? "green.500" : "red.500"}>
+										Status: {rate.status ? "Active" : "Inactive"}
+									</Text> */}
+									<Text>Created At: {createdAt}</Text>
+									<Text>Updated At: {updatedAt}</Text>
+									<Flex justifyContent="space-between" mt={4}>
+										<Button
+											colorScheme="teal"
+											onClick={() => handleEditCard(rate)}
+										>
+											Edit
+										</Button>
+										<Text
+											fontWeight="bold"
+											fontSize="md"
+											color={rate.status ? "green.600" : "red.600"}
+										>
+											{rate.status ? "Active" : "Inactive"}
+										</Text>
+									</Flex>
+								</Box>
 							);
 						})
 					) : (
