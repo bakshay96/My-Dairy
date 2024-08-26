@@ -6,13 +6,13 @@ const API_URL = `${url2}/admin/`;
 
 export const registerUser = async (userData) => {
 	const response = await axios.post(`${API_URL}register`, userData);
-	console.log("try", response.data);
+	//console.log("try", response.data);
 
 	return response.data;
 };
 
 export const loginUser = async (userData) => {
-	console.log(userData);
+	//console.log(userData);
 
 	const response = await axios.post(`${API_URL}login`, userData);
 	//console.log(response.data);
@@ -42,6 +42,6 @@ export const currentUser = async (token) => {
 	};
 
 	const response = await axios.get(`${API_URL}me`, config);
-	console.log(response.data);
+	//console.log(response.data);
 	return response.data;
 };

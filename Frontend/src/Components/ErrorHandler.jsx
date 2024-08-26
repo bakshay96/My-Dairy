@@ -18,13 +18,14 @@ export const ErrorHandler = ({ status, message }) => {
     const navigate=useNavigate();
     const dispatch=useDispatch();
     let id;
+   
     if(status=="error" && message)
     {
      
         toast({
             position: 'top-right',
-            title: `${message}`,
-            description:"Aert",
+            title: `Alert`,
+            description:"I'm not feeling very 😔 well",
             status: 'error',
             duration: 2000,
             isClosable: true,

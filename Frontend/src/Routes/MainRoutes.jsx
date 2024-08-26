@@ -21,6 +21,7 @@ import Test from "../Test";
 import { Loader1 } from "../Components/Loader1";
 import { PrivateRoute } from "./PrivateRoute";
 import Maintance from "../maintance/Maintance";
+import MilkRateDashboard from "../Pages/Rate/MilkRateDashboard";
 //import MilkDashboard from "../Pages/Milk/MilkTable/MilkDashboard";
 const AddMilk = lazy(() => import("../Pages/Milk/AddMilk"));
 const MilkDashboard = lazy(() =>
@@ -148,7 +149,18 @@ export const MainRoutes = () => {
 							</Suspense>
 						}
 					/>
+					<Route
+							path="rate"
+							element={
+								<Suspense fallback={<Loader1 />}>
+									<PrivateRoute>
+										<MilkRateDashboard />
+									</PrivateRoute>
+								</Suspense>
+							}
+						/>
 				</Route>
+				
 				<Route
 					path="*"
 					element={
@@ -158,6 +170,7 @@ export const MainRoutes = () => {
 						</Suspense>
 					}
 				/>
+				
 				<Route path="/test" element={<Loader1 />} />
 			</Routes>
 		</>

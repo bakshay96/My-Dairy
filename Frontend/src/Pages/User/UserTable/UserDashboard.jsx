@@ -20,6 +20,7 @@ import {
   Select,
   SelectSection,
   SelectItem,
+  useDisclosure,
 } from "@nextui-org/react";
 import { PlusIcon } from "./PlusIcon";
 
@@ -46,6 +47,7 @@ import {
 import { ErrorHandler } from "../../../Components/ErrorHandler";
 import { toast } from "react-toastify";
 import { DeleteFarmerAccount } from "../../../Redux/Slices/farmerSlice";
+import { DeleteConfirmationModal } from "../../../Components/models/DeleteModel";
 const statusColorMap = {
   Active: "success",
   paused: "danger",
@@ -72,19 +74,25 @@ export default function UserDashboard() {
     column: "age",
     direction: "ascending",
   });
-  const handleDeleteFarmer=(user)=>{
-    const id=user._id;
-    
-    dispatch(DeleteFarmerAccount({id,token})).then((res)=>{
-      if(res.payload.deletedCount)
-      {
-        
-        dispatch(getFarmersDetails(token))
 
-      }
-      
-    })
-  }
+  
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [selectedItem, setSelectedItem] = React.useState(null);
+  const [showDetails, setShowDetails] = React.useState(false);
+  
+  const handleDelete = (item) => {
+    //console.log('Deleted farmer id:', item);
+    const id=item._id;
+     //console.log('Item deleted',id,token);
+    dispatch(DeleteFarmerAccount({id,token}))
+    
+  };
+
+  const openDeleteModal = (item) => {
+    setSelectedItem(item);
+    setIsModalOpen(true);
+  };
+  
   const [page, setPage] = React.useState(1);
 
   const hasSearchFilter = Boolean(filterValue);
@@ -195,7 +203,7 @@ export default function UserDashboard() {
                   </Tooltip>
                 </DropdownItem>
                 <DropdownItem>
-                  <div onClick={()=>handleDeleteFarmer(user)}>
+                  <div  onClick={() => openDeleteModal(user)}>
                   <Tooltip color="danger" content="Delete user">
                     <span  className="text-lg text-danger cursor-pointer active:opacity-50">
                       <DeleteIcon />
@@ -397,6 +405,13 @@ export default function UserDashboard() {
 
   return (
     <>
+    <DeleteConfirmationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onDelete={handleDelete}
+        item={selectedItem}
+      />
+                      
     {status && ! farmerData && <ErrorHandler status={"error"} message={status} />}
     <Table
       aria-label="Example table with custom cells, pagination and sorting"

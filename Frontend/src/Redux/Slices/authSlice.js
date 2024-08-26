@@ -1,12 +1,12 @@
-import {
-	createAsyncThunk,
-	createSlice,
-	
-} from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 import { toast } from "react-toastify";
-import { currentUser, loginUser, logoutUser, registerUser } from "../Services/authServices";
-
+import {
+	currentUser,
+	loginUser,
+	logoutUser,
+	registerUser,
+} from "../Services/authServices";
 
 export const register = createAsyncThunk(
 	"auth/register",
@@ -14,9 +14,9 @@ export const register = createAsyncThunk(
 		try {
 			return await registerUser(userData);
 		} catch (error) {
-       console.log("slice error",error)
-       //toast.error(`${error.response.data.status} ${error.response.data.message}`)
-       
+			//console.log("slice error", error);
+			//toast.error(`${error.response.data.status} ${error.response.data.message}`)
+
 			return rejectWithValue(error.response.data);
 		}
 	}
@@ -28,28 +28,31 @@ export const login = createAsyncThunk(
 		try {
 			return await loginUser(userData);
 		} catch (error) {
-      console.log(error)
+			//console.log(error);
+			return rejectWithValue(error);
+		}
+	}
+);
+
+export const existingUser = createAsyncThunk(
+	"auth/me",
+	(token, { rejectWithValue }) => {
+		try {
+			return currentUser(token);
+		} catch (error) {
+			//console.log(error);
 			return rejectWithValue(error.response.data);
 		}
 	}
 );
 
-export const existingUser= createAsyncThunk('auth/me', (token,{rejectWithValue})=>{
-
-  try {
-       return currentUser(token);
-  } catch (error) {
-    console.log(error)
-    return rejectWithValue(error.response.data)
-  }
-})
-
-export const logout = createAsyncThunk("auth/logout", async (token, { rejectWithValue }) => {
+export const logout = createAsyncThunk(
+	"auth/logout",
+	async (token, { rejectWithValue }) => {
 		try {
-                return await logoutUser(token);
-            
-        }catch (error) {
-      console.log("logout",error)
+			return await logoutUser(token);
+		} catch (error) {
+			//console.log("logout", error);
 			return rejectWithValue(error.response.data);
 		}
 	}
@@ -70,90 +73,85 @@ export const authSlice = createSlice({
 	},
 
 	extraReducers: (builder) => {
-        builder
+		builder
 
-        //registration
-          .addCase(register.pending, (state) => {
-            state.loading = true;
-          })
-          .addCase(register.fulfilled, (state, action) => {
-           
-            
-            state.loading = false;
-            state.user = action.payload.admin;
-            state.token = action.payload.token;
-            localStorage.setItem('token', action.payload.token);
-            toast.success(action.payload.message || 'Registration successful !');
-           
-          })
-          .addCase(register.rejected, (state, action) => {
-          
-            state.loading = false;
-            state.error = action.payload.message;
-           
-            toast.error(action.payload.message || 'Registration failed!');
-            
-          })
+			//registration
+			.addCase(register.pending, (state) => {
+				state.loading = true;
+			})
+			.addCase(register.fulfilled, (state, action) => {
+       
+				state.loading = false;
+				state.user = action.payload.admin;
+				state.token = action.payload.token;
+				localStorage.setItem("token", action.payload.token);
+        toast.info(`${action.payload.admin.name} , Welcome to Milkify`)
+				toast.success(action.payload.message || "Registration successful !");
+			})
+			.addCase(register.rejected, (state, action) => {
+				state.loading = false;
+				state.error = action.payload.message;
 
-          //login
-          .addCase(login.pending, (state) => {
-            state.loading = true;
-          })
-          .addCase(login.fulfilled, (state, action) => {
-           
-            state.loading = false;
-            state.user = action.payload.admin;
-            state.token = action.payload.token;
-            localStorage.setItem('token', action.payload.token);
-            toast.success(`${action.payload.message}`||'Login successful!');
-          })
-          .addCase(login.rejected, (state, action) => {
-           
-            state.loading = false;
-            state.error = true;
-            toast.error(`${action.error} `|| 'Login failed!');
-          })
+				toast.error(action.payload.message || "Registration failed!");
+			})
 
-          //logout
-          .addCase(logout.pending, (state)=>{
-            state.loading=true;
+			//login
+			.addCase(login.pending, (state) => {
+				state.loading = true;
+			})
+			.addCase(login.fulfilled, (state, action) => {
+        //console.log(action)
+				state.loading = false;
+				state.user = action.payload.admin;
+				state.token = action.payload.token;
+				localStorage.setItem("token", action.payload.token);
+				toast.success(action.payload.message?`${action.payload.message}`:`${action.payload.error}` || "Login successful!");
+        toast.info(`Welcome back, ${action.payload.admin.name}`)
+			})
+			.addCase(login.rejected, (state, action) => {
+        //console.log(action)
+				state.loading = false;
+				state.error = true;
+				toast.error(`${action.payload?.message} ` || "Login failed!" || `${action.error}`);
+			})
 
-          })
-          .addCase(logout.fulfilled, (state,action) => {
-            state.loading=false;
-            state.user = null;
-            state.token = null;
-          })
+			//logout
+			.addCase(logout.pending, (state) => {
+				state.loading = true;
+			})
+			.addCase(logout.fulfilled, (state, action) => {
+				state.loading = false;
+				state.user = null;
+				state.token = null;
+			})
 
-          .addCase(logout.rejected, (state)=>{
-            state.loading=false;
-            state.error=true;
-            toast.info('Logged out fail..!');
+			.addCase(logout.rejected, (state) => {
+				state.loading = false;
+				state.error = true;
+				toast.info("Logged out fail..!");
+			})
 
-          })
+			// current user
+			.addCase(existingUser.pending, (state) => {
+				state.pending = true;
+			})
 
-          // current user 
-          .addCase(existingUser.pending , (state)=>{
-            state.pending=true;
-          })
-          
-          .addCase(existingUser.fulfilled,(state,action)=>{
-            
-            state.loading=false;
-            state.user=action.payload.admin;
-            toast.success(action.payload.message?action.payload.message : "user auto login")
-            
-          })
+			.addCase(existingUser.fulfilled, (state, action) => {
+				state.loading = false;
+				state.user = action.payload.admin;
+				toast.success(
+					action.payload.message ? action.payload.message : "user auto login"
+				);
+			})
 
-          .addCase(existingUser.rejected , (state,action)=>{
-           
-            state.pending=false;
-            
-            state.error=action.payload;
-            toast.error("server connection error")
-          });
-      },
-    });
-    
+			.addCase(existingUser.rejected, (state, action) => {
+				state.pending = false;
+        //console.log(action)
+				state.error = action.payload;
+				//console.log("action",action);
+				toast.error(action.error?action.error.code:"auto login fail..");
+			});
+	},
+});
 
 export const { setUser } = authSlice.actions;

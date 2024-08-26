@@ -7,17 +7,23 @@ export const Loader = ({message}) => {
    <>
    <Modal isCentered isOpen={(()=>onOpen())} onClose={onClose}>
       {<ModalOverlay
-      bg='blackAlpha.300'
+      bg='blackAlpha.100'
       backdropFilter='blur(10px) hue-rotate(90deg)'
     />}
     
-      <ModalContent bg={"white.800"}>
+      <ModalContent bg={"white.900"}>
         {/* <ModalHeader>Plase Wait...</ModalHeader> */}
         {/* <ModalCloseButton /> */}
         <ModalBody >
           <Flex gap={"5px"} direction={"column"} align={"center"}>
 
-        <Spinner  color="success" size="lg" label="Loading..." />
+        <Spinner 	thickness="4px"
+							speed="1s"
+							emptyColor="gray.200"
+							color="blue.500"
+							size="xl"
+							label="Loading..."
+						 />
           <h1 color='blueviolet.800' fontSize={"25px"}>{message?message:"Please wait...!"}</h1>
           </Flex>
         </ModalBody>

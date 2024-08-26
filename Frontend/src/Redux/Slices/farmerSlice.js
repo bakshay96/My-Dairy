@@ -77,9 +77,9 @@ export const farmerSlice =createSlice({
         })
 
         .addCase(getFarmersDetails.fulfilled, (state,action)=>{
-            
             state.loading=false;
             state.farmerData=action.payload.farmers;
+            console.log(state.farmerData)
             toast.success(action.payload.message || "fetched farmers data")
         })
 
@@ -98,7 +98,10 @@ export const farmerSlice =createSlice({
         })
 
         .addCase(DeleteFarmerAccount.fulfilled , (state,action)=>{
+            
             state.loading=false;
+            state.farmerData=state.farmerData.filter((farmer)=>farmer._id !== action.payload.id)
+            
             toast.success(action.payload.message || "farmed account deleted");
         })
 

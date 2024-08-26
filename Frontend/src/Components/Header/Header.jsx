@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   ModalContent,
@@ -12,22 +12,30 @@ import { Link, NavLink,useNavigate } from "react-router-dom";
 import brandLogo from "../../assets/Logo/project-logo.svg";
 import { useDispatch, useSelector } from "react-redux";
 import { existingUser, logout } from "../../Redux/Slices/authSlice";
-
-
+import { useTranslation } from 'react-i18next';
 
 export default function Header() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [backdrop, setBackdrop] = React.useState("opaque");
   const { token, user,loading,error } = useSelector((state) => state.auth);
-  
+  const [language,setLangauge] =useState('en')
+   const { t,i18n } = useTranslation();
   //console.log("auth header", token, user,loading,error);
   const dispatch = useDispatch();
   const navigate=useNavigate();
 
-  // handle authication function
+  // change language
+ 
+  
+    const changeLanguage = (lag) => {
+console.log("langguage changed")
 
+      i18n.changeLanguage(lagn);
+    };
+    
   
-  
+
+  // handle authication function
   const handleAuth = () => {
    
     if(token !="null" || user)
@@ -104,7 +112,7 @@ export default function Header() {
                     } border-b border-gray-100 hover:bg-gray-50 lg:hover:bg-transparent lg:border-0 hover:text-orange-700 lg:p-0`
                   }
                 >
-                  Home
+                 {t('Home')}
                 </NavLink>
               </li>
               <li>
@@ -143,10 +151,24 @@ export default function Header() {
                   Github
                 </NavLink>
               </li>
+              <li>
+                <NavLink
+                  to=""
+                  onClick={()=>changeLanguage('mr')}
+                  className={({ isActive }) =>
+                    `block py-2 pr-4 pl-3 duration-200 ${
+                      isActive ? "text-orange-700" : "text-gray-700"
+                    } border-b border-gray-100 hover:bg-gray-50 lg:hover:bg-transparent lg:border-0 hover:text-orange-700 lg:p-0`
+                  }
+                >
+                  Marathi
+                </NavLink>
+              </li>
+             
             </ul>
           </div>
         </div>
       </nav>
     </header>
   );
-}
+};

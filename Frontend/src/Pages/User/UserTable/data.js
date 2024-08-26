@@ -14,9 +14,12 @@ const columns = [
   {name:"FAT",uid:"fat"},
   {name:"SNF",uid:"snf"},
   {name:"Degree",uid:"degree"},
-  {name:"WATER",uid:"water"},
-  {name:"Litter",uid:"litter"},
-
+  {name:"WATER %",uid:"water"},
+  {name:"Weight/Li",uid:"litter"},
+  {name:"Category", uid:"category"},
+  {name:"Rate/Li",uid:"rate"},
+  {name:"Rate/Fat",uid:"fatRate"},
+  {name:"Amount/₹",uid:'calculatedAmount'},
   {name: "ACTIONS", uid: "actions"},
 ];
 

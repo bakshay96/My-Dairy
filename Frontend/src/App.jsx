@@ -12,15 +12,26 @@ import { useSelector } from 'react-redux';
 function App() {
   const [count, setCount] = useState(0)
   const {user,token} =useSelector((state)=>state.auth)
-  console.log(user,token)
+  //console.log(user,token)
   useEffect(()=>{
-    console.log("app is render")
+    console.log("app render")
   },[])
 
   return (
     <>
      <MainRoutes/>
-     <ToastContainer />
+     <ToastContainer
+     autoClose={4000}
+     hideProgressBar={false}
+     newestOnTop
+     closeOnClick
+     rtl={false}
+     pauseOnFocusLoss
+     draggable
+     pauseOnHover
+     theme="light"
+     transition: Bounce
+      />
      {/* <Test /> */}
      
      

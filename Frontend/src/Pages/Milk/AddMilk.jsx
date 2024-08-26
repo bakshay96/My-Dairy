@@ -54,7 +54,7 @@ export default function AddMilk() {
   
 
   const handleChange = (e) => {
-    console.log(e.target.name, e.target.value);
+   
     const { name, value } = e.target;
    
     // get user name
@@ -84,7 +84,7 @@ export default function AddMilk() {
   
    
     dispatch(addMilk({value:formMilkData,token})).then((res)=>{
-      console.log("res add milk",res);
+      
      
       if(res.status==201)
       {

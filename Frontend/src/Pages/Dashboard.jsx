@@ -79,7 +79,7 @@ const LinkItems = [
     path: "/dashboard/milk_info",
   },
   { id: "4", name: "Favourites", icon: FiStar, path: "#" },
-  { id: "5", name: "Settings", icon: FiSettings, path: "#" },
+  { id: "5", name: "Settings", icon: FiSettings, path: "/dashboard/rate" },
 ];
 
 export default function Dashboard({ children }) {
@@ -103,7 +103,7 @@ export default function Dashboard({ children }) {
     if (user) {
       dispatch(getFarmersDetails(token));
     }
-    console.log("app render");
+    console.log("dash app render");
   }, [user]);
   return (
     <>
@@ -153,7 +153,7 @@ export default function Dashboard({ children }) {
             ""
           )}
            {/* cover banner  */}
-          {location.pathname == "/dashboard" && (
+          {location.pathname ==="/dashboard" && (
             <div id='home' className="mx-auto w-full max-w-7xl">
             <aside className="relative overflow-hidden text-black rounded-lg sm:mx-16 mx-2 sm:py-16">
                 <div className="relative z-10 max-w-screen-xl px-4  pb-20 pt-10 sm:py-24 mx-auto sm:px-6 lg:px-8">
