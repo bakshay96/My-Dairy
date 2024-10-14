@@ -23,6 +23,7 @@ Our main objective is to complete all main functionalities of the Milkify web ap
 - Images  : [google Images](https://www.google.com/]
 - Icons   : [Font Awesome](https://fontawesome.com/)
 - References : [MDN Docs](https://developer.mozilla.org/en-US/) | [W3School](https://www.w3schools.com/)
+- open AI
 
 ## Tech Stack
 
