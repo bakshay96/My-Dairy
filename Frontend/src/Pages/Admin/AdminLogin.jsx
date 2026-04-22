@@ -46,7 +46,7 @@ export default function AdminLoginCard() {
 		e.preventDefault();
 		
 		if (!password || !mobile) {
-			toast.info("All * mark filds are required...!")
+			toast.info("All * mark fields are required...!")
 			setPassord("");
 			setMobile("");
 			return;
@@ -55,31 +55,17 @@ export default function AdminLoginCard() {
 		try {
 			let loginData = { mobile, password };
 			
-			dispatch(login(loginData))
-				.then((res) => {
-					
-					if(res.payload.admin)
-					{
-
-						navigate("/dashboard");
-					}
-					
-				})
-				.catch((error) => {
-					
-					navigate("/")
-					
-				});
-		} catch (error) {
-			// xtoast({
-			// 	title: `${error.response.status},${error.response.statusText} !`,
-			// 	description: `${error.response.data.error}`,
-			// 	status: "error",
-			// 	duration: 5000,
-			// 	position: "top",
-			// 	isClosable: true,
-			// });
+			const result = await dispatch(login(loginData));
 			
+			if (login.fulfilled.match(result)) {
+				// Login successful, navigate to dashboard
+				navigate("/dashboard", { replace: true });
+			} else {
+				// Login failed, stay on login page
+				toast.error("Login failed. Please check your credentials.");
+			}
+		} catch (error) {
+			toast.error("An error occurred during login. Please try again.");
 		}
 	};
 

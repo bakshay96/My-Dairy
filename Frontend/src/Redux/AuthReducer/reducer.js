@@ -58,10 +58,10 @@ export const reducer = (state = initialState, action) => {
 			return { ...state, error: true, isLoading: false, status: payload };
 
 		//current user
-		case type.CURRENT_USER_REQUEST:
+		case types.CURRENT_USER_REQUEST:
 			return { ...state, loading: true };
 
-		case type.CURRENT_USER_SUCCESS:
+		case types.CURRENT_USER_SUCCESS:
       toast.success(`${payload.msg}` || "User logged in..")
       
 			return {
@@ -72,16 +72,16 @@ export const reducer = (state = initialState, action) => {
 			};
       
     
-		case type.CURRENT_USER_FAILURE:
+		case types.CURRENT_USER_FAILURE:
       toast.error(`${payload.msg}` || "Connection Error..!");
-			return { ...state, loading: false, error: true,  };
+			return { ...state, loading: false, error: true };
 
 		//logout user
 		case types.USER_LOGOUT_REQUEST:
 			return { ...state, loading: true };
 
 		case types.USER_LOGOUT_SUCCESS:
-			localStorage.setItem("token", null);
+			localStorage.removeItem("token");
       toast.info("User loggedout successfully..")
 			return { ...state, loading: false, user: null, token: null };
 
@@ -91,9 +91,6 @@ export const reducer = (state = initialState, action) => {
 		//Message
 		case types.USER_MESSAGE_SUCCESS:
 			return { ...state, loading: false };
-
-		case types.USER_SIGNUP_FAILURE:
-			return { ...state, error: true, loading: false, status: payload };
 
 		default:
 			return state;

@@ -78,41 +78,51 @@ export const authSlice = createSlice({
 			//registration
 			.addCase(register.pending, (state) => {
 				state.loading = true;
+				state.error = null;
 			})
 			.addCase(register.fulfilled, (state, action) => {
-       
 				state.loading = false;
-				state.user = action.payload.admin;
-				state.token = action.payload.token;
-				localStorage.setItem("token", action.payload.token);
-        toast.info(`${action.payload.admin.name} , Welcome to Milkify`)
-				toast.success(action.payload.message || "Registration successful !");
+				state.error = null;
+				const data = action.payload.data || action.payload;
+				// Handle both old and new response structures
+				state.user = data.admin || data.user || null;
+				state.token = data.token;
+				if (data.token) {
+					localStorage.setItem("token", data.token);
+				}
+				const userName = (data.admin || data.user)?.name || 'User';
+				toast.info(`${userName}, Welcome to Milkify`);
+				toast.success(action.payload.message || "Registration successful!");
 			})
 			.addCase(register.rejected, (state, action) => {
 				state.loading = false;
-				state.error = action.payload.message;
-
-				toast.error(action.payload.message || "Registration failed!");
+				state.error = action.payload?.message || action.error?.message || "Registration failed";
+				toast.error(state.error);
 			})
 
 			//login
 			.addCase(login.pending, (state) => {
 				state.loading = true;
+				state.error = null;
 			})
 			.addCase(login.fulfilled, (state, action) => {
-        //console.log(action)
 				state.loading = false;
-				state.user = action.payload.admin;
-				state.token = action.payload.token;
-				localStorage.setItem("token", action.payload.token);
-				toast.success(action.payload.message?`${action.payload.message}`:`${action.payload.error}` || "Login successful!");
-        toast.info(`Welcome back, ${action.payload.admin.name}`)
+				state.error = null;
+				const data = action.payload.data || action.payload;
+				state.user = data.admin || null;
+				state.token = data.token;
+				if (data.token) {
+					localStorage.setItem("token", data.token);
+				}
+				toast.success(action.payload.message || "Login successful!");
+				if (data.admin?.name) {
+					toast.info(`Welcome back, ${data.admin.name}`);
+				}
 			})
 			.addCase(login.rejected, (state, action) => {
-        //console.log(action)
 				state.loading = false;
-				state.error = true;
-				toast.error(`${action.payload?.message} ` || "Login failed!" || `${action.error}`);
+				state.error = action.payload?.message || action.error?.message || "Login failed";
+				toast.error(state.error);
 			})
 
 			//logout
@@ -133,23 +143,25 @@ export const authSlice = createSlice({
 
 			// current user
 			.addCase(existingUser.pending, (state) => {
-				state.pending = true;
+				state.loading = true;
+				state.error = null;
 			})
 
 			.addCase(existingUser.fulfilled, (state, action) => {
 				state.loading = false;
-				state.user = action.payload.admin;
-				toast.success(
-					action.payload.message ? action.payload.message : "user auto login"
-				);
+				state.error = null;
+				const data = action.payload.data || action.payload;
+				state.user = data.admin || null;
+				toast.success(action.payload.message || "User auto login");
 			})
 
 			.addCase(existingUser.rejected, (state, action) => {
-				state.pending = false;
-        		//console.log(action)
-				state.error = action.payload;
-				//console.log("action",action);
-				toast.error("Thanks for choosing Milkify..");
+				state.loading = false;
+				state.error = action.payload?.message || "Authentication failed";
+				// Clear invalid token
+				state.user = null;
+				state.token = null;
+				localStorage.removeItem("token");
 			});
 	},
 });

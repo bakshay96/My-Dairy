@@ -71,6 +71,13 @@ const milkSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for optimized queries
+milkSchema.index({ farmerId: 1, date: 1 });
+milkSchema.index({ adminId: 1, createdAt: -1 });
+milkSchema.index({ adminId: 1, farmerId: 1 });
+milkSchema.index({ category: 1 });
+milkSchema.index({ createdAt: -1 });
+
 const MilkModel = mongoose.model("Milk", milkSchema);
 
 module.exports = {

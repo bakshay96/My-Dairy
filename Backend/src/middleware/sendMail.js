@@ -5,9 +5,27 @@ require("dotenv").config();
 
 const sendMail= (req, res,next) => {
     // Extract user data from the request body
-   // console.log("data",req.milkdata);
-    const {snf,fat,litter,shift,date,mobile,category,water,degree}=req.milkdata._doc;
-    const {email,name}=req.milkdata
+    // req.milkdata is already a plain object from toObject() in controller
+    const milkdata = req.milkdata;
+    
+    if (!milkdata) {
+        console.log("No milk data available for email");
+        return next(); // Skip email if no milk data
+    }
+    
+    const {
+        snf = 0,
+        fat = 0,
+        litter = 0,
+        shift = "morning",
+        date = new Date().toLocaleDateString(),
+        mobile = "",
+        category = "cow",
+        water = 0,
+        degree = 0
+    } = milkdata;
+    
+    const { email = "", name = "Customer" } = milkdata;
     
 
     //Compose the email content
@@ -136,13 +154,14 @@ const sendMail= (req, res,next) => {
     // Send the email
    transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
-        return res.status(500).send(error.toString());
+        console.error("Email send error:", error.message);
+        // Don't block the response if email fails - just log it
+        next();
       }
       else
       {
-
-         // res.status(200).send(`Data submitted successfully! Email sent. ${info.response}`);
-          next();
+         console.log("Email sent successfully:", info.response);
+         next();
       }
     });
            

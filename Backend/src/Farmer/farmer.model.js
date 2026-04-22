@@ -55,6 +55,12 @@ const userSchema = new mongoose.Schema(
 	}
 );
 
+// Indexes for optimized queries
+userSchema.index({ adminId: 1, mobile: 1 });
+userSchema.index({ adminId: 1, name: 1 });
+userSchema.index({ adminId: 1, status: 1 });
+userSchema.index({ createdAt: -1 });
+
 const farmerModel = mongoose.model("Farmer", userSchema);
 
 module.exports = {

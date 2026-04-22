@@ -27,6 +27,9 @@ const AddMilk = lazy(() => import("../Pages/Milk/AddMilk"));
 const MilkDashboard = lazy(() =>
 	import("../Pages/Milk/MilkTable/MilkDashboard")
 );
+const TransactionHistory = lazy(() =>
+	import("../Pages/Payment/TransactionHistory")
+);
 
 export const MainRoutes = () => {
 	return (
@@ -159,14 +162,23 @@ export const MainRoutes = () => {
 								</Suspense>
 							}
 						/>
+					<Route
+							path="payments"
+							element={
+								<Suspense fallback={<Loader1 />}>
+									<PrivateRoute>
+										<TransactionHistory />
+									</PrivateRoute>
+								</Suspense>
+							}
+						/>
 				</Route>
 				
 				<Route
 					path="*"
 					element={
 						<Suspense fallback={<Loader1 />}>
-							<Layout />
-							<Home />
+							<NotFound />
 						</Suspense>
 					}
 				/>

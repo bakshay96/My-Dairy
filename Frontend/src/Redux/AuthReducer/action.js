@@ -1,7 +1,7 @@
 //Write the ActionCreator functions here
 import axios from "axios";
 import * as types from "./actionTypes";
-import { url, url2,localhost } from "../Api/api";
+import { url2 } from "../Api/api";
 
 export const signinRequestAction = () => {
   return { type: types.USER_SIGNIN_REQUEST };
@@ -87,19 +87,16 @@ export const signin = (payload) => async (dispatch) => {
 
 //admin register function
 export const signup = (payload) => async (dispatch) => {
-  console.log("action", payload);
   dispatch(signupRequestAction());
   try {
-    return await axios
-      .post(`${url2}/admin/register`, payload)
-      .then((res) => {
-       console.log("action", res);
-        dispatch(signupSuccessAction(res));
-      })
-      
-  }catch (error) {
-    dispatch(signupFailureAction(error));
-    console.log(error)
+    const res = await axios.post(`${url2}/admin/register`, payload);
+    dispatch(signupSuccessAction(res.data));
+    return res.data;
+  } catch (error) {
+    // Extract serializable error message
+    const errorMessage = error.response?.data?.message || error.message || 'Registration failed';
+    dispatch(signupFailureAction(errorMessage));
+    throw error;
   }
 };
 
@@ -135,25 +132,28 @@ export const logout =() =>async (dispatch) =>{
   dispatch(logoutRequestAction())
   try {
     setTimeout(()=>{
-      localhost.setTimeout("token",null);
+      localStorage.removeItem("token");
       dispatch(logoutSuccessAction())
     },1000)
     
   } catch (error) {
-    dispatch(logoutFailureAction(error))
+    const errorMessage = error.message || 'Logout failed';
+    dispatch(logoutFailureAction(errorMessage))
   }
 }
 
 // send message
 export const sendMail = (payload) => async (dispatch) => {
-  //console.log("action", payload);
   dispatch(signinRequestAction());
   try {
-    return await axios
-      .post(`${url2}/admin/message`, payload)
-      
+    const res = await axios.post(`${url2}/admin/message`, payload);
+    dispatch(sendMessageSuccessAction(res.data));
+    return res.data;
   } catch (error) {
-    dispatch(sendMessageFailureAction(error));
+    // Extract serializable error message
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to send message';
+    dispatch(sendMessageFailureAction(errorMessage));
+    throw error;
   }
 };
 
