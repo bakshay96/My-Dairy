@@ -39,7 +39,7 @@
     "react-router-dom": "^6.21.0",
     "react-scroll": "^1.9.0",
     "react-toastify": "^10.0.5",
-    "recharts": "^3.8.1",
+    "recharts": "^2.12.7",
     "redux": "^5.0.1",
     "redux-thunk": "^3.1.0",
     "swr": "^2.2.4"

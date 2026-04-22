@@ -3,6 +3,7 @@ const { farmerModel } = require("../Farmer/farmer.model");
 const mongoose = require("mongoose");
 const { sendMail } = require("../middleware/sendMail");
 const { rateSettingModel } = require("./RateSetting/rateSetting.model");
+const { sendMilkEntryNotification } = require("../services/smsService");
 
 // ─── Add Milk Data ────────────────────────────────────────────────────────────
 exports.addMilkData = async (req, res) => {
@@ -71,6 +72,18 @@ exports.addMilkData = async (req, res) => {
     const farmerdata = await farmerMilkCollection.save();
     const milkdata = { ...farmerMilkCollection.toObject(), name, email };
     req.milkdata = milkdata;
+
+    // Send SMS notification (non-blocking)
+    if (farmer.mobile) {
+      sendMilkEntryNotification({
+        name,
+        mobile: farmer.mobile,
+        litter: req.body.litter,
+        fat: req.body.fat,
+        calculatedAmount,
+        date,
+      }).catch(err => console.error('SMS notification error:', err));
+    }
 
     sendMail(req, res, () => {
       res.status(201).json({ message: "Milk data submitted successfully", milk: farmerdata });

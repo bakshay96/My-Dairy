@@ -30,6 +30,9 @@ const MilkDashboard = lazy(() =>
 const TransactionHistory = lazy(() =>
 	import("../Pages/Payment/TransactionHistory")
 );
+const AnalyticsDashboard = lazy(() =>
+	import("../Pages/Analytics/AnalyticsDashboard")
+);
 
 export const MainRoutes = () => {
 	return (
@@ -97,7 +100,7 @@ export const MainRoutes = () => {
 					/>
 				</Route>
 				<Route path="test" element={<Test />} />
-				//dashboard nested routes
+				{/* dashboard nested routes */}
 				<Route
 					path="/dashboard"
 					element={
@@ -168,6 +171,16 @@ export const MainRoutes = () => {
 								<Suspense fallback={<Loader1 />}>
 									<PrivateRoute>
 										<TransactionHistory />
+									</PrivateRoute>
+								</Suspense>
+							}
+						/>
+					<Route
+							path="analytics"
+							element={
+								<Suspense fallback={<Loader1 />}>
+									<PrivateRoute>
+										<AnalyticsDashboard />
 									</PrivateRoute>
 								</Suspense>
 							}

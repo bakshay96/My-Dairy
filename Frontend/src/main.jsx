@@ -10,6 +10,10 @@ import MyProvider from "./Pages/ContextApi/MyProvider.jsx";
 import { store } from "./Redux/store.js";
 import './i18n';
 import ErrorBoundary from "./Components/ErrorBoundary.jsx";
+import { registerServiceWorker } from "./utils/pwa.js";
+
+// Register service worker for PWA
+registerServiceWorker();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

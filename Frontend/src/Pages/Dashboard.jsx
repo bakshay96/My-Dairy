@@ -22,16 +22,6 @@ import {
   Image,
   useColorMode,
   Button,
-  Spacer,
-  border,
-  useStatStyles,
-  ModalCloseButton,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalOverlay,
   Heading,
 } from "@chakra-ui/react";
 import {
@@ -81,11 +71,17 @@ const LinkItems = [
   },
   {
     id: "4",
+    name: "Analytics",
+    icon: FiTrendingUp,
+    path: "/dashboard/analytics",
+  },
+  {
+    id: "5",
     name: "Payments",
     icon: FiCreditCard,
     path: "/dashboard/payments",
   },
-  { id: "5", name: "Settings", icon: FiSettings, path: "/dashboard/rate" },
+  { id: "6", name: "Settings", icon: FiSettings, path: "/dashboard/rate" },
 ];
 
 export default function Dashboard({ children }) {
