@@ -7,11 +7,11 @@ const { getSingleFarmerMilkData, getfarmerMilkCollections, getfarmerMilkCollecti
 const MilkRouter=express.Router();
 
 
+MilkRouter.get("/",authMiddleware,getfarmerMilkCollections);
+MilkRouter.get("/get",authMiddleware,getfarmerMilkCollectionWithPagination);
 MilkRouter.post("/:id",authMiddleware,addMilkData,sendMail);
 MilkRouter.get("/:id",authMiddleware,getSingleFarmerMilkData);
-MilkRouter.get("/",authMiddleware,getfarmerMilkCollections)
-MilkRouter.get("/get",authMiddleware,getfarmerMilkCollectionWithPagination);
-MilkRouter.patch("/:id",authMiddleware,updateMilkCollection)
+MilkRouter.patch("/:id",authMiddleware,updateMilkCollection);
 MilkRouter.delete("/:id",authMiddleware,deleteMilkCollection);
 
 

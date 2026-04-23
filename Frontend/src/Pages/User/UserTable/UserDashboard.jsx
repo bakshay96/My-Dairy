@@ -34,9 +34,9 @@ import { EditIcon } from "./EditIcon";
 import { EyeIcon } from "./EyeIcon";
 import Model from "./Model";
 import { useDispatch, useSelector } from "react-redux";
-import { getFarmersDetails } from "../../../Redux/userReducer/action";
+import { getFarmersDetails } from "../../../Redux/Slices/farmerSlice";
 import SelectFarmer from "../../Milk/SelectFarmer";
-import { getMilkDetails } from "../../../Redux/MilkReducer/action";
+import { getMilkDetails } from "../../../Redux/Slices/milkSlice";
 import { useToast } from '@chakra-ui/react'
 import {
   Alert,
@@ -412,8 +412,7 @@ export default function UserDashboard() {
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
   const getdata = () => {
-    dispatch(getFarmersDetails({token}));
-   
+    dispatch(getFarmersDetails(token));
   };
 
 

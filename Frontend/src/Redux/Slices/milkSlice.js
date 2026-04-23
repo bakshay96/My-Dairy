@@ -1,11 +1,21 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
-import { deleteMilkEntry, getmilkData, postMilkData, updateMilkEntry } from '../Services/milkServices';
+import { deleteMilkEntry, getAllMilkData, getmilkData, postMilkData, updateMilkEntry } from '../Services/milkServices';
 
 // Async thunk to get milk detail by farmer id;
 export const getMilkDetails = createAsyncThunk('milk/get', async ({ value, token }, { rejectWithValue }) => {
   try {
     const response = await getmilkData(value);
+    return response;
+  } catch (error) {
+    return rejectWithValue(error.response?.data || { message: error.message });
+  }
+});
+
+// Async thunk to get ALL milk collections (for analytics)
+export const getAllMilkDetails = createAsyncThunk('milk/getAll', async (_, { rejectWithValue }) => {
+  try {
+    const response = await getAllMilkData();
     return response;
   } catch (error) {
     return rejectWithValue(error.response?.data || { message: error.message });
@@ -71,7 +81,23 @@ export const milkSlice = createSlice({
         state.loading = false;
         state.error = action.payload?.message || 'Failed to load details';
         state.data = [];
-        // Don't show toast here - let the component handle it
+      })
+
+      // get ALL milk data for analytics
+      .addCase(getAllMilkDetails.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getAllMilkDetails.fulfilled, (state, action) => {
+        state.loading = false;
+        const payload = action.payload;
+        // Backend returns { count, milkcollections } for getAllMilk
+        state.data = Array.isArray(payload) ? payload : (payload.milkcollections || payload.data || []);
+        state.error = null;
+      })
+      .addCase(getAllMilkDetails.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload?.message || 'Failed to load milk data';
+        state.data = [];
       })
 
       // add new milk details

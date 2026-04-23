@@ -6,6 +6,12 @@ export const getmilkData = async (farmerId) => {
 	return response.data;
 };
 
+// get ALL milk collections for analytics
+export const getAllMilkData = async () => {
+	const response = await api.get(`/milk/`);
+	return response.data;
+};
+
 // Function to add new milk data on farmer account by id
 export const postMilkData = async (value) => {
 	// Validate farmerId before making request

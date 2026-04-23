@@ -44,7 +44,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useSelector, useDispatch } from 'react-redux';
-import { getMilkDetails } from '../../Redux/Slices/milkSlice';
+import { getAllMilkDetails } from '../../Redux/Slices/milkSlice';
 
 const AnalyticsDashboard = () => {
   const dispatch = useDispatch();
@@ -147,8 +147,7 @@ const AnalyticsDashboard = () => {
 
   useEffect(() => {
     if (token) {
-      // Fetch all milk data for analytics
-      dispatch(getMilkDetails({ value: '', token }));
+      dispatch(getAllMilkDetails());
     }
   }, [token, dispatch]);
 

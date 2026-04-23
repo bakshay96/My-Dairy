@@ -383,7 +383,7 @@ function MilkDashboard() {
 	}, [page]);
 
 	const onRowsPerPageChange = React.useCallback((e) => {
-		consoe.log("row per page", e);
+		console.log("row per page", e);
 		setRowsPerPage(Number(e.target.value));
 		setPage(1);
 	}, []);
