@@ -3,6 +3,7 @@ const {
   adminLogin,
   message,
   getCurrentUser,
+  updateAdminProfile,
   logoutUser,
   registerAdmin,
 } = require("./admin.controller");
@@ -18,6 +19,7 @@ AdminRouter.post("/message", messageResponse, message);
 
 // Protected routes
 AdminRouter.get("/me", authMiddleware, getCurrentUser);
+AdminRouter.put("/profile", authMiddleware, updateAdminProfile);
 AdminRouter.get("/logout", authMiddleware, logoutUser);
 
 module.exports = { AdminRouter };

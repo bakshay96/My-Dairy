@@ -14,12 +14,19 @@ const paymentSchema = new mongoose.Schema(
       ref: "Farmer",
       default: null,
     },
+    internalOrderId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
 
     // ── Razorpay Identifiers ────────────────────────────────
     razorpayOrderId: {
       type: String,
-      required: true,
+      required: false,
       unique: true,
+      sparse: true,
       index: true,
     },
     razorpayPaymentId: {
@@ -48,12 +55,30 @@ const paymentSchema = new mongoose.Schema(
       default: "created",
       index: true,
     },
+    paymentMode: {
+      type: String,
+      enum: ["cash", "online"],
+      default: "online",
+    },
+    paymentChannel: {
+      type: String,
+      enum: ["razorpay", "upi", "google_pay", "phonepe", "bhim", "other", "cash"],
+      default: "razorpay",
+    },
 
     // ── Optional metadata ────────────────────────────────────
     description: {
       type: String,
       default: "",
       maxlength: 255,
+    },
+    billingStartDate: {
+      type: String,
+      default: "",
+    },
+    billingEndDate: {
+      type: String,
+      default: "",
     },
     notes: {
       type: mongoose.Schema.Types.Mixed,

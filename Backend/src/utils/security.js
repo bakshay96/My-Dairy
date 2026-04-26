@@ -91,7 +91,7 @@ const sanitizeNoSQL = (obj) => {
  * @param {number} maxRequests - Maximum requests per window
  * @returns {Object} - Rate limit config
  */
-const createRateLimitConfig = (windowMs = 15 * 60 * 1000, maxRequests = 200) => {
+const createRateLimitConfig = (windowMs = 50 * 60 * 1000, maxRequests = 200) => {
   return {
     windowMs,
     max: maxRequests,

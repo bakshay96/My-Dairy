@@ -57,8 +57,11 @@ const adminRegistration = async (req, res) => {
 
 // ─── Register Admin ──────────────────────────────────────────────────────────
 const registerAdmin = async (req, res) => {
-  const { mobile, password } = req.body;
+  const { mobile, password, email } = req.body;
   try {
+    if (!email) {
+      return res.sendError("Email is required for communication", 400);
+    }
     let admin = await AdminModel.findOne({ mobile });
     if (admin) {
       return res.sendError("Admin already exists", 409);
@@ -134,6 +137,26 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+// ─── Update Admin Profile ──────────────────────────────────────────────────────
+const updateAdminProfile = async (req, res) => {
+  try {
+    const allowedFields = ["name", "email", "mobile", "shopName", "village", "gender"];
+    const updateData = {};
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) updateData[field] = req.body[field];
+    });
+
+    if (Object.keys(updateData).length === 0) {
+      return res.sendError("No valid fields to update", 400);
+    }
+
+    const admin = await AdminModel.findByIdAndUpdate(req.admin.id, { $set: updateData }, { new: true }).select("-password");
+    return res.sendSuccess({ admin }, "Profile updated successfully");
+  } catch (error) {
+    return res.sendError(error.message, 500);
+  }
+};
+
 // ─── Logout ───────────────────────────────────────────────────────────────────
 const logoutUser = async (req, res) => {
   try {
@@ -184,6 +207,7 @@ module.exports = {
   adminLogin,
   message,
   getCurrentUser,
+  updateAdminProfile,
   logoutUser,
   registerAdmin,
 };

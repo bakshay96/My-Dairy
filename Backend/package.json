@@ -20,13 +20,14 @@
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.0.0",
     "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.2",
     "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.0",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.8",
-    "razorpay": "^2.9.2"
+    "razorpay": "^2.9.2",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",

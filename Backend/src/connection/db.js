@@ -1,12 +1,16 @@
 const mongoose = require("mongoose");
 require("dotenv").config();
 
-const mongo_url = process.env.mongo_url;
-console.log("DEBUG: Using MONGO_URL:", mongo_url);
+const mongo_url =
+  process.env.mongo_url ||
+  process.env.MONGO_URL ||
+  process.env.MONGODB_URI ||
+  "";
+console.log("DEBUG: Using Mongo connection string:", mongo_url ? "[configured]" : "[missing]");
 
 
 if (!mongo_url) {
-  console.error("ERROR: mongo_url is not defined in environment variables");
+  console.error("ERROR: Mongo DB URL is not defined. Set mongo_url (or MONGO_URL) in .env");
   process.exit(1);
 }
 
@@ -19,7 +23,7 @@ const mongoOptions = {
 };
 
 const connection = mongoose
-  .connect(mongo_url, mongoOptions)
+  .connect(mongo_url.trim(), mongoOptions)
   .then(() => {
     console.log("✓ MongoDB connection successful");
     return mongoose;

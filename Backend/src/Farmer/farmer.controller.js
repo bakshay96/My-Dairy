@@ -85,19 +85,47 @@ exports.getSingleFarmer = async (req, res) => {
 // ─── Update Farmer ────────────────────────────────────────────────────────────
 exports.updateFarmer = async (req, res) => {
   try {
-    // ✅ Fixed: was referencing `err.message` but catch param was `error`
+    // Whitelist only safe, editable fields — never allow adminId override
+    const allowedFields = ["name", "mobile", "email", "village", "address", "gender", "status"];
+    const updateData = {};
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    });
+
+    // Merge address into village field (frontend may send either)
+    if (updateData.address && !updateData.village) {
+      updateData.village = updateData.address;
+      delete updateData.address;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: "No valid fields to update." });
+    }
+
     const farmer = await farmerModel.findOneAndUpdate(
-      { _id: req.params.id, adminId: req.admin.id },
-      req.body,
-      { new: true }
+      { _id: req.params.id, adminId: req.admin._id },
+      { $set: updateData },
+      { new: true, runValidators: true }
     );
 
     if (!farmer) {
-      return res.status(404).json({ message: "Farmer not found" });
+      return res.status(404).json({ message: "Farmer not found or unauthorized." });
     }
 
     res.status(200).json({ message: "Farmer updated successfully", farmer });
   } catch (error) {
+    console.error("[Farmer] updateFarmer error:", error);
+    // Handle Mongoose duplicate key (mobile already exists)
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "A farmer with this mobile number already exists." });
+    }
+    // Mongoose validation errors
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((e) => e.message).join(", ");
+      return res.status(400).json({ message: messages });
+    }
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
