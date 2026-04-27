@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import SessionTimer from "@/components/ui/SessionTimer";
+import { useEffect } from "react";
+import api from "@/lib/api";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -26,6 +28,34 @@ export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
+  const setAuth = useAuthStore((state) => state.setAuth);
+
+  const handleLogout = async () => {
+    try {
+      await api.get("/admin/logout");
+    } catch {
+      // ignore network errors during logout
+    } finally {
+      logout();
+      window.location.href = "/login";
+    }
+  };
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const me = await api.get("/admin/me");
+        if (me.data?.admin) {
+          setAuth(me.data.admin, null, me.data.sessionExpiresAt || null);
+          return;
+        }
+      } catch {
+        logout();
+        window.location.href = "/login";
+      }
+    };
+    checkSession();
+  }, [logout, setAuth]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50/60 dark:bg-slate-950">
@@ -105,10 +135,7 @@ export default function DashboardLayout({ children }) {
               {isUserMenuOpen && (
                 <div className="absolute bottom-11 left-0 w-full rounded-md border bg-white dark:bg-slate-900 shadow-md">
                   <button
-                    onClick={() => {
-                      logout();
-                      window.location.href = "/login";
-                    }}
+                    onClick={handleLogout}
                     className="flex w-full items-center px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <LogOut className="h-5 w-5 mr-2" />
@@ -157,10 +184,7 @@ export default function DashboardLayout({ children }) {
               <div className="pt-4 mt-4 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
                 <ThemeToggle />
                 <button
-                  onClick={() => {
-                    logout();
-                    window.location.href = "/login";
-                  }}
+                  onClick={handleLogout}
                   className="flex items-center rounded-lg px-3 py-3 text-base font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
                   <LogOut className="mr-3 h-6 w-6" />

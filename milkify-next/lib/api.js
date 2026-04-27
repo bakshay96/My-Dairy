@@ -6,24 +6,11 @@ const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3030/api";
 const api = axios.create({
   baseURL,
   timeout: 15000,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
-
-// Add a request interceptor to inject the token from localStorage
-api.interceptors.request.use(
-  (config) => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 // Optional response interceptor to handle global auth errors (e.g., 401)
 api.interceptors.response.use(
@@ -38,11 +25,18 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      // Clear token and redirect to login if auth fails
-      localStorage.removeItem("token");
-      localStorage.removeItem("admin");
-      localStorage.removeItem("auth-storage");
-      window.location.href = "/login";
+      const requestUrl = String(error.config?.url || "");
+      const pathname = window.location.pathname;
+      const isAuthPage = pathname === "/login" || pathname === "/register";
+      const isAuthEndpoint =
+        requestUrl.includes("/admin/login") ||
+        requestUrl.includes("/admin/register") ||
+        requestUrl.includes("/admin/me");
+
+      // Avoid reload loops on auth pages and form submissions.
+      if (!isAuthPage && !isAuthEndpoint) {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

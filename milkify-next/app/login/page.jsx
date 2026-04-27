@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -25,6 +25,7 @@ export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.login);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
   const form = useForm({
@@ -41,13 +42,9 @@ export default function LoginPage() {
     try {
       const res = await api.post("/admin/login", values);
       // api.js interceptor now correctly unwraps the backend payload into res.data
-      if (res.data && res.data.token) {
+      if (res.data && res.data.admin) {
         const payload = res.data;
-        setAuth(payload.admin, payload.token);
-        
-        // Save token to localStorage explicitly for api interceptor
-        localStorage.setItem("token", payload.token);
-        localStorage.setItem("admin", JSON.stringify(payload.admin));
+        setAuth(payload.admin, null, payload.sessionExpiresAt || null);
         toast.success("Login successful");
         router.push("/dashboard");
       }
@@ -63,6 +60,28 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const me = await api.get("/admin/me");
+        if (me.data?.admin) {
+          setAuth(me.data.admin, null, me.data.sessionExpiresAt || null);
+          router.push("/dashboard");
+          return;
+        }
+      } catch {
+        // no active session; stay on login
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+    checkSession();
+  }, [router, setAuth]);
+
+  if (checkingSession) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen w-full bg-gray-50/60 dark:bg-slate-950 p-4 md:p-6">

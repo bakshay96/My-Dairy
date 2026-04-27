@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -14,6 +14,7 @@ import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import AuthArt from "@/components/auth/AuthArt";
 import { toast } from "sonner";
+import { useAuthStore } from "@/lib/store";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -27,7 +28,9 @@ const registerSchema = z.object({
 
 export default function RegisterPage() {
   const router = useRouter();
+  const setAuth = useAuthStore((state) => state.login);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -50,10 +53,13 @@ export default function RegisterPage() {
     setSuccessMsg("");
 
     try {
-      await api.post("/admin/register", values);
-      setSuccessMsg("Registration successful. Redirecting to login...");
+      const res = await api.post("/admin/register", values);
+      if (res.data?.admin) {
+        setAuth(res.data.admin, null, res.data.sessionExpiresAt || null);
+      }
+      setSuccessMsg("Registration successful. Redirecting to dashboard...");
       toast.success("Registration successful");
-      setTimeout(() => router.push("/login"), 800);
+      setTimeout(() => router.push("/dashboard"), 800);
     } catch (error) {
       toast.error("Registration failed");
       setErrorMsg(
@@ -65,6 +71,28 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const me = await api.get("/admin/me");
+        if (me.data?.admin) {
+          setAuth(me.data.admin, null, me.data.sessionExpiresAt || null);
+          router.push("/dashboard");
+          return;
+        }
+      } catch {
+        // no active session; stay on register
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+    checkSession();
+  }, [router, setAuth]);
+
+  if (checkingSession) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen w-full bg-gray-50/60 dark:bg-slate-950 p-4 md:p-6">
@@ -137,7 +165,7 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Email (optional)</label>
+                <label className="text-sm font-medium">Email</label>
                 <input
                   type="email"
                   {...form.register("email")}

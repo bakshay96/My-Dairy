@@ -5,6 +5,16 @@ const { transporter } = require("../connection/mailConnection");
 
 require("dotenv").config();
 
+const setAuthCookie = (res, token) => {
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    maxAge: 30 * 60 * 1000, // 30 minutes
+  });
+};
+
 // ─── Admin Registration (legacy – kept for backward compat) ─────────────────
 const adminRegistration = async (req, res) => {
   const { mobile, password } = req.body;
@@ -75,11 +85,11 @@ const registerAdmin = async (req, res) => {
 
     const payload = { id: admin.id };
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRY || "12h",
+      expiresIn: "30m",
     });
+    setAuthCookie(res, token);
 
     return res.sendSuccess({
-      token,
       admin: {
         name: admin.name,
         email: admin.email,
@@ -87,6 +97,7 @@ const registerAdmin = async (req, res) => {
         id: admin.id,
         shopName: admin.shopName,
       },
+      sessionExpiresAt: Date.now() + 30 * 60 * 1000,
     }, "Registration successful", 201);
   } catch (error) {
     return res.sendError(error.message, 500);
@@ -103,18 +114,33 @@ const adminLogin = async (req, res) => {
       return res.sendError("Invalid credentials", 401);
     }
 
-    const passwordMatch = await bcrypt.compare(password, admin.password);
+    let passwordMatch = false;
+    if (admin.password && typeof admin.password === "string" && admin.password.startsWith("$2")) {
+      passwordMatch = await bcrypt.compare(password, admin.password);
+    } else if (admin.password) {
+      passwordMatch = admin.password === password;
+    }
+    if (!passwordMatch && admin.key) {
+      passwordMatch = admin.key === password;
+    }
     if (!passwordMatch) {
       return res.sendError("Invalid mobile or password", 401);
     }
 
+    // Migrate legacy plaintext password to bcrypt hash on successful login
+    if (!admin.password || !String(admin.password).startsWith("$2")) {
+      const salt = await bcrypt.genSalt(10);
+      admin.password = await bcrypt.hash(password, salt);
+      await admin.save();
+    }
+
     const payload = { id: admin.id };
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRY || "6h",
+      expiresIn: "30m",
     });
+    setAuthCookie(res, token);
 
     return res.sendSuccess({
-      token,
       admin: {
         name: admin.name,
         mobile: admin.mobile,
@@ -122,6 +148,7 @@ const adminLogin = async (req, res) => {
         shopName: admin.shopName,
         id: admin.id,
       },
+      sessionExpiresAt: Date.now() + 30 * 60 * 1000,
     }, "Login successful");
   } catch (error) {
     return res.sendError(error.message, 500);
@@ -131,7 +158,10 @@ const adminLogin = async (req, res) => {
 // ─── Get Current User ─────────────────────────────────────────────────────────
 const getCurrentUser = async (req, res) => {
   try {
-    return res.sendSuccess({ admin: req.admin }, "User fetched successfully");
+    return res.sendSuccess(
+      { admin: req.admin, sessionExpiresAt: req.tokenExp || Date.now() + 30 * 60 * 1000 },
+      "User fetched successfully"
+    );
   } catch (error) {
     return res.sendError(error.message, 500);
   }
@@ -160,7 +190,12 @@ const updateAdminProfile = async (req, res) => {
 // ─── Logout ───────────────────────────────────────────────────────────────────
 const logoutUser = async (req, res) => {
   try {
-    res.clearCookie("token", { httpOnly: true });
+    const isProd = process.env.NODE_ENV === "production";
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+    });
     return res.sendSuccess(null, "Logout successful!");
   } catch (error) {
     return res.sendError(error.message, 500);

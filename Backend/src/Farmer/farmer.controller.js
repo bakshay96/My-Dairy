@@ -14,11 +14,30 @@ exports.createFarmer = async (req, res) => {
       return res.status(409).json({ message: "Farmer already exists with this mobile number." });
     }
 
-    const farmer = new farmerModel({ ...req.body, adminId: req.admin.id });
+    // Merge address into village field (frontend may send either)
+    const farmerData = { ...req.body, adminId: req.admin.id };
+    if (farmerData.address && !farmerData.village) {
+      farmerData.village = farmerData.address;
+    }
+
+    const farmer = new farmerModel(farmerData);
     const newFarmer = await farmer.save();
 
     res.status(201).json({ msg: "New farmer added successfully", farmer: newFarmer });
   } catch (error) {
+    console.error("[Farmer] createFarmer error:", error);
+    
+    // Handle Mongoose duplicate key (mobile already exists)
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "A farmer with this mobile number already exists." });
+    }
+    
+    // Mongoose validation errors - extract user-friendly messages
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((e) => e.message).join(", ");
+      return res.status(400).json({ message: messages });
+    }
+    
     res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };

@@ -2,24 +2,33 @@ require("dotenv").config();
 const jwt = require('jsonwebtoken');
 const { AdminModel } = require('../Admin/admin.model');
 
+const getTokenFromCookies = (req) => {
+    const cookieHeader = req.headers.cookie || "";
+    if (!cookieHeader) return null;
+    const tokenCookie = cookieHeader
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith("token="));
+    if (!tokenCookie) return null;
+    return decodeURIComponent(tokenCookie.split("=")[1] || "");
+};
+
 const authMiddleware = async (req, res, next) => {
     const authHeader = req.header('Authorization');
+    const cookieToken = getTokenFromCookies(req);
     
-    // Check if authorization header exists
-    if (!authHeader) {
-        return res.status(401).json({ 
-            success: false,
-            msg: 'No authorization header provided' 
-        });
+    let token = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else if (cookieToken) {
+        token = cookieToken;
     }
 
-    // Validate token format
-    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-    
+    // Check if token exists in any supported source
     if (!token) {
         return res.status(401).json({ 
             success: false,
-            msg: 'Invalid token format. Use: Bearer <token>' 
+            msg: 'Authentication token missing' 
         });
     }
 
@@ -55,6 +64,7 @@ const authMiddleware = async (req, res, next) => {
 
         req.admin = admin;
         req.adminId = admin._id;
+        req.tokenExp = decoded.exp ? decoded.exp * 1000 : null;
         next();
     } catch (err) {
         // Handle specific JWT errors

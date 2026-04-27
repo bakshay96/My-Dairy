@@ -39,14 +39,32 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
   }, [editing, farmer]);
 
   const handleSave = async () => {
+    // Client-side validation
+    if (!form.name.trim()) {
+      setError("Please enter farmer's full name.");
+      return;
+    }
+    if (!form.mobile.trim()) {
+      setError("Please enter mobile number.");
+      return;
+    }
+    if (form.mobile.trim().length !== 10) {
+      setError("Mobile number must be exactly 10 digits.");
+      return;
+    }
+    
     setSaving(true);
     setError("");
     try {
       await api.put(`/farmer/${farmer._id}`, form);
+      toast.success("Farmer updated successfully!");
       onSaved();
       onClose();
     } catch (e) {
-      setError(e.response?.data?.message || "Failed to save changes.");
+      // Extract and display user-friendly error message
+      const errorMessage = e.response?.data?.message || "Failed to save changes. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -104,19 +122,27 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
             /* ── Edit Form ─────────────────────────────────────────────── */
             <div className="space-y-4">
               {[
-                { key: "name", label: "Full Name", type: "text", placeholder: "Farmer name" },
-                { key: "mobile", label: "Mobile", type: "tel", placeholder: "10-digit mobile" },
+                { key: "name", label: "Full Name *", type: "text", placeholder: "Farmer name", required: true },
+                { key: "mobile", label: "Mobile *", type: "tel", placeholder: "10-digit mobile", required: true, maxLength: 10 },
                 { key: "email", label: "Email", type: "email", placeholder: "farmer@example.com" },
-                { key: "address", label: "Village / Address", type: "text", placeholder: "Village name" },
-              ].map(({ key, label, type, placeholder }) => (
+                { key: "address", label: "Village / Address *", type: "text", placeholder: "Village name", required: true },
+              ].map(({ key, label, type, placeholder, required, maxLength }) => (
                 <div key={key} className="space-y-1.5">
                   <label className="text-sm font-medium">{label}</label>
                   <input
                     type={type}
                     value={form[key]}
                     placeholder={placeholder}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    maxLength={maxLength}
+                    onChange={(e) => {
+                      const value = type === "tel" ? e.target.value.replace(/\D/g, '').slice(0, 10) : e.target.value;
+                      setForm({ ...form, [key]: value });
+                      // Clear error when user starts typing
+                      if (error) setError("");
+                    }}
+                    className={`flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      error && form[key] === '' ? 'border-red-500' : 'border-input bg-background'
+                    }`}
                   />
                 </div>
               ))}
@@ -220,18 +246,36 @@ function AddFarmerDrawer({ onClose, onSaved }) {
   const [success, setSuccess] = useState(false);
 
   const handleAdd = async () => {
-    if (!form.name || !form.mobile) {
-      setError("Name and mobile are required.");
+    // Client-side validation
+    if (!form.name.trim()) {
+      setError("Please enter farmer's full name.");
       return;
     }
+    if (!form.mobile.trim()) {
+      setError("Please enter mobile number.");
+      return;
+    }
+    if (form.mobile.trim().length !== 10) {
+      setError("Mobile number must be exactly 10 digits.");
+      return;
+    }
+    if (!form.address.trim()) {
+      setError("Please enter village name or address.");
+      return;
+    }
+    
     setSaving(true);
     setError("");
     try {
       await api.post("/farmer", form);
       setSuccess(true);
+      toast.success("Farmer added successfully!");
       setTimeout(() => { onSaved(); onClose(); }, 1200);
     } catch (e) {
-      setError(e.response?.data?.message || "Failed to add farmer.");
+      // Extract and display user-friendly error message
+      const errorMessage = e.response?.data?.message || "Failed to add farmer. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -249,19 +293,27 @@ function AddFarmerDrawer({ onClose, onSaved }) {
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {[
-            { key: "name", label: "Full Name *", type: "text", placeholder: "e.g. Ramesh Patil" },
-            { key: "mobile", label: "Mobile *", type: "tel", placeholder: "10-digit number" },
-            { key: "email", label: "Email", type: "email", placeholder: "optional" },
-            { key: "address", label: "Village / Address", type: "text", placeholder: "optional" },
-          ].map(({ key, label, type, placeholder }) => (
+            { key: "name", label: "Full Name *", type: "text", placeholder: "e.g. Ramesh Patil", required: true },
+            { key: "mobile", label: "Mobile *", type: "tel", placeholder: "10-digit number", required: true, maxLength: 10 },
+            { key: "email", label: "Email", type: "email", placeholder: "optional (e.g. farmer@example.com)" },
+            { key: "address", label: "Village / Address *", type: "text", placeholder: "e.g. Bhandari, Mumbai", required: true },
+          ].map(({ key, label, type, placeholder, required, maxLength }) => (
             <div key={key} className="space-y-1.5">
               <label className="text-sm font-medium">{label}</label>
               <input
                 type={type}
                 value={form[key]}
                 placeholder={placeholder}
-                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                maxLength={maxLength}
+                onChange={(e) => {
+                  const value = type === "tel" ? e.target.value.replace(/\D/g, '').slice(0, 10) : e.target.value;
+                  setForm({ ...form, [key]: value });
+                  // Clear error when user starts typing
+                  if (error) setError("");
+                }}
+                className={`flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  error && form[key] === '' ? 'border-red-500' : 'border-input bg-background'
+                }`}
               />
             </div>
           ))}
