@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Droplet, Calculator, Settings, Menu, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LayoutDashboard, Users, Droplet, Calculator, Settings, Menu, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import Brand from "@/components/ui/Brand";
@@ -11,6 +11,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import SessionTimer from "@/components/ui/SessionTimer";
 import { useEffect } from "react";
 import api from "@/lib/api";
+import { toast } from "sonner";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -25,6 +26,7 @@ export default function DashboardLayout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const pathname = usePathname();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
@@ -42,20 +44,37 @@ export default function DashboardLayout({ children }) {
   };
 
   useEffect(() => {
+    // Wait for Zustand persistence to hydrate
+    setIsHydrated(true);
+
     const checkSession = async () => {
       try {
         const me = await api.get("/admin/me");
         if (me.data?.admin) {
           setAuth(me.data.admin, null, me.data.sessionExpiresAt || null);
+        } else {
+          throw new Error("No admin data");
+        }
+      } catch (err) {
+        console.error("Session check failed:", err);
+        const status = err?.response?.status;
+        // Only force logout when server explicitly says session is invalid.
+        if (status === 401) {
+          logout();
+          window.location.href = "/login";
           return;
         }
-      } catch {
-        logout();
-        window.location.href = "/login";
+        // For transient/network/proxy issues, avoid hard redirect loop.
+        toast.error("Session check failed. Please refresh once.");
       }
     };
+
     checkSession();
   }, [logout, setAuth]);
+
+  if (!isHydrated) {
+    return <div className="h-screen w-screen flex items-center justify-center bg-gray-50"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50/60 dark:bg-slate-950">

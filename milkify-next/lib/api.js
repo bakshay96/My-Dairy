@@ -1,7 +1,11 @@
 import axios from "axios";
 
-// Using the Next.js rewrite proxy setup in next.config.js, or direct API URL
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3030/api";
+// In browser, always use same-origin Next.js rewrite (/api) so cookies remain first-party.
+// This prevents production redirect loops caused by cross-site cookie restrictions.
+const baseURL =
+  typeof window !== "undefined"
+    ? "/api"
+    : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3030/api";
 
 const api = axios.create({
   baseURL,
