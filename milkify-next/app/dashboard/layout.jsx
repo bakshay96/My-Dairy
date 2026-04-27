@@ -11,6 +11,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import SessionTimer from "@/components/ui/SessionTimer";
 import { useEffect } from "react";
 import api from "@/lib/api";
+import { toast } from "sonner";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -56,8 +57,15 @@ export default function DashboardLayout({ children }) {
         }
       } catch (err) {
         console.error("Session check failed:", err);
-        logout();
-        window.location.href = "/login";
+        const status = err?.response?.status;
+        // Only force logout when server explicitly says session is invalid.
+        if (status === 401) {
+          logout();
+          window.location.href = "/login";
+          return;
+        }
+        // For transient/network/proxy issues, avoid hard redirect loop.
+        toast.error("Session check failed. Please refresh once.");
       }
     };
 
