@@ -6,12 +6,11 @@ import { toast } from "react-toastify";
 export const getMilkRates = createAsyncThunk(
 	"get/rates",
 	async ({ token }, { rejectWithValue }) => {
-		//console.log(token);
 		try {
 			const response = await getRates(token);
 			return response;
 		} catch (error) {
-			return rejectWithValue(error.reponse.data);
+			return rejectWithValue(error.response?.data || { message: error.message });
 		}
 	}
 );
@@ -20,13 +19,12 @@ export const getMilkRates = createAsyncThunk(
 
 export const addAndUpdateMilkRates = createAsyncThunk(
 	"post/rates",
-	async ({ token, newRate }, { rejctWithValue }) => {
+	async ({ token, newRate }, { rejectWithValue }) => {
 		try {
-			//console.log(token, newRate);
 			const response = await postRates(token, newRate);
 			return response;
 		} catch (error) {
-			return rejctWithValue(error.response.data);
+			return rejectWithValue(error.response?.data || { message: error.message });
 		}
 	}
 );
@@ -34,13 +32,12 @@ export const addAndUpdateMilkRates = createAsyncThunk(
 // delete rate collection by id
 export const deleteMilkRates = createAsyncThunk(
 	"delete/rate",
-	async ({ token, id }, { rejctWithValue }) => {
+	async ({ token, id }, { rejectWithValue }) => {
 		try {
-			//console.log(token, id);
 			const response = await deleteRates(token, id);
 			return response;
 		} catch (error) {
-			return rejctWithValue(error.response.data);
+			return rejectWithValue(error.response?.data || { message: error.message });
 		}
 	}
 );
@@ -66,12 +63,12 @@ export const rateSlice = createSlice({
 				//console.log(action);
 				state.loading = false;
 				state.rates = action.payload.rates;
-				toast.success(action.payload.message || "fetch rates data");
+				// Removed toast on fetch - not needed for routine data loading
 			})
 			.addCase(getMilkRates.rejected, (state, action) => {
 				state.loading = false;
-				state.error = true;
-				toast.error(action.payload.error.message || "rejct getting data");
+				state.error = action.payload?.message || 'Failed to fetch rates';
+				// Don't show toast on error - let the component handle it
 			})
 
 			// post new Rates
@@ -86,9 +83,9 @@ export const rateSlice = createSlice({
 				state.loading = false;
 				const updatedRate = action.payload.rate;
 
-				// Find the index of the existing rate based on milkCategory
+				// Find the index of the existing rate based on _id (more accurate)
 				const index = state.rates.findIndex(
-					(rate) => rate.milkCategory === updatedRate.milkCategory
+					(rate) => rate._id === updatedRate._id
 				);
 
 				if (index >= 0) {
@@ -98,13 +95,11 @@ export const rateSlice = createSlice({
 					// If rate does not exist, add it to the array
 					state.rates.push(updatedRate);
 				}
-				toast.success(action.payload.message || "rate updated");
+				// Removed toast - handled in component
 			})
 			.addCase(addAndUpdateMilkRates.rejected, (state, action) => {
-				//console.log(action);
 				state.loading = false;
-				state.error = true;
-				toast.error("Something wen't wrong");
+				state.error = action.payload?.message || 'Failed to update rate';
 			})
 
 			// delete rate by id;
@@ -122,8 +117,8 @@ export const rateSlice = createSlice({
 			})
 			.addCase(deleteMilkRates.rejected, (state, action) => {
 				state.loading = false;
-				state.error = "Server error";
-				toast.error(action.payload.message || "Failed to delete rate entry!");
+				state.error = action.payload?.message || 'Failed to delete rate';
+				// Toast is handled in the component
 			});
 	},
 });

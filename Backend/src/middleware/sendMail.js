@@ -1,20 +1,42 @@
 const { transporter } = require("../connection/mailConnection");
-const nodemailer=require("nodemailer");
-const { x } = require("./milkReport");
 require("dotenv").config();
 
 const sendMail= (req, res,next) => {
     // Extract user data from the request body
-   // console.log("data",req.milkdata);
-    const {snf,fat,litter,shift,date,mobile,category,water,degree}=req.milkdata._doc;
-    const {email,name}=req.milkdata
+    // req.milkdata is already a plain object from toObject() in controller
+    const milkdata = req.milkdata;
     
+    if (!milkdata) {
+        console.log("No milk data available for email");
+        return next(); // Skip email if no milk data
+    }
+    
+    const {
+        snf = 0,
+        fat = 0,
+        litter = 0,
+        shift = "morning",
+        date = new Date().toLocaleDateString(),
+        mobile = "",
+        category = "cow",
+        water = 0,
+        degree = 0,
+        calculatedAmount = 0,
+        rate = 0,
+    } = milkdata;
+    
+    const { email = "", name = "Customer" } = milkdata;
+    
+    // Skip email if no valid recipient
+    if (!email || !email.includes("@")) {
+        console.log(`[Mail] No valid email for farmer ${name}, skipping.`);
+        return next();
+    }
 
-    //Compose the email content
     const mailOptions = {
-      from: process.env.SMTP_EAMIL, // Replace with your email
-      to: `${email}` , // Replace with the recipient's email
-      subject: 'Milk Report Receipt, Team Milkify (Automated - No Replies) sent you a message ',
+      from: `"Milkify Dairy" <${process.env.SMTP_EMAIL}>`,
+      to: email,
+      subject: "Milk Collection Receipt — Milkify",
       //text:`hello ${name}\nMilk Report:\nDate: ${date}\nShift: ${shift}\nCategory: ${category} \nFat: ${fat}\nSNF: ${snf}\nDegree: ${degree}\nWater: ${water}\nTotal: ${litter} Litter`,
       html:`<!DOCTYPE html5>
       <html>
@@ -136,13 +158,14 @@ const sendMail= (req, res,next) => {
     // Send the email
    transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
-        return res.status(500).send(error.toString());
+        console.error("Email send error:", error.message);
+        // Don't block the response if email fails - just log it
+        next();
       }
       else
       {
-
-         // res.status(200).send(`Data submitted successfully! Email sent. ${info.response}`);
-          next();
+         console.log("Email sent successfully:", info.response);
+         next();
       }
     });
            

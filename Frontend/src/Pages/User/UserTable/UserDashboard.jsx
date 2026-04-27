@@ -34,9 +34,9 @@ import { EditIcon } from "./EditIcon";
 import { EyeIcon } from "./EyeIcon";
 import Model from "./Model";
 import { useDispatch, useSelector } from "react-redux";
-import { getFarmersDetails } from "../../../Redux/userReducer/action";
+import { getFarmersDetails } from "../../../Redux/Slices/farmerSlice";
 import SelectFarmer from "../../Milk/SelectFarmer";
-import { getMilkDetails } from "../../../Redux/MilkReducer/action";
+import { getMilkDetails } from "../../../Redux/Slices/milkSlice";
 import { useToast } from '@chakra-ui/react'
 import {
   Alert,
@@ -48,6 +48,8 @@ import { ErrorHandler } from "../../../Components/ErrorHandler";
 import { toast } from "react-toastify";
 import { DeleteFarmerAccount } from "../../../Redux/Slices/farmerSlice";
 import { DeleteConfirmationModal } from "../../../Components/models/DeleteModel";
+import PaymentModal from "../../Payment/PaymentModal";
+import { FiCreditCard } from "react-icons/fi";
 const statusColorMap = {
   Active: "success",
   paused: "danger",
@@ -79,6 +81,9 @@ export default function UserDashboard() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedItem, setSelectedItem] = React.useState(null);
   const [showDetails, setShowDetails] = React.useState(false);
+
+  const [paymentModalOpen, setPaymentModalOpen] = React.useState(false);
+  const [paymentFarmer, setPaymentFarmer] = React.useState(null);
   
   const handleDelete = (item) => {
     //console.log('Deleted farmer id:', item);
@@ -91,6 +96,11 @@ export default function UserDashboard() {
   const openDeleteModal = (item) => {
     setSelectedItem(item);
     setIsModalOpen(true);
+  };
+  
+  const openPaymentModal = (item) => {
+    setPaymentFarmer(item);
+    setPaymentModalOpen(true);
   };
   
   const [page, setPage] = React.useState(1);
@@ -211,6 +221,15 @@ export default function UserDashboard() {
                     </span>
                   </Tooltip>
 
+                  </div>
+                </DropdownItem>
+                <DropdownItem>
+                  <div onClick={() => openPaymentModal(user)}>
+                    <Tooltip color="primary" content="Make Payment">
+                      <span className="text-lg text-primary cursor-pointer active:opacity-50 inline-flex items-center">
+                        <FiCreditCard />
+                      </span>
+                    </Tooltip>
                   </div>
                 </DropdownItem>
               </DropdownMenu>
@@ -393,8 +412,7 @@ export default function UserDashboard() {
   }, [selectedKeys, items.length, page, pages, hasSearchFilter]);
 
   const getdata = () => {
-    dispatch(getFarmersDetails({token}));
-   
+    dispatch(getFarmersDetails(token));
   };
 
 
@@ -450,6 +468,21 @@ export default function UserDashboard() {
         )}
       </TableBody>
     </Table>
+    
+    {paymentFarmer && (
+      <PaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        farmerId={paymentFarmer._id}
+        farmerName={paymentFarmer.name}
+        farmerEmail={paymentFarmer.email}
+        farmerPhone={paymentFarmer.mobile?.toString()}
+        onPaymentSuccess={(data) => {
+          // You could optionally refetch payments or just show a toast
+          console.log("Payment successful!", data);
+        }}
+      />
+    )}
     </>
   );
 }

@@ -1,201 +1,272 @@
-
-const { MilkModel} = require("./milk.model");
-const { farmerModel } = require("../Farmer/farmer.model");
-const nodemailer = require("nodemailer");
-const mongoose = require("mongoose");
-const { sendMail } = require("../middleware/sendMail");
+const { MilkModel }        = require("./milk.model");
+const { farmerModel }      = require("../Farmer/farmer.model");
 const { rateSettingModel } = require("./RateSetting/rateSetting.model");
+const { sendMail }         = require("../middleware/sendMail");
+const { sendMilkEntryNotification } = require("../services/smsService");
+const { calculateMilkAmount, getBillingCycleDate } = require("../utils/milkCalculator");
+const { emitMilkAdded }   = require("../services/socketService");
+const mongoose = require("mongoose");
 
-
-//add farmer milk data 
+// ─── Add Milk Data ────────────────────────────────────────────────────────────
 exports.addMilkData = async (req, res) => {
-	const {category,fat,litter} =req.body;
-	const { id } = req.params;
-	try {
-		
+  const { category, fat, snf = 0, degree = 0, litter } = req.body;
+  const { id: farmerId } = req.params;
 
-		const Farmer = await farmerModel.find({ _id: id, adminId: req.admin.id });
+  if (!farmerId || farmerId === "undefined" || farmerId === "null") {
+    return res.status(400).json({ message: "Invalid farmer ID. Please select a valid farmer." });
+  }
 
-		if (!Farmer) {
-			return res.status(200).json({ message: "User not found..!" });
-		}
-		const [{ name, email, mobile }] = Farmer;
-   
-		//auto shift desider
-		const currentHour = new Date().getHours();
-		const shift = currentHour < 12 ? "morning" : "evening";
+  try {
+    const farmer = await farmerModel.findOne({ _id: farmerId, adminId: req.admin.id });
+    if (!farmer) return res.status(404).json({ message: "Farmer not found" });
 
-		// Date in local string
+    const { name, email, mobile } = farmer;
 
-		const formattedDateTime = new Date().toLocaleDateString("en-IN", {
-			day: "2-digit",
-			month: "2-digit",
-			year: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-			second: "2-digit",
-			timeZone: "Asia/Kolkata", // Indian Standard Time (IST)
-			hour12: true, // Use true for 12-hour format with AM/PM
-		});
+    // ── Auto shift based on IST hour ───────────────────────────────────────
+    const istHour = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })).getHours();
+    const shift   = istHour < 12 ? "morning" : "evening";
 
-		const date = formattedDateTime;
+    // ── Formatted date string (IST) ────────────────────────────────────────
+    const date = new Date().toLocaleDateString("en-IN", {
+      day:      "2-digit",
+      month:    "2-digit",
+      year:     "numeric",
+      hour:     "2-digit",
+      minute:   "2-digit",
+      second:   "2-digit",
+      timeZone: "Asia/Kolkata",
+      hour12:   true,
+    });
 
+    // ── 10-day billing cycle key ───────────────────────────────────────────
+    const billingCycleDate = getBillingCycleDate();
 
-		// Fetch rate settings for the given milk category
-        const rateSetting = await rateSettingModel.findOne({ adminId: req.admin.id, milkCategory:category });
-        if (!rateSetting) {
-            return res.status(400).json({ msg: `Rate settings for ${category} not found` });
-        }
+    // ── Fetch rate settings ────────────────────────────────────────────────
+    const rateSetting = await rateSettingModel.findOne({
+      adminId:      req.admin.id,
+      milkCategory: category,
+      status:       "Active",
+    });
 
-		const fatRate =rateSetting.ratePerFat;
-        const rate = fat * rateSetting.ratePerFat; // Basic rate calculation per litter;
-        const calculatedAmount = rate * parseFloat(litter).toFixed(3); // Calculate final totalAmount
+    if (!rateSetting) {
+      return res.status(400).json({
+        message: `Rate settings for "${category}" not found. Please configure rates in Settings first.`,
+      });
+    }
 
-		const farmerMilkCollection =  MilkModel({
-			adminId: req.admin.id,
-			farmerId: id,
-			...req.body,
-			shift,
-			date,
-			fatRate,
-			rate,
-			calculatedAmount,
-            mobile,
-		});
-		const farmerdata=await farmerMilkCollection.save();
-    //console.log("milk collection",farmerMilkCollection)
+    // ── Calculate amount using utility (precision-safe) ────────────────────
+    const { rate, calculatedAmount, fatRate } = calculateMilkAmount({
+      fat,
+      snf,
+      degree,
+      litter,
+      rateSetting,
+    });
 
-		const milkdata = { ...farmerMilkCollection, name, email };
-    
-		req.milkdata = milkdata;
+    // ── Create & save milk entry ───────────────────────────────────────────
+    const milkEntry = new MilkModel({
+      adminId: req.admin.id,
+      farmerId,
+      ...req.body,
+      snf:     parseFloat(snf)    || 0,
+      degree:  parseFloat(degree) || 0,
+      shift,
+      date,
+      billingCycleDate,
+      fatRate,
+      rate,
+      calculatedAmount,
+      mobile,
+    });
 
-		// call mail middleware
-		sendMail(req, res, () => {
-			//sres.send("data send successfully")
-			// Send a 201 Created response with the created milk provider
-			res.status(200).json({ message: "Milk data submitted", milk: farmerdata});
-		});
+    const savedEntry = await milkEntry.save();
+    const milkdata   = { ...savedEntry.toObject(), name, email };
+    req.milkdata     = milkdata;  // for sendMail middleware
 
-	} catch (error) {
+    // ── Emit real-time socket event (non-blocking) ─────────────────────────
+    emitMilkAdded(farmerId, milkdata);
 
-		res.status(500).json({ message: "Server error", error: error.message });
-	}
+    // ── SMS notification (non-blocking) ───────────────────────────────────
+    if (farmer.mobile) {
+      sendMilkEntryNotification({
+        name,
+        mobile: farmer.mobile,
+        litter,
+        fat,
+        calculatedAmount,
+        date,
+      }).catch((err) => console.error("SMS notification error:", err));
+    }
+
+    // ── Email + response ───────────────────────────────────────────────────
+    sendMail(req, res, () => {
+      res.status(201).json({
+        message: "Milk data submitted successfully",
+        milk:    savedEntry,
+      });
+    });
+  } catch (error) {
+    console.error("Error adding milk data:", error);
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
 
-// get Single farmer milk data using farmer id
-
+// ─── Get Single Farmer Milk Data ──────────────────────────────────────────────
 exports.getSingleFarmerMilkData = async (req, res) => {
-	const { id } = req.params;
+  const { id } = req.params;
 
-	try {
-		UserMilkData = await MilkModel.find({ farmerId:id, adminId: req.admin.id })
-		.populate('farmerId', 'name email mobile') // Populating farmer information
-        .populate('adminId', 'name email mobile shopName') // Populating admin information
-        .exec();
-		
-		const Admin=
+  try {
+    const userMilkData = await MilkModel.find({ farmerId: id, adminId: req.admin.id })
+      .populate("farmerId", "name email mobile")
+      .populate("adminId", "name email mobile shopName")
+      .sort({ createdAt: -1 })
+      .lean();
 
-		res.status(200).send({
-			total_entries: UserMilkData.length,
-			data: UserMilkData,
-		});
-	} catch (error) {
-		res.status(500).send({ msg: error.message });
-	}
+    res.status(200).json({
+      total_entries: userMilkData.length,
+      data: userMilkData,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
 
-
-// get all milk collection data without pagination
+// ─── Get All Milk Collections (no pagination) ─────────────────────────────────
 exports.getfarmerMilkCollections = async (req, res) => {
-	try {
-		const milkcollections= await MilkModel.find({ adminId: req.admin.id });
-		
-			res.status(200).json({ count: milkcollections.length, milkcollections });
-		
-	} catch (error) {
-		res.status(500).json({ message:"Server error",error: error.message });
-	}
+  try {
+    const milkcollections = await MilkModel.find({ adminId: req.admin.id })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.status(200).json({ count: milkcollections.length, milkcollections });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
 
-
-
-// get all milk collection entries with pagination
+// ─── Get All Milk Collections (paginated) ────────────────────────────────────
 exports.getfarmerMilkCollectionWithPagination = async (req, res) => {
-	try {
-		const page = parseInt(req.query.page) || 1;
-		const pageSize = parseInt(req.query.pageSize) || 3
-    const sort=req.query.sort || "asc";
-  
+  try {
+    const page     = parseInt(req.query.page)     || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const sort     = req.query.sort === "asc" ? 1 : -1;
+    const skip     = (page - 1) * pageSize;
 
-		// Calculate the skip value based on the page and pageSize
-		const skip = (page - 1) * pageSize;
+    const milkcollections = await MilkModel.find({ adminId: req.admin.id })
+      .select("farmerId category fat snf water litter degree rate calculatedAmount date shift billingCycleDate createdAt")
+      .populate("farmerId", "name mobile")
+      .skip(skip)
+      .limit(pageSize)
+      .sort({ createdAt: sort })
+      .lean();
 
-		// Query the database with pagination
-		const milkcollections = await MilkModel.find({ adminId: req.admin.id })
-			.skip(skip)
-			.limit(pageSize)
-			.sort({ date: sort }); // Optionally, you can sort the entries by date
+    const totalEntries = await MilkModel.countDocuments({ adminId: req.admin.id });
+    const totalPages   = Math.ceil(totalEntries / pageSize);
 
-		// Count total number of entries for pagination
-		const totalEntries = await MilkModel.countDocuments({
-			adminId: req.admin.id,
-		});
-
-		// Calculate total pages
-		const totalPages = Math.ceil(totalEntries / pageSize);
-
-		// Create the response object with entries, total pages, and current page
-		const response = {
-			milkcollections,
-			totalPages,
-			currentPage: page,
-		};
-
-		return res.status(200).json(response);
-	} catch (error) {
-		//console.error(error);
-		return res.status(500).json({ message: "Internal Server Error",error:error.message });
-	}
+    res.status(200).json({ milkcollections, totalPages, currentPage: page, totalEntries });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
 };
 
-
-//update farmer milk data
+// ─── Update Milk Collection ───────────────────────────────────────────────────
 exports.updateMilkCollection = async (req, res) => {
   try {
-	const {category,fat,litter}=req.body;
-	
-	// Fetch rate settings for the given milk category
-	const rateSetting = await rateSettingModel.findOne({ adminId: req.admin.id, milkCategory:category });
-	if (!rateSetting) {
-		return res.status(400).json({ msg: `Rate settings for ${category} not found` });
-	}
+    const { category, fat, snf = 0, degree = 0, litter } = req.body;
 
-	const fatRate =rateSetting.ratePerFat;
-	const rate = fat * rateSetting.ratePerFat; // Basic rate calculation per litter;
-	const calculatedAmount = rate * parseFloat(litter).toFixed(3); // Calculate final totalAmount
+    const rateSetting = await rateSettingModel.findOne({
+      adminId:      req.admin.id,
+      milkCategory: category,
+      status:       "Active",
+    });
 
-	const newMilkCollection =req.body;
-	const newUpdatedMilkCollection={...newMilkCollection,fatRate,rate,calculatedAmount};
+    if (!rateSetting) {
+      return res.status(400).json({ message: `Rate settings for "${category}" not found` });
+    }
 
-      const milkCollection = await MilkModel.findByIdAndUpdate(req.params.id, newUpdatedMilkCollection, { new: true });
+    const { rate, calculatedAmount, fatRate } = calculateMilkAmount({
+      fat, snf, degree, litter, rateSetting,
+    });
 
-      res.status(200).json({message:"data updated",data:milkCollection});
-	  
+    const updatedData   = { ...req.body, fatRate, rate, calculatedAmount };
+    const milkCollection = await MilkModel.findByIdAndUpdate(req.params.id, updatedData, { new: true });
+
+    if (!milkCollection) return res.status(404).json({ message: "Milk record not found" });
+
+    res.status(200).json({ message: "Data updated successfully", data: milkCollection });
   } catch (error) {
-     
-      res.status(500).json({message:'Server Error',error:error.message});
+    res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
-// delete milk collection by id
+// ─── Delete Milk Collection ───────────────────────────────────────────────────
 exports.deleteMilkCollection = async (req, res) => {
   try {
-     const deletedmilkData= await MilkModel.findByIdAndDelete(req.params.id);
-      res.status(200).json({ message: 'Milk Collection deleted',data:deletedmilkData});
+    const { hard } = req.query;
+    const query = { _id: req.params.id, adminId: req.admin.id };
+
+    if (hard === "true") {
+      const deleted = await MilkModel.findOneAndDelete(query);
+      if (!deleted) return res.status(404).json({ message: "Record not found" });
+      return res.status(200).json({ message: "Milk collection permanently deleted", mode: "hard", data: deleted });
+    }
+
+    const softDeleted = await MilkModel.findOneAndUpdate(
+      query,
+      {
+        $set: {
+          isActive: false,
+          paymentStatus: "paid",
+          deletedAt: new Date(),
+        },
+      },
+      { new: true }
+    );
+    if (!softDeleted) return res.status(404).json({ message: "Record not found" });
+
+    res.status(200).json({ message: "Milk collection soft deleted", mode: "soft", data: softDeleted });
   } catch (error) {
-      //console.error(err.message);
-      res.status(500).json({message:'Server Error',error:error.message});
+    res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
-
+// ─── Delete Milk Collections by Farmer + Range ────────────────────────────────
+exports.deleteFarmerMilkCollections = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+    const { startDate, endDate, hard = "false" } = req.query;
+    if (!mongoose.Types.ObjectId.isValid(farmerId)) {
+      return res.status(400).json({ message: "Invalid farmerId" });
+    }
+    const filter = {
+      adminId: req.admin.id,
+      farmerId: new mongoose.Types.ObjectId(farmerId),
+    };
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) {
+        const s = new Date(startDate);
+        s.setHours(0, 0, 0, 0);
+        filter.createdAt.$gte = s;
+      }
+      if (endDate) {
+        const e = new Date(endDate);
+        e.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = e;
+      }
+    }
+    if (hard === "true") {
+      const result = await MilkModel.deleteMany(filter);
+      return res.status(200).json({ message: "Farmer entries permanently deleted", mode: "hard", deletedCount: result.deletedCount });
+    }
+    const result = await MilkModel.updateMany(
+      filter,
+      { $set: { isActive: false, paymentStatus: "paid", deletedAt: new Date() } }
+    );
+    return res.status(200).json({ message: "Farmer entries soft deleted", mode: "soft", modifiedCount: result.modifiedCount });
+  } catch (error) {
+    return res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};

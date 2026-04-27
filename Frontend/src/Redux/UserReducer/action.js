@@ -1,7 +1,7 @@
 //Write the ActionCreator functions here
 import axios from "axios";
 import * as types from "./actionTypes" ;
-import {localhost, url,url2} from "../Api/api"
+import {url2} from "../Api/api"
 
 export const addUserRequestAction = () => {
   return { type: types.FARMER_USER_REQUEST };
@@ -38,53 +38,45 @@ export const getUserFailureAction = (payload) => {
 
 //add farmer function
 export const addFarmer = ({value,token}) => async (dispatch) => {
-  //console.log("add user action", value,token);
   dispatch(addUserRequestAction());
   try {
-    return  await axios
-      .post(`${url2}/user/register`,value,{
-        headers: {
-          'Authorization':`Bearer ${token}`,
-        }
-      })
-      
+    const res = await axios.post(`${url2}/user/register`, value, {
+      headers: {
+        'Authorization':`Bearer ${token}`,
+      }
+    });
+    dispatch(addUserSuccessAction(res.data));
+    return res.data;
   } catch (error) {
-    dispatch(addUserFailureAction(error.message));
+    // Extract serializable error message
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to add farmer';
+    dispatch(addUserFailureAction(errorMessage));
+    throw error;
   }
 };
 
 //get All Farmer details
 
 export const getFarmersDetails = ({token}) => async (dispatch) => {
-  //console.log("farmer details action", token);
   dispatch(getUserRequestAction());
   try {
-      await axios 
-    .get(`${url2}/user/`,
-    {
-      headers: {
-        'Authorization':`Bearer ${token}`
-      }
-    })
-    .then((res)=>{
-      if(res.data.err)
-      {
-        dispatch(getUserFailureAction(res.data.err))
-      }
-      else
-      {
-
+      const res = await axios.get(`${url2}/user/`,
+        {
+          headers: {
+            'Authorization':`Bearer ${token}`
+          }
+        }
+      );
+      
+      if(res.data.err) {
+        dispatch(getUserFailureAction(res.data.err));
+      } else {
         dispatch(getUserSuccessAction(res.data));
       }
-      console.log("action user detials",res.data);
-    }).catch((error)=>{
-      //console.log(error)
-      dispatch(getUserFailureAction(error));
-    })
-    
   } catch (error) {
-    //console.log("error usre action",error)
-    dispatch(getUserFailureAction(error));
+    // Extract serializable error message instead of entire error object
+    const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch farmers';
+    dispatch(getUserFailureAction(errorMessage));
   }
 };
 

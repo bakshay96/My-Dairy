@@ -1,6 +1,6 @@
 import axios from "axios";
 import * as types from "./actionTypes";
-import { localhost, url2 } from "../Api/api";
+import { url2 } from "../Api/api";
 
 //POST
 export const addMilkRequestAction = () => {

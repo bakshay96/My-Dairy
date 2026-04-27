@@ -76,14 +76,14 @@ export default function AdminRegistration() {
    
 		e.preventDefault();
 		if (
-			! formData.firstName ||
-			! formData.lastName ||
-			! formData.email ||
-			! formData.village ||
-			! formData.shopName ||
-			! formData.mobile ||
-      ! formData.password ||
-      ! formData.confirmPassword
+			!formData.firstName ||
+			!formData.lastName ||
+			!formData.email ||
+			!formData.village ||
+			!formData.shopName ||
+			!formData.mobile ||
+      !formData.password ||
+      !formData.confirmPassword
 		) {
 			toast({
 				position: "top-right",
@@ -112,51 +112,46 @@ export default function AdminRegistration() {
           return;
         }  
     }
+    
     try{
-			let name = formData.firstName + " " + formData.lastName;
-			delete formData.firstName;
-			delete formData.lastName;
-			delete formData.confirmPassword;
-
-			let adminData = { ...formData, name };
-			 
-			dispatch(register(adminData)).then((res) => {
-				
-				if(res.payload.user)
-				{
-					
-					console.log("going to towards dashboard")
-					navigate("/dashboard")
-				}
-				else{
-					navigate("/")
-				}
-			});
-
-
-
-			// If validation passes, proceed with form submission
+			// Create a copy of formData without confirmPassword
+			const { confirmPassword, firstName, lastName, ...restData } = formData;
+			const name = firstName + " " + lastName;
 			
-      //clear form formData
-      setFormData({firstName: "",
-		lastName: "",
-		gender: "Male", //default
-		village: "",
-		shopName: "",
-		mobile: "",
-		email: "",
-		password: "",
-		confirmPassword: "",})
+			const adminData = { ...restData, name };
+			
+			const result = await dispatch(register(adminData));
+			
+			if (register.fulfilled.match(result)) {
+				// Registration successful, navigate to dashboard
+				toast.success("Registration successful! Redirecting to dashboard...");
+				navigate("/dashboard", { replace: true });
+			} else {
+				// Registration failed, stay on registration page
+				toast.error("Registration failed. Please try again.");
+			}
+
+			// Clear form data
+			setFormData({
+				firstName: "",
+				lastName: "",
+				gender: "Male",
+				village: "",
+				shopName: "",
+				mobile: "",
+				email: "",
+				password: "",
+				confirmPassword: "",
+			});
 		}
     catch(error)
     {
-      alert("err",err);
       toast({
             position: "top-right",
             title: `Error`,
-            description: `${error.message}`,
+            description: `${error.message || "Registration failed"}`,
             status: "error",
-            duration: 2000,
+            duration: 3000,
             isClosable: true,
           });
     }
@@ -197,7 +192,7 @@ export default function AdminRegistration() {
 							boxShadow={"lg"}
 							p={8}
 						>
-							<form>
+							<form onSubmit={handleSubmit}>
 								<Stack spacing={4}>
 									<HStack>
 										{/* first name */}
@@ -369,12 +364,11 @@ export default function AdminRegistration() {
 											color={"white"}
 											loadingText="Submitting"
 											type="submit"
-											onClick={handleSubmit}
 											_hover={{
 												bg: "blue.500",
 											}}
 										>
-										{loading?"singnin....":"SignUp"}
+										{loading ? "Signing up..." : "SignUp"}
 										</Button>
 									</Stack>
 									<Stack pt={6}>

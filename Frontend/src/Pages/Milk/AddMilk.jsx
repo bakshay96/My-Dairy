@@ -1,304 +1,153 @@
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useEffect, useState } from "react";
 import {
-  Flex,
-  Box,
-  FormControl,
-  FormLabel,
-  Input,
-  InputGroup,
-  HStack,
-  InputRightElement,
-  Stack,
-  Button,
-  Heading,
-  Text,
-  useColorModeValue,
-  Link,
-  InputLeftAddon,
-  RadioGroup,
-  Radio,
-  Select,
-  GridItem,
-  useToast ,
+  Box, Button, Flex, FormControl, FormLabel, Heading,
+  Input, Select, Stack, Text, useColorModeValue, useToast,
 } from "@chakra-ui/react";
-
-import { GiBuffaloHead, GiCow, GiFarmer, GiGoat } from "react-icons/gi";
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
+import { useDispatch, useSelector } from "react-redux";
 import { addMilk } from "../../Redux/Slices/milkSlice";
 import { getFarmersDetails } from "../../Redux/Slices/farmerSlice";
 
+const CATEGORIES = ["cow", "buffalo", "mixed"];
+
+const initialForm = {
+  farmerId: "",
+  category: "cow",
+  fat: "",
+  snf: "",
+  litter: "",
+};
+
 export default function AddMilk() {
-  const toast = useToast()
-  const [value, setValue] = useState("cow");
-  const [name, setName] = useState({
-    firstName: "",
-    lastName: "",
-  });
-  const [formMilkData, setformMilkData] = useState({
-   farmerId:null,
-    category: "cow", //should be [cow,buffalo,goat];
-    fat: 0,
-    snf: 0,
-    water: 0 || 0,
-    litter: 0,
-    degree:0,
-    id:""
-    
-  });
+  const toast = useToast();
   const dispatch = useDispatch();
   const { farmerData } = useSelector((state) => state.farmer);
-  const {token,user}=useSelector((state)=>state.auth);
-
-  const {data,loading,error} =useSelector((state)=>state.milk);
-  
-
-  const handleChange = (e) => {
-   
-    const { name, value } = e.target;
-   
-    // get user name
-    if(name=="farmerId")
-    {
-      farmerData.forEach((user)=>{
-        if(user._id===value)
-        {
-         
-          let [firstName,lastName]=user.name.split(" ");
-          
-          setName({firstName,lastName});
-          setformMilkData.farmerId=value;
-        }
-      })
-
-    }
-    setformMilkData({
-      ...formMilkData,
-      [name]: value,
-    });
-  };
-  
-  // add milk
-  const handleMilkSubmit = (e) => {
-    e.preventDefault();
-  
-   
-    dispatch(addMilk({value:formMilkData,token})).then((res)=>{
-      
-     
-      if(res.status==201)
-      {
-        
-        toast({
-          title: 'Milk Added Successfully.',
-          description: "We've added your milk to your account for you.",
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-          position:"top"
-        })
-      }
-    })
-    setformMilkData({
-   farmerId:null,
-    category: "cow", //should be [cow,buffalo,goat];
-    fat: 0,
-    snf: 0,
-    water: 0 || 0,
-    litter: 0,
-    degree:0 || 0,})
-    
-  };
+  const { loading } = useSelector((state) => state.milk);
+  const { token } = useSelector((state) => state.auth);
+  const [form, setForm] = useState(initialForm);
+  const bg = useColorModeValue("white", "gray.700");
 
   useEffect(() => {
-    
+    if (token) dispatch(getFarmersDetails(token));
+  }, [token]);
 
-      dispatch(getFarmersDetails(token)).then((res)=>{
-       
-      });
-    
-    // if(isMilkAdded)
-    // {
-    //   dispatch(addMilkSuccessAction({status:false,response:"initial"}))
-    // }
-  }, []);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.farmerId) {
+      toast({ title: "Please select a farmer", status: "warning", position: "top", duration: 3000 });
+      return;
+    }
+    if (!form.fat || !form.litter) {
+      toast({ title: "FAT and Litter are required", status: "warning", position: "top", duration: 3000 });
+      return;
+    }
+    const result = await dispatch(addMilk({ value: form, token }));
+    if (addMilk.fulfilled.match(result)) {
+      toast({ title: "Milk entry added successfully!", status: "success", position: "top", duration: 3000 });
+      setForm(initialForm);
+    } else {
+      const msg = result.payload?.message || "Failed to add milk entry";
+      toast({ title: msg, status: "error", position: "top", duration: 4000 });
+    }
+  };
+
   return (
-    <Flex
-      minH={"100vh"}
-      align={"center"}
-      justify={"center"}
-      bg={useColorModeValue("gray.50", "gray.800")}
-    >
-      <Stack spacing={8} mx={"auto"} maxW={"lg"} py={12} px={6}>
-        <Stack align={"center"}>
-          <Heading fontSize={"4xl"} textAlign={"center"}>
-            Add Milk
-            <Box display={"flex"} justifyContent={"center"}>
-              <GiCow />
-            </Box>
-          </Heading>
-          <Text fontSize={"lg"} color={"gray.600"}>
-            to enjoy all of our cool features ✌️
-          </Text>
-        </Stack>
-        <Box
-          rounded={"lg"}
-          bg={useColorModeValue("white", "gray.700")}
-          boxShadow={"lg"}
-          p={8}
-        >
-          <form action="" onSubmit={handleMilkSubmit}>
-            <Stack spacing={4}>
-              {/* select farmer */}
-              <FormControl colSpan={[6, 3]}>
-                <FormLabel
-                  htmlFor="farmer-name"
-                  fontSize="sm"
-                  fontWeight="md"
-                  color="gray.700"
-                  _dark={{
-                    color: "gray.50",
-                  }}
-                >
-                  Select Farmer
-                </FormLabel>
-                <Select
-                  id="farmer"
-                  name="farmerId"
-                  autoComplete="Farmer"
-                  placeholder="Select Farmer"
-                  focusBorderColor="brand.400"
-                  shadow="sm"
-                  size="sm"
-                  w="full"
-                  rounded="md"
-                  onChange={(e) => handleChange(e)}
-                >
-                  {farmerData && farmerData&&farmerData.map((user) => {
-                    return (
-                      <option value={user._id} key={user._id}>
-                        {user.name}
-                      </option>
-                    );
-                  })}
+    <Flex minH="80vh" align="center" justify="center">
+      <Box bg={bg} rounded="xl" shadow="lg" p={8} w="full" maxW="520px">
+        <Heading mb={2} fontSize="2xl" textAlign="center">
+          🥛 Add Milk Entry
+        </Heading>
+        <Text mb={6} textAlign="center" color="gray.500" fontSize="sm">
+          Record a farmer's milk collection for today
+        </Text>
+        <form onSubmit={handleSubmit}>
+          <Stack spacing={4}>
+            {/* Farmer */}
+            <FormControl isRequired>
+              <FormLabel>Select Farmer</FormLabel>
+              <Select
+                name="farmerId"
+                value={form.farmerId}
+                onChange={handleChange}
+                placeholder="-- Choose Farmer --"
+              >
+                {Array.isArray(farmerData) && farmerData.map((f) => (
+                  <option key={f._id} value={f._id}>{f.name} — {f.mobile}</option>
+                ))}
+              </Select>
+            </FormControl>
 
-                  {/* <option>Ab</option>
-               <option>DB</option> */}
-                </Select>
+            {/* Category */}
+            <FormControl isRequired>
+              <FormLabel>Milk Category</FormLabel>
+              <Select name="category" value={form.category} onChange={handleChange}>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* FAT & SNF */}
+            <Flex gap={4}>
+              <FormControl isRequired>
+                <FormLabel>FAT (%)</FormLabel>
+                <Input
+                  name="fat"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  placeholder="e.g. 3.5"
+                  value={form.fat}
+                  onChange={handleChange}
+                />
               </FormControl>
-              <HStack>
-                {/* first name */}
-                <Box>
-                  <FormControl id="firstName" isRequired>
-                    <FormLabel>First Name</FormLabel>
-                    <Input
-                      placeholder="first-name"
-                      type="text"
-                      value={name.firstName}
-                      name="firstName"
-                      
-                    />
-                  </FormControl>
-                </Box>
-                {/* last name */}
-                <Box>
-                  <FormControl id="lastName">
-                    <FormLabel>Last Name</FormLabel>
-                    <Input
-                      placeholder="last-name"
-                      type="text"
-                      value={name.lastName}
-                      name="lastName"
-                    />
-                  </FormControl>
-                </Box>
-              </HStack>
-
-              {/* Milk Category */}
               <FormControl>
-                <FormLabel>Milk Category</FormLabel>
-                <RadioGroup onChange={setValue} value={value} name="category">
-                  <Stack direction="row" spacing={"2rem"}>
-                    <Radio value="cow" name="category" onChange={handleChange} checked={formMilkData.category=="cow"} >
-                      <GiCow />
-                      Cow
-                    </Radio>
-                    <Radio value="buffalo" name="category" onChange={handleChange} checked={formMilkData.category=="buffalo"} >
-                      <GiBuffaloHead />
-                      Buffalo
-                    </Radio>
-                    <Radio value="goat" name="category" onChange={handleChange} checked={formMilkData.category=="goat"} >
-                      <GiGoat />
-                      Goat
-                    </Radio>
-                  </Stack>
-                </RadioGroup>
+                <FormLabel>SNF (%)</FormLabel>
+                <Input
+                  name="snf"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="15"
+                  placeholder="e.g. 8.5"
+                  value={form.snf}
+                  onChange={handleChange}
+                />
               </FormControl>
+            </Flex>
 
-              {/* liter */}
-              <FormControl id="liter" isRequired>
-                <FormLabel>Liter</FormLabel>
-                <Input placeholder="MILK Liter" type="number" name="litter" value={formMilkData.litter} onChange={handleChange} />
-              </FormControl>
+            {/* Litter */}
+            <FormControl isRequired>
+              <FormLabel>Quantity (Litres)</FormLabel>
+              <Input
+                name="litter"
+                type="number"
+                step="0.001"
+                min="0"
+                placeholder="e.g. 10.5"
+                value={form.litter}
+                onChange={handleChange}
+              />
+            </FormControl>
 
-              {/* FAT */}
-              <FormControl id="fat" isRequired>
-                <FormLabel>FAT</FormLabel>
-                <Input placeholder="MILK FAT" type="number" name="fat" value={formMilkData.fat} onChange={handleChange} />
-              </FormControl>
-
-              {/* SNF */}
-              <FormControl id="snf">
-                <FormLabel>SNF</FormLabel>
-                <Input placeholder="MILK SNF" type="number" name="snf" value={formMilkData.snf} onChange={handleChange} />
-              </FormControl>
-
-              {/* WATER */}
-              <FormControl id="water" isRequired>
-                <FormLabel>WATER</FormLabel>
-                <Input placeholder="MILK WATER" type="number" name="water" value={formMilkData.water} onChange={handleChange} />
-              </FormControl>
-
-
-              {/* Degree  */}
-              <FormControl id="degree">
-                <FormLabel>Degree</FormLabel>
-                <Input placeholder="Degree" type="number" name="degree" value={formMilkData.degree} onChange={handleChange} />
-              </FormControl>
-
-              <Stack spacing={10} pt={2}>
-                {loading ? (
-                  <Button
-                    size="lg"
-                    bg={"blue.400"}
-                    color={"white"}
-                    loadingText="Submitting"
-                    isLoading
-                    _hover={{
-                      bg: "blue.600",
-                    }}
-                  >
-                    Submit Milk
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    bg={"blue.400"}
-                    color={"white"}
-                    loadingText="Submitting"
-                    type="submit"
-                    _hover={{
-                      bg: "blue.600",
-                    }}
-                  >
-                    Submit Milk
-                  </Button>
-                )}
-              </Stack>
-            </Stack>
-          </form>
-        </Box>
-      </Stack>
+            <Button
+              type="submit"
+              colorScheme="teal"
+              size="lg"
+              isLoading={loading}
+              loadingText="Submitting..."
+              mt={2}
+            >
+              Add Milk Entry
+            </Button>
+          </Stack>
+        </form>
+      </Box>
     </Flex>
   );
 }

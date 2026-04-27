@@ -1,42 +1,16 @@
-import axios from "axios"
-import { url2 } from "../Api/api";
+import api from "../../services/api";
 
-const API_URL = `${url2}/farmer`;
-
-export const addNewFarmer= async (value,token) =>
-{
-    
-	const config = {
-		headers: {
-			Authorization: `Bearer ${token}`,
-		},
-	};
-	const response = await axios.post(`${API_URL}/register`,value, config);
-	
+export const addNewFarmer = async (value) => {
+	const response = await api.post(`/farmer/register`, value);
 	return response.data;
 };
 
-export const fetchFarmers = async (token) =>{
-   
-	const config = {
-		headers: {
-			Authorization: `Bearer ${token}`,
-		},
-	};
-	const response = await axios.get(`${API_URL}/`, config);
-	
+export const fetchFarmers = async () => {
+	const response = await api.get(`/farmer/`);
 	return response.data;
-}
+};
 
-export const deleteFarmer = async (id,token) =>{
-	
-   
-	const config = {
-		headers: {
-			Authorization: `Bearer ${token}`,
-		},
-	};
-	const response = await axios.delete(`${API_URL}/${id}`, config);
-	
+export const deleteFarmer = async (id) => {
+	const response = await api.delete(`/farmer/${id}`);
 	return response.data;
-}
+};

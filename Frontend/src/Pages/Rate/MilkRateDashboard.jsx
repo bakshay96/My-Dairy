@@ -37,10 +37,10 @@ const MilkRateDashboard = () => {
 	const cardTextColor = useColorModeValue("gray.800", "white");
 
 	useEffect(() => {
-		if (token && user) {
+		if (token) {
 			dispatch(getMilkRates({ token }));
 		}
-	}, [user, token, dispatch]);
+	}, [token, dispatch]);
 
 	const handleFilterChange = (e) => {
 		setFilterCategory(e.target.value);
@@ -61,15 +61,21 @@ const MilkRateDashboard = () => {
 	};
 
 	const handleSave = async (newRate) => {
+		if (!token) {
+			toast({
+				title: "Authentication error",
+				description: "Please login again",
+				status: "error",
+				duration: 3000,
+				isClosable: true,
+			});
+			return;
+		}
+		
 		try {
-			dispatch(addAndUpdateMilkRates({ token, newRate }))
-				.then((res) => {
-					//console.log(res);
-				})
-				.finally(() => {
-					//console.log("Experiment completed");
-				});
-
+			await dispatch(addAndUpdateMilkRates({ token, newRate })).unwrap();
+			// Refresh the rates after saving
+			dispatch(getMilkRates({ token }));
 			toast({
 				title: "Milk rate saved successfully!",
 				status: "success",
@@ -77,10 +83,10 @@ const MilkRateDashboard = () => {
 				isClosable: true,
 			});
 		} catch (error) {
-			//console.log(error);
+			console.error("Error saving rate:", error);
 			toast({
-				title: error.message,
-				status: "fail",
+				title: error?.message || "Failed to save milk rate",
+				status: "error",
 				duration: 3000,
 				isClosable: true,
 			});
@@ -88,10 +94,21 @@ const MilkRateDashboard = () => {
 	};
 
 	const handleDelete = async (id) => {
+		if (!token) {
+			toast({
+				title: "Authentication error",
+				description: "Please login again",
+				status: "error",
+				duration: 3000,
+				isClosable: true,
+			});
+			return;
+		}
+		
 		try {
-			//console.log(id)
-			dispatch(deleteMilkRates({ token, id }));
-
+			await dispatch(deleteMilkRates({ token, id })).unwrap();
+			// Refresh the rates after deleting
+			dispatch(getMilkRates({ token }));
 			toast({
 				title: "Milk rate deleted successfully!",
 				status: "success",
@@ -99,9 +116,50 @@ const MilkRateDashboard = () => {
 				isClosable: true,
 			});
 		} catch (error) {
-			//console.log(error);
+			console.error("Error deleting rate:", error);
 			toast({
-				title: "Failed to delete milk rate",
+				title: error?.message || "Failed to delete milk rate",
+				status: "error",
+				duration: 3000,
+				isClosable: true,
+			});
+		}
+	};
+
+	const handleToggleStatus = async (rate) => {
+		if (!token) {
+			toast({
+				title: "Authentication error",
+				description: "Please login again",
+				status: "error",
+				duration: 3000,
+				isClosable: true,
+			});
+			return;
+		}
+		
+		try {
+			// Toggle the status
+			const updatedRate = {
+				_id: rate._id,
+				milkCategory: rate.milkCategory,
+				ratePerFat: rate.ratePerFat,
+				status: !rate.status, // Toggle boolean
+			};
+			
+			await dispatch(addAndUpdateMilkRates({ token, newRate: updatedRate })).unwrap();
+			// Refresh the rates after toggling
+			dispatch(getMilkRates({ token }));
+			toast({
+				title: `Rate ${!rate.status ? 'activated' : 'deactivated'} successfully!`,
+				status: "success",
+				duration: 3000,
+				isClosable: true,
+			});
+		} catch (error) {
+			console.error("Error toggling status:", error);
+			toast({
+				title: error?.message || "Failed to update status",
 				status: "error",
 				duration: 3000,
 				isClosable: true,
@@ -186,7 +244,7 @@ const MilkRateDashboard = () => {
 				</Button>
 			</Flex>
 
-			{rates && rates ? (
+			{(rates && rates.length > 0) ? (
 				<SimpleGrid columns={{ sm: 1, md: 2, lg: 3 }} spacing={5}>
 					{sortedRates?.length > 0 ? (
 						sortedRates.map((rate, index) => {
@@ -220,39 +278,44 @@ const MilkRateDashboard = () => {
 									/>
 
 									<Text fontWeight="bold" fontSize="lg">
-										{rate.milkCategory.toUpperCase()}
+										{rate.milkCategory?.toUpperCase() || "N/A"}
 									</Text>
-									<Text>Rate: ₹ {rate.ratePerFat}/Fat</Text>
-									{/* Highlight status based on active/inactive */}
-									{/* <Text color={rate.status ? "green.500" : "red.500"}>
-										Status: {rate.status ? "Active" : "Inactive"}
-									</Text> */}
+									<Text>Rate: ₹ {rate.ratePerFat || 0}/Fat</Text>
 									<Text>Created At: {createdAt}</Text>
 									<Text>Updated At: {updatedAt}</Text>
-									<Flex justifyContent="space-between" mt={4}>
+									<Flex justifyContent="space-between" mt={4} alignItems="center">
 										<Button
 											colorScheme="teal"
 											onClick={() => handleEditCard(rate)}
 										>
 											Edit
 										</Button>
-										<Text
-											fontWeight="bold"
-											fontSize="md"
-											color={rate.status ? "green.600" : "red.600"}
-										>
-											{rate.status ? "Active" : "Inactive"}
-										</Text>
+										<Flex alignItems="center" gap={2}>
+											<Switch
+												isChecked={rate.status}
+												onChange={() => handleToggleStatus(rate)}
+												colorScheme="green"
+											/>
+											<Text
+												fontWeight="bold"
+												fontSize="sm"
+												color={rate.status ? "green.600" : "red.600"}
+											>
+												{rate.status ? "Active" : "Inactive"}
+											</Text>
+										</Flex>
 									</Flex>
 								</Box>
 							);
 						})
 					) : (
-						<Text align={"center"}>Data not available</Text>
+						<Text align={"center"}>No rate data available</Text>
 					)}
 				</SimpleGrid>
+			) : loading ? (
+				<Text align={"center"}>Loading rates...</Text>
 			) : (
-				<Text align={"center"}>Data not available</Text>
+				<Text align={"center"}>No rate data found. Click "Add New Rate" to create one.</Text>
 			)}
 
 			<MilkRateModal

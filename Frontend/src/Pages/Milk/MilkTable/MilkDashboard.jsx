@@ -126,6 +126,8 @@ function MilkDashboard() {
 			water: 0,
 			totalLitters: 0,
 			totalEntries: 0,
+			sumAmount: 0,
+			avgRate: 0,
 		},
 	]);
 	const [statUserName, setStatUserName] = React.useState("data not available");
@@ -167,17 +169,20 @@ function MilkDashboard() {
 	const handleSelectFarmer = (e) => {
 		const payload = e.target.value;
 
-		dispatch(getMilkDetails({ value: payload, token }));
-
-		findName(e.target.value, filteredItems);
+		if (payload && token) {
+			dispatch(getMilkDetails({ value: payload, token }));
+			findName(payload, farmerData);
+		}
 	};
 
-	const findName = (value, filteredItems) => {
-		let x = farmerData.forEach((user) => {
-			if (user._id == value) {
-				setStatUserName(user.name);
-			}
-		});
+	const findName = (value, farmers) => {
+		if (!farmers || !Array.isArray(farmers)) return;
+		const user = farmers.find((u) => u._id === value);
+		if (user) {
+			setStatUserName(user.name);
+		} else {
+			setStatUserName("Data not available");
+		}
 	};
 
 	const handleDateChange = (event, dateType) => {
@@ -378,7 +383,7 @@ function MilkDashboard() {
 	}, [page]);
 
 	const onRowsPerPageChange = React.useCallback((e) => {
-		consoe.log("row per page", e);
+		console.log("row per page", e);
 		setRowsPerPage(Number(e.target.value));
 		setPage(1);
 	}, []);
@@ -397,59 +402,39 @@ function MilkDashboard() {
 		setPage(1);
 	}, []);
   const getMilkStats = React.useMemo(() => {
-		let stats = [...sortedItems];
-		let [totalFat, totalSnf, totalWater, totalDegree, totalLitters] = [
-			0, 0, 0, 0, 0,
-		];
-		 const tItems = stats.length;
-     const totalEntries = stats.length;
-    const sumFat = stats.reduce((acc, item) => acc + item.fat, 0);
-    const sumSnf = stats.reduce((acc, item) => acc + item.snf, 0);
-    const sumDegree = stats.reduce((acc, item) => acc + item.degree, 0);
-    const sumWater = stats.reduce((acc, item) => acc + parseFloat(item.water), 0);
-    const sumTotal = stats.reduce((acc, item) => acc + item.litter, 0);
-    const sumAmount =stats.reduce ((acc,item)=> acc+item.calculatedAmount,0)
-    const sumRate = stats.reduce((acc,item)=>acc + item.rate,0);
-    if(stats ==[])
-      return [{ fat: 0, snf: 0, degree: 0, water: 0, avgRate, totalLitters: 0,sumAmount }];
-    return [{
+		if (!sortedItems || sortedItems.length === 0) {
+			return [{
+				fat: 0,
+				snf: 0,
+				degree: 0,
+				water: 0,
+				avgRate: 0,
+				totalLitters: 0,
+				sumAmount: 0,
+				totalEntries: 0,
+			}];
+		}
+
+		const totalEntries = sortedItems.length;
+    const sumFat = sortedItems.reduce((acc, item) => acc + (item.fat || 0), 0);
+    const sumSnf = sortedItems.reduce((acc, item) => acc + (item.snf || 0), 0);
+    const sumDegree = sortedItems.reduce((acc, item) => acc + (item.degree || 0), 0);
+    const sumWater = sortedItems.reduce((acc, item) => acc + (item.water || 0), 0);
+    const sumTotal = sortedItems.reduce((acc, item) => acc + (item.litter || 0), 0);
+    const sumAmount = sortedItems.reduce((acc, item) => acc + (item.calculatedAmount || 0), 0);
+    const sumRate = sortedItems.reduce((acc, item) => acc + (item.rate || 0), 0);
+
+		return [{
       fat: (sumFat / totalEntries).toFixed(1),
       snf: (sumSnf / totalEntries).toFixed(2),
       degree: (sumDegree / totalEntries).toFixed(1),
       water: (sumWater / totalEntries).toFixed(1),
-      avgRate: (sumRate/totalEntries).toFixed(2),
+      avgRate: (sumRate / totalEntries).toFixed(2),
       totalLitters: sumTotal.toFixed(3),
-      sumAmount,
+      sumAmount: sumAmount.toFixed(2),
       totalEntries,
     }];
-		// if () {
-		// 	stats.forEach((item) => {
-		// 		totalFat += item.fat;
-		// 		totalSnf += item.snf;
-		// 		totalDegree += item.degree;
-		// 		totalWater += item.water;
-		// 		totalLitters += item.litter;
-		// 	});
-
-			// let totalStats = {
-			// 	fat: roundUpToDecimalPlaces(totalFat / tItems, 2),
-			// 	snf: roundUpToDecimalPlaces(totalSnf / tItems, 2),
-			// 	degree: roundUpToDecimalPlaces(totalDegree / tItems, 2),
-			// 	water: roundUpToDecimalPlaces(totalWater / tItems, 2),
-			// 	totalLitters: roundUpToDecimalPlaces(totalLitters, 4),
-			// 	totalEntries: tItems,
-			// };
-			// return [totalStats];
-		// } else {
-		// 	
-	
-
-		//round up function
-		 function roundUpToDecimalPlaces(number, decimalPlaces) {
-			const multiplier = Math.pow(10, decimalPlaces);
-			return Math.floor(number * multiplier) / multiplier;
-		}
-	}, [dateValues, sortedItems]);
+	}, [sortedItems]);
 
  // console.log("Sorted data",sortedItems,dateValues)
 	const topContent = React.useMemo(() => {
@@ -559,7 +544,7 @@ function MilkDashboard() {
 								name="farmerId"
 								onChange={(e) => handleSelectFarmer(e)}
 							>
-								{!loading && farmerData ? (
+							{!loading && farmerData && farmerData.length > 0 ? (
 									farmerData.map((user) => (
 										<SelectItem key={user._id} value={user._id}>
 											{user.name}
@@ -664,7 +649,7 @@ function MilkDashboard() {
 				/>
 			}
 
-			{farmerData.length ? (
+			{farmerData && farmerData.length > 0 ? (
 				<Table
 					aria-label=" table with custom cells, pagination and sorting"
 					isHeaderSticky
@@ -697,9 +682,9 @@ function MilkDashboard() {
 						emptyContent={
 							loading
 								? "...Loading"
-								: data && data.length == 0
-								? "Entry not found"
-								: "data not available"
+								: data && data.length === 0
+								? "No entries found for this farmer"
+								: "Select a farmer to view milk records"
 						}
 						items={sortedItems}
 					>
@@ -715,7 +700,7 @@ function MilkDashboard() {
 			) : (
 				<div style={{ display: "flex", flexDirection: "columns" }}>
 					<Heading color={"tomato"} m={"auto"}>
-						{farmerData.err}{" "}
+						{farmerData?.err || "Please add farmers first"}
 						<p style={{ fontSize: "20px", color: "blue" }}>
 							Please try again..!
 						</p>
@@ -725,7 +710,7 @@ function MilkDashboard() {
 
 			{/* //Arithmatic table  */}
 			<div>
-				{farmerData.length ? (
+				{farmerData && farmerData.length > 0 ? (
 					<Table aria-label=" static collection table">
 						<TableHeader>
 							<TableColumn>Total & Avg</TableColumn>
@@ -738,7 +723,7 @@ function MilkDashboard() {
 						</TableHeader>
 						<TableBody
 							emptyContent={
-								loading || milkStats == [] ? "...Loading" : "No Entry Found"
+								loading || !sortedItems || sortedItems.length === 0 ? "...Loading" : "No Entry Found"
 							}
 							items={getMilkStats}
 						>

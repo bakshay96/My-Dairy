@@ -1,58 +1,210 @@
-const express=require("express");
-const cors=require("cors");
-const { connection } = require("./src/connection/db");
-const { farmerRouter } = require("./src/Farmer/farmerRoutes");
-const { AdminRouter } = require("./src/Admin/adminRoutes");
-const { MilkRouter } = require("./src/Milk/milkRoutes");
-const { transporter } = require("./src/connection/mailConnection");
-const rateRouter = require("./src/Milk/RateSetting/rateSettingRoutes");
-
-
 require("dotenv").config();
-const PORT=process.env.PORT || 3030;
+const http    = require("http");
+const express = require("express");
+const cors    = require("cors");
+const helmet  = require("helmet");
+const morgan  = require("morgan");
+const { Server } = require("socket.io");
 
-const app=express();
+const { connection }           = require("./src/connection/db");
+const { farmerRouter }         = require("./src/Farmer/farmerRoutes");
+const { AdminRouter }          = require("./src/Admin/adminRoutes");
+const { MilkRouter }           = require("./src/Milk/milkRoutes");
+const { billingRouter }        = require("./src/Milk/billingRoutes");
+const { transporter }          = require("./src/connection/mailConnection");
+const rateRouter               = require("./src/Milk/RateSetting/rateSettingRoutes");
+const { paymentRouter }        = require("./src/Payment/paymentRoutes");
+const { analyticsRouter }      = require("./src/Analytics/analyticsRoutes");
+const { responseInterceptor }  = require("./src/middleware/responseHandler.middleware");
+const { generalLimiter, authLimiter } = require("./src/middleware/rateLimiter.middleware");
+const sanitizeInput            = require("./src/middleware/sanitize.middleware");
+const { initSocketService }    = require("./src/services/socketService");
 
+const PORT      = process.env.PORT      || 3030;
+const NODE_ENV  = process.env.NODE_ENV  || "development";
+const CORS_ORIGIN = process.env.origin  || "http://localhost:3000"; // Next.js default port
 
-// CORS configuration
-// app.use(cors({
-//   origin: process.env.origin, //  frontend domain
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed methods
-//   allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
-//   credentials: true // Allow credentials like cookies
-// }));
+const app    = express();
+const server = http.createServer(app);  // ← Wrap in raw http.Server for Socket.io
 
-app.use(cors());
- app.options('*', cors()); 
+// ============================================================
+// SOCKET.IO SETUP
+// ============================================================
+const io = new Server(server, {
+  cors: {
+    origin: NODE_ENV === "development" ? "*" : CORS_ORIGIN,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
+});
 
-app.use(express.json());
+// Init socket service (so controllers can emit without importing io directly)
+initSocketService(io);
 
-app.get("/", async (req, res) => {
-    res.sendFile(__dirname + "/utils/index.html");
-  });
-  
+io.on("connection", (socket) => {
+  console.log(`[Socket] Client connected: ${socket.id}`);
 
-
-app.use("/api/admin",AdminRouter);
-app.use("/api/farmer",farmerRouter);
-app.use("/api/milk",MilkRouter)
-app.use("/api/rate",rateRouter);
-
-//server
-app.listen(PORT, async ()=>{
-    try {
-        await connection
-         
-        console.log("DB connected successfully")
-        console.log(`Server is running on port ${PORT}`)
-        transporter.verify(function (error, success) {
-            if (error) {
-              console.log(error);
-            } else {
-              console.log("Server is ready to take our messages");
-            }
-          });
-    } catch (error) {
-        console.error(error);
+  // Admin joins their private room (called from frontend after login)
+  socket.on("join_admin_room", (adminId) => {
+    if (adminId) {
+      socket.join(`admin:${adminId}`);
+      console.log(`[Socket] Admin ${adminId} joined room`);
     }
-})
+  });
+
+  socket.on("disconnect", () => {
+    console.log(`[Socket] Client disconnected: ${socket.id}`);
+  });
+});
+
+// ============================================================
+// SECURITY MIDDLEWARE
+// ============================================================
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "https://checkout.razorpay.com",
+          "'unsafe-inline'",
+        ],
+        frameSrc:   ["'self'", "https://api.razorpay.com"],
+        connectSrc: ["'self'", "https://api.razorpay.com"],
+      },
+    },
+  })
+);
+
+// ============================================================
+// CORS CONFIGURATION
+// ============================================================
+const allowedOrigins =
+  NODE_ENV === "development"
+    ? true
+    : Array.isArray(CORS_ORIGIN)
+    ? CORS_ORIGIN
+    : [CORS_ORIGIN];
+
+const corsOptions = {
+  origin: allowedOrigins,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+  optionsSuccessStatus: 200,
+  maxAge: 3600,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
+// ============================================================
+// BODY PARSER — raw for Razorpay webhook, json for everything else
+// ============================================================
+app.use("/api/payment/webhook", express.raw({ type: "application/json" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
+// ============================================================
+// LOGGING
+// ============================================================
+const morganFormat = NODE_ENV === "development" ? "dev" : "combined";
+app.use(morgan(morganFormat));
+
+// ============================================================
+// INPUT SANITIZATION
+// ============================================================
+app.use(sanitizeInput);
+
+// ============================================================
+// RATE LIMITING
+// ============================================================
+app.use("/api/", generalLimiter);
+// app.use("/api/admin/login", authLimiter);
+// app.use("/api/admin/register", authLimiter);
+// ============================================================
+// RESPONSE INTERCEPTOR
+// ============================================================
+app.use(responseInterceptor);
+
+// ============================================================
+// ROOT + HEALTH
+// ============================================================
+app.get("/", (req, res) => res.sendFile(__dirname + "/utils/index.html"));
+
+app.get("/health", (req, res) =>
+  res.status(200).json({
+    status: "ok",
+    environment: NODE_ENV,
+    timestamp: new Date().toISOString(),
+    socketClients: io.engine.clientsCount,
+  })
+);
+
+// ============================================================
+// API ROUTES
+// ============================================================
+app.use("/api/admin",   AdminRouter);
+app.use("/api/farmer",  farmerRouter);
+app.use("/api/milk",    MilkRouter);
+app.use("/api/billing", billingRouter);   // ← NEW: 10-day billing
+app.use("/api/rate",    rateRouter);
+app.use("/api/payment", paymentRouter);
+app.use("/api/analytics", analyticsRouter);
+
+// ============================================================
+// 404 HANDLER
+// ============================================================
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+    path: req.originalUrl,
+  });
+});
+
+// ============================================================
+// GLOBAL ERROR HANDLER
+// ============================================================
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    ...(NODE_ENV === "development" && { error: err.toString(), stack: err.stack }),
+  });
+});
+
+// ============================================================
+// SERVER STARTUP
+// ============================================================
+server.listen(PORT, async () => {
+  try {
+    await connection;
+    console.log(`✓ Database connected successfully`);
+    console.log(`✓ Server running on http://localhost:${PORT}`);
+    console.log(`✓ Socket.io ready`);
+    console.log(`✓ Environment: ${NODE_ENV}`);
+
+    transporter.verify((error) => {
+      if (error) console.log("⚠ Email service error:", error.message);
+      else        console.log("✓ Email service is ready");
+    });
+  } catch (error) {
+    console.error("✗ Server startup error:", error);
+    process.exit(1);
+  }
+});
+
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received — closing server");
+  server.close(() => {
+    console.log("Server closed");
+    process.exit(0);
+  });
+});
+
+module.exports = { app, io };

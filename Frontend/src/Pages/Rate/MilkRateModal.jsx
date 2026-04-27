@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Button,
   Input,
@@ -16,9 +16,24 @@ import {
 const MilkRateModal = ({ isOpen, onClose, onSave, initialData }) => {
   const [milkCategory, setMilkCategory] = useState(initialData?.milkCategory || 'cow');
   const [ratePerFat, setRatePerFat] = useState(initialData?.ratePerFat || "");
-  const [status, setStatus] = useState(initialData?.status || 'Active');
+  const [status, setStatus] = useState(initialData?.status ? 'Active' : 'Inactive');
 
   const toast = useToast();
+
+  // Update form fields when initialData changes (when opening modal for edit)
+  useEffect(() => {
+    if (initialData) {
+      setMilkCategory(initialData.milkCategory || 'cow');
+      setRatePerFat(initialData.ratePerFat || "");
+      // Convert boolean status to string for the form
+      setStatus(initialData.status ? 'Active' : 'Inactive');
+    } else {
+      // Reset form when adding new rate
+      setMilkCategory('cow');
+      setRatePerFat("");
+      setStatus('Inactive');
+    }
+  }, [initialData, isOpen]);
 
   const handleSave = () => {
     if (!milkCategory || !ratePerFat) {
@@ -30,12 +45,20 @@ const MilkRateModal = ({ isOpen, onClose, onSave, initialData }) => {
       });
       return;
     }
-    onSave({
-     
+    
+    // Convert form data to proper types for backend
+    const rateData = {
       milkCategory,
-      ratePerFat,
-      status,
-    });
+      ratePerFat: parseFloat(ratePerFat), // Convert string to number
+      status: status === 'Active', // Convert string to boolean
+    };
+    
+    // If editing, include the ID
+    if (initialData?._id) {
+      rateData._id = initialData._id;
+    }
+    
+    onSave(rateData);
     onClose();
   };
 
@@ -48,7 +71,6 @@ const MilkRateModal = ({ isOpen, onClose, onSave, initialData }) => {
         <ModalBody>
           <Select
             placeholder="Select Category"
-            defaultValue={'cow'}
             value={milkCategory}
             onChange={(e) => setMilkCategory(e.target.value)}
           >
@@ -61,6 +83,7 @@ const MilkRateModal = ({ isOpen, onClose, onSave, initialData }) => {
           <Input
             mt={4}
             placeholder="Rate per Fat (₹)"
+            type="number"
             value={ratePerFat}
             onChange={(e) => setRatePerFat(e.target.value)}
           />
@@ -68,7 +91,6 @@ const MilkRateModal = ({ isOpen, onClose, onSave, initialData }) => {
           <Select
             mt={4}
             placeholder="Status"
-            defaultValue={'Inactive'}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >

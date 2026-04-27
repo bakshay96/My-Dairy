@@ -1,216 +1,248 @@
-const express = require("express");
-const adminRouter = express.Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { AdminModel } = require("./admin.model");
 const { transporter } = require("../connection/mailConnection");
+
 require("dotenv").config();
 
-//admin registration
-const adminRegistration = async (req, res) => {
-	const { name, village, shopName, mobile, password } = req.body;
-  try {
+const setAuthCookie = (res, token) => {
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    maxAge: 30 * 60 * 1000, // 30 minutes
+  });
+};
 
-    
-    // Check if an admin with the same email already exists
+// ─── Admin Registration (legacy – kept for backward compat) ─────────────────
+const adminRegistration = async (req, res) => {
+  const { mobile, password } = req.body;
+  try {
     const isAdmin = await AdminModel.findOne({ mobile });
     if (isAdmin) {
-      return res
-        .status(400)
-        .json({ msg: "Admin  already exists" });
-    } 
-	else {
-      bcrypt.hash(password, 5, async (error, hash) => {
-        try {
-          if (error) {
-            res.status(500).json({ error: error.message });
-          } else {
-            const newAdmin = new AdminModel({
-              ...req.body,
-
-              password: hash,
-              key: password,
-            });
-
-            const admin = await newAdmin.save();
-            
-            const payload= {id:admin.id};
-            
-
-            // Respond with the saved admin
-            jwt.sign(
-              payload,
-              process.env.TOKEN_API_SECRET_KEY,
-              { expiresIn: "12h" },
-              (err, token) => 
-              {
-                if (err) throw err;
-        
-                res
-                  .status(201)
-                  .json({
-                     msg: "Admin Registration Successfully done" ,
-                     token,
-                     user:{id: user._id,
-                     username: user.user,
-                     mobile: user.mobile,
-
-                    }
-
-                    });
-              }
-            );
-          }
-        } catch (error) {
-          res.status(500).json({ error: error.message });
-        }
-      });
+      return res.status(409).json({ msg: "Admin already exists" });
     }
+
+    bcrypt.hash(password, 10, async (error, hash) => {
+      try {
+        if (error) {
+          return res.status(500).json({ error: error.message });
+        }
+
+        const newAdmin = new AdminModel({
+          ...req.body,
+          password: hash,
+          key: password,
+        });
+
+        const admin = await newAdmin.save();
+        const payload = { id: admin.id };
+
+        jwt.sign(
+          payload,
+          process.env.JWT_SECRET,
+          { expiresIn: process.env.JWT_EXPIRY || "12h" },
+          (err, token) => {
+            if (err) throw err;
+            res.status(201).json({
+              msg: "Admin Registration Successfully done",
+              token,
+              user: {
+                id: admin._id,
+                name: admin.name,
+                mobile: admin.mobile,
+              },
+            });
+          }
+        );
+      } catch (error) {
+        res.status(500).json({ error: error.message });
+      }
+    });
   } catch (error) {
-    // Handle errors and respond with an error message
     res.status(400).json({ error: error.message });
   }
 };
 
-
-
+// ─── Register Admin ──────────────────────────────────────────────────────────
 const registerAdmin = async (req, res) => {
-  const { name, email, password ,mobile} = req.body;
+  const { mobile, password, email } = req.body;
   try {
-      let admin = await AdminModel.findOne({ mobile });
-      if (admin) {
-          return res.status(200).json({ message: 'Admin already exists' });
-      }
-      const salt = await bcrypt.genSalt(10);
-		const hashedPassword = await bcrypt.hash(password, salt);
-      admin = new AdminModel({ ...req.body,key:password,password:hashedPassword});
-      await admin.save();
+    if (!email) {
+      return res.sendError("Email is required for communication", 400);
+    }
+    let admin = await AdminModel.findOne({ mobile });
+    if (admin) {
+      return res.sendError("Admin already exists", 409);
+    }
 
-      const payload = { id: admin.id };
-      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '12h' });
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-      res.status(200).json({ message: "Registration successfull", token,admin:{name:admin.name,"email":admin.email,mobile:admin.mobile,id:admin.id,shopName:admin.shopName}});
+    admin = new AdminModel({ ...req.body, key: password, password: hashedPassword });
+    await admin.save();
+
+    const payload = { id: admin.id };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "30m",
+    });
+    setAuthCookie(res, token);
+
+    return res.sendSuccess({
+      admin: {
+        name: admin.name,
+        email: admin.email,
+        mobile: admin.mobile,
+        id: admin.id,
+        shopName: admin.shopName,
+      },
+      sessionExpiresAt: Date.now() + 30 * 60 * 1000,
+    }, "Registration successful", 201);
   } catch (error) {
-     
-      res.status(500).json({message:'Server Error',error:error.message});
+    return res.sendError(error.message, 500);
   }
 };
 
-// admin login
+// ─── Admin Login ─────────────────────────────────────────────────────────────
 const adminLogin = async (req, res) => {
   try {
-    // Extract login credentials from the request body
     const { mobile, password } = req.body;
 
-    // Find the admin with the specified email
     const admin = await AdminModel.findOne({ mobile });
-
     if (!admin) {
-      return res.status(200).json({ error: "Invalid credentials"});
+      return res.sendError("Invalid credentials", 401);
     }
 
-    // Compare the provided password with the hashed password in the database
-    const passwordMatch = await bcrypt.compare(password, admin.password);
-
+    let passwordMatch = false;
+    if (admin.password && typeof admin.password === "string" && admin.password.startsWith("$2")) {
+      passwordMatch = await bcrypt.compare(password, admin.password);
+    } else if (admin.password) {
+      passwordMatch = admin.password === password;
+    }
+    if (!passwordMatch && admin.key) {
+      passwordMatch = admin.key === password;
+    }
     if (!passwordMatch) {
-      return res.status(200).json({ error: "Invalid email or password" });
+      return res.sendError("Invalid mobile or password", 401);
     }
 
-    // Generate a unique token upon successful login
-    const payload={id:admin.id}
-    const token = jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: "6h" }
-    );
+    // Migrate legacy plaintext password to bcrypt hash on successful login
+    if (!admin.password || !String(admin.password).startsWith("$2")) {
+      const salt = await bcrypt.genSalt(10);
+      admin.password = await bcrypt.hash(password, salt);
+      await admin.save();
+    }
 
-    // Respond with the generated token
-    res.status(200).send({ 
-      message: "Loign successfull",
-       token,
-      admin:{
-        name:admin.name,
-        mobile:admin.mobile,
-        email:admin.email,
-        shopName:admin.shopName,
-        id:admin.id }
-      });
+    const payload = { id: admin.id };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "30m",
+    });
+    setAuthCookie(res, token);
+
+    return res.sendSuccess({
+      admin: {
+        name: admin.name,
+        mobile: admin.mobile,
+        email: admin.email,
+        shopName: admin.shopName,
+        id: admin.id,
+      },
+      sessionExpiresAt: Date.now() + 30 * 60 * 1000,
+    }, "Login successful");
   } catch (error) {
-    // Handle errors and respond with an error message
-    res.status(500).json({ error: error.message });
+    return res.sendError(error.message, 500);
   }
 };
 
-
-// current user
+// ─── Get Current User ─────────────────────────────────────────────────────────
 const getCurrentUser = async (req, res) => {
- 
-	try {
-		res.status(200).json({admin:req.admin ,"message":"user logged in successfully "});
-	} catch (error) {
-		res.status(500).send({"message":error.message,error:error.message})
-}
+  try {
+    return res.sendSuccess(
+      { admin: req.admin, sessionExpiresAt: req.tokenExp || Date.now() + 30 * 60 * 1000 },
+      "User fetched successfully"
+    );
+  } catch (error) {
+    return res.sendError(error.message, 500);
+  }
 };
 
-const logoutUser = async (req, res, next) => {
-	try {
-		res.clearCookie("token", { httpOnly: true });
-		// req.session.destroy();
-		return res.status(200).json({ message: "Logout successful!" });
-	} catch (error) {
-		res.status(500).send({"msg":error})
-	}
+// ─── Update Admin Profile ──────────────────────────────────────────────────────
+const updateAdminProfile = async (req, res) => {
+  try {
+    const allowedFields = ["name", "email", "mobile", "shopName", "village", "gender"];
+    const updateData = {};
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) updateData[field] = req.body[field];
+    });
+
+    if (Object.keys(updateData).length === 0) {
+      return res.sendError("No valid fields to update", 400);
+    }
+
+    const admin = await AdminModel.findByIdAndUpdate(req.admin.id, { $set: updateData }, { new: true }).select("-password");
+    return res.sendSuccess({ admin }, "Profile updated successfully");
+  } catch (error) {
+    return res.sendError(error.message, 500);
+  }
 };
 
+// ─── Logout ───────────────────────────────────────────────────────────────────
+const logoutUser = async (req, res) => {
+  try {
+    const isProd = process.env.NODE_ENV === "production";
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+    });
+    return res.sendSuccess(null, "Logout successful!");
+  } catch (error) {
+    return res.sendError(error.message, 500);
+  }
+};
 
-
-
+// ─── Contact Message ──────────────────────────────────────────────────────────
 const message = async (req, res) => {
-  const { name, email, message } = req.body;
+  const { name, email, message: userMessage } = req.body;
 
+  if (!name || !email || !userMessage) {
+    return res.status(400).json({ error: "Name, email, and message are required" });
+  }
 
- 
+  const mailOptions = {
+    from: process.env.SMTP_EMAIL,
+    to: process.env.SMTP_EMAIL,
+    replyTo: email,
+    subject: `Milkify Contact: Message from ${name}`,
+    html: `
+      <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2 style="color: #2563eb;">Milkify — New Contact Message</h2>
+          <p><strong>From:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <hr/>
+          <p><strong>Message:</strong></p>
+          <p>${userMessage}</p>
+        </body>
+      </html>
+    `,
+  };
 
-    mailOptions = {
-        from: email, // Replace with your email
-        to: "process.env.SMTP_EAMIL", // Replace with the recipient's email
-        subject: "Milkify User Message",
-        
-        html: `
-          <html>
-            <body>
-              <h2>Milkify User Message !</h2>
-              <p>Hi my is ${name}</p>
-              <p>${message}</p>
-              <h3>User Name : <b>${name} </b></h3>
-              <p>User Email Id :${email} </p>
-              <p>Best regards,<br/>${name}</p>
-            </body>
-          </html>
-        `,
-      }
-      
-
-      // Send the email
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          return res.status(500).send(error.toString());
-        } else {
-          res.status(201).send(`Message send successfully! Email sent. ${info.response}`);
-          
-        }
-      });
-
-      
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      return res.status(500).json({ error: error.toString() });
+    }
+    res.status(200).json({ message: "Message sent successfully!", info: info.response });
+  });
 };
-
 
 module.exports = {
   adminRegistration,
   adminLogin,
   message,
   getCurrentUser,
+  updateAdminProfile,
   logoutUser,
-  registerAdmin
-  
+  registerAdmin,
 };

@@ -22,16 +22,6 @@ import {
   Image,
   useColorMode,
   Button,
-  Spacer,
-  border,
-  useStatStyles,
-  ModalCloseButton,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalOverlay,
   Heading,
 } from "@chakra-ui/react";
 import {
@@ -43,6 +33,7 @@ import {
   FiMenu,
   FiBell,
   FiChevronDown,
+  FiCreditCard,
 } from "react-icons/fi";
 import { MoonIcon, SunIcon } from "@chakra-ui/icons";
 import { FaAddressBook, FaBluetooth, FaRegAddressCard } from "react-icons/fa";
@@ -78,8 +69,19 @@ const LinkItems = [
     icon: FiTrendingUp,
     path: "/dashboard/milk_info",
   },
-  { id: "4", name: "Favourites", icon: FiStar, path: "#" },
-  { id: "5", name: "Settings", icon: FiSettings, path: "/dashboard/rate" },
+  {
+    id: "4",
+    name: "Analytics",
+    icon: FiTrendingUp,
+    path: "/dashboard/analytics",
+  },
+  {
+    id: "5",
+    name: "Payments",
+    icon: FiCreditCard,
+    path: "/dashboard/payments",
+  },
+  { id: "6", name: "Settings", icon: FiSettings, path: "/dashboard/rate" },
 ];
 
 export default function Dashboard({ children }) {
@@ -100,18 +102,16 @@ export default function Dashboard({ children }) {
   //   naviate("/")
   // }
   useEffect(() => {
-    if (user) {
+    if (user && token) {
       dispatch(getFarmersDetails(token));
     }
-    console.log("dash app render");
-  }, [user]);
+  }, [user, token]);
   return (
     <>
       {loading && <Loader />}
       <Box
         minH="100vh"
         bg={useColorModeValue("gray.100", "gray.900")}
-        border={"1px solid red"}
       >
         <SidebarContent
           onClose={() => onClose}
@@ -317,14 +317,8 @@ const MobileNav = ({ onOpen, onClose, ...rest }) => {
   const navigate = useNavigate();
   const handleAuth = () => {
     dispatch(logout(token));
-
-   
+    navigate("/admin/signin", { replace: true });
   };
-  useEffect(() => {
-    if (!user) {
-      navigate("/admin/signin");
-    }
-  }, [token,user]);
   return (
     <Flex
       ml={{ base: 0, md: 60 }}
@@ -405,12 +399,17 @@ const MobileNav = ({ onOpen, onClose, ...rest }) => {
               bg={useColorModeValue("white", "gray.900")}
               borderColor={useColorModeValue("gray.200", "gray.700")}
             >
-              {/* <MenuItem>Profile</MenuItem>
-              <MenuItem>Settings</MenuItem>
-              <MenuItem>Billing</MenuItem> */}
+              <MenuItem>
+                <VStack alignItems="flex-start" spacing="1px" ml="2">
+                  <Text fontSize="sm" fontWeight="bold">{user?.name || "Admin"}</Text>
+                  <Text fontSize="xs" color="gray.600">
+                    {user?.email || "admin@milkify.com"}
+                  </Text>
+                </VStack>
+              </MenuItem>
               <MenuDivider />
               <MenuItem onClick={() => handleAuth()}>
-                {user? "Sign out":""}
+                Sign out
               </MenuItem>
             </MenuList>
           </Menu>
