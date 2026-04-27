@@ -70,7 +70,7 @@ export default function DashboardHome() {
         
         <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900">Today's Milk</CardTitle>
+            <CardTitle className="text-sm font-medium text-blue-900">Today&apos;s Milk</CardTitle>
             <Droplet className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -81,7 +81,7 @@ export default function DashboardHome() {
         
         <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-amber-900">Today's Avg FAT</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-900">Today&apos;s Avg FAT</CardTitle>
             <Percent className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>

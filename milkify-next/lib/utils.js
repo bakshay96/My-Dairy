@@ -41,7 +41,7 @@ export function formatIndianDate(date) {
     const year = d.getFullYear();
     
     return `${day}-${month}-${year}`;
-  } catch (e) {
+  } catch {
     return "Invalid Date";
   }
 }

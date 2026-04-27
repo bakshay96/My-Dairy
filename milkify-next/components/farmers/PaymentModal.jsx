@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import api from "@/lib/api";
 import { formatRupees } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -239,7 +240,7 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
                 <div className="border rounded-lg p-3 space-y-2">
                   <p className="text-xs text-gray-500">Internal Order ID</p>
                   <p className="text-sm font-semibold break-all">{manualIntent.internalOrderId}</p>
-                  <img src={manualIntent.qrCodeUrl} alt="Payment QR" className="h-40 w-40 mx-auto" />
+                  <Image src={manualIntent.qrCodeUrl} alt="Payment QR" width={160} height={160} className="mx-auto" unoptimized />
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       type="button"

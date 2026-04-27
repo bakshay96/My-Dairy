@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { formatIndianDate, formatRupees } from "@/lib/utils";
 import MilkifyLoader from "@/components/ui/Loader";
 import { getLastTenDaysRange, buildDateQuery } from "@/lib/dateRange";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 
 export default function BillingPage() {
-  const defaultRange = getLastTenDaysRange();
+  const defaultRange = useMemo(() => getLastTenDaysRange(), []);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -24,7 +24,7 @@ export default function BillingPage() {
   const [startDate, setStartDate] = useState(defaultRange.startDate);
   const [endDate, setEndDate] = useState(defaultRange.endDate);
 
-  const fetchBillingData = async (overrideStartDate = startDate, overrideEndDate = endDate) => {
+  const fetchBillingData = useCallback(async (overrideStartDate = startDate, overrideEndDate = endDate) => {
     try {
       setLoading(true);
       setError("");
@@ -39,9 +39,9 @@ export default function BillingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate]);
 
-  const fetchSettlements = async (overrideStartDate = startDate, overrideEndDate = endDate) => {
+  const fetchSettlements = useCallback(async (overrideStartDate = startDate, overrideEndDate = endDate) => {
     try {
       const query = buildDateQuery(overrideStartDate, overrideEndDate);
       const res = await api.get(`/payment/history?status=captured&pageSize=100${query ? `&${query.slice(1)}` : ""}`);
@@ -49,12 +49,12 @@ export default function BillingPage() {
     } catch (error) {
       console.error("Failed to fetch settlements:", error);
     }
-  };
+  }, [startDate, endDate]);
 
   useEffect(() => {
     fetchBillingData(defaultRange.startDate, defaultRange.endDate);
     fetchSettlements(defaultRange.startDate, defaultRange.endDate);
-  }, []); // Initial load always shows last 10 days
+  }, [fetchBillingData, fetchSettlements, defaultRange]); // Initial load always shows last 10 days
 
   const handleFilter = (e) => {
     e.preventDefault();

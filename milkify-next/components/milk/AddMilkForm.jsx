@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +29,6 @@ const CATEGORY_EMOJI = { cow: "🐄", buffalo: "🐃", goat: "🐐", sheep: "�
 
 // ─── Main AddMilkForm ─────────────────────────────────────────────────────────
 export default function AddMilkForm() {
-  const user = useAuthStore((s) => s.user);
 
   // ── Farmers state ──────────────────────────────────────────────────────────
   const [allFarmers, setAllFarmers] = useState([]);

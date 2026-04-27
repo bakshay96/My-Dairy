@@ -112,7 +112,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {farmers.map((farmer, idx) => (
+                  {farmers.map((farmer) => (
                     <tr key={farmer.farmerId} className="hover:bg-gray-50/80 transition-colors">
                       <td className="px-5 py-4">
                         <div className="font-medium text-gray-900">{farmer.farmerName}</div>

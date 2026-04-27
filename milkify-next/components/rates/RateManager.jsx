@@ -5,9 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
 import { formatRupees, formatIndianDate } from "@/lib/utils";
-import MilkifyLoader from "@/components/ui/Loader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, AlertCircle, TrendingUp, RefreshCw } from "lucide-react";
@@ -63,7 +61,6 @@ function ActiveRateCard({ rate }) {
 
 // ─── Main RateManager Component ───────────────────────────────────────────────
 export default function RateManager() {
-  const user = useAuthStore((state) => state.user);
 
   // Active rates from GET /api/rate/active
   const [activeRates, setActiveRates] = useState([]);

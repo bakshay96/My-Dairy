@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import api from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatRupees, formatIndianDate } from "@/lib/utils";
 import MilkifyLoader from "@/components/ui/Loader";
@@ -126,7 +126,7 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
                 { key: "mobile", label: "Mobile *", type: "tel", placeholder: "10-digit mobile", required: true, maxLength: 10 },
                 { key: "email", label: "Email", type: "email", placeholder: "farmer@example.com" },
                 { key: "address", label: "Village / Address *", type: "text", placeholder: "Village name", required: true },
-              ].map(({ key, label, type, placeholder, required, maxLength }) => (
+              ].map(({ key, label, type, placeholder, maxLength }) => (
                 <div key={key} className="space-y-1.5">
                   <label className="text-sm font-medium">{label}</label>
                   <input
@@ -297,7 +297,7 @@ function AddFarmerDrawer({ onClose, onSaved }) {
             { key: "mobile", label: "Mobile *", type: "tel", placeholder: "10-digit number", required: true, maxLength: 10 },
             { key: "email", label: "Email", type: "email", placeholder: "optional (e.g. farmer@example.com)" },
             { key: "address", label: "Village / Address *", type: "text", placeholder: "e.g. Bhandari, Mumbai", required: true },
-          ].map(({ key, label, type, placeholder, required, maxLength }) => (
+          ].map(({ key, label, type, placeholder, maxLength }) => (
             <div key={key} className="space-y-1.5">
               <label className="text-sm font-medium">{label}</label>
               <input
