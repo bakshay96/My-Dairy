@@ -3,7 +3,12 @@ import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import ThemeInitializer from "@/components/ui/ThemeInitializer";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const inter = Inter({ 
+  subsets: ["latin"], 
+  variable: "--font-inter",
+  display: "swap",
+  preload: true,
+});
 
 export const metadata = {
   title: "Milkify Admin Dashboard",

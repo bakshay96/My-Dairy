@@ -1,14 +1,20 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export const useAuthStore = create(
-  (set) => ({
-    user: null,
-    token: null,
-    sessionExpiresAt: null,
-    // Primary setter — used everywhere
-    setAuth: (user, token, sessionExpiresAt = null) => set({ user, token, sessionExpiresAt }),
-    // Alias for backward compatibility
-    login: (user, token, sessionExpiresAt = null) => set({ user, token, sessionExpiresAt }),
-    logout: () => set({ user: null, token: null, sessionExpiresAt: null }),
-  })
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      sessionExpiresAt: null,
+      setAuth: (user, token, sessionExpiresAt = null) => set({ user, token, sessionExpiresAt }),
+      login: (user, token, sessionExpiresAt = null) => set({ user, token, sessionExpiresAt }),
+      logout: () => set({ user: null, token: null, sessionExpiresAt: null }),
+    }),
+    {
+      name: "milkify-auth",
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
 );
+
