@@ -62,7 +62,7 @@ const paymentSchema = new mongoose.Schema(
     },
     paymentChannel: {
       type: String,
-      enum: ["razorpay", "upi", "google_pay", "phonepe", "bhim", "other", "cash"],
+      enum: ["razorpay", "razorpay_payout", "upi", "google_pay", "phonepe", "bhim", "other", "cash", "bank_transfer"],
       default: "razorpay",
     },
 

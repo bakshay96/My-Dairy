@@ -284,7 +284,10 @@ export default function BillingPage() {
               farmers={finalFilteredFarmers}
               startDate={startDate}
               endDate={endDate}
-              onPaymentSuccess={fetchBillingData}
+              onPaymentSuccess={() => {
+                fetchBillingData(startDate, endDate);
+                fetchSettlements(startDate, endDate);
+              }}
             />
           ) : (
             <div className="text-center py-12 text-gray-500">
@@ -357,6 +360,14 @@ export default function BillingPage() {
                       <p>Avg FAT: <strong>{Number(p.notes?.avgFat || 0).toFixed(2)}</strong></p>
                       <p>Entries: <strong>{p.notes?.totalEntries || 0}</strong></p>
                       <p>Amount: <strong>{formatRupees((p.amount || 0) / 100)}</strong></p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+                      <p>
+                        Mode/Channel: <strong>{p.paymentMode || "-"} / {p.paymentChannel || "-"}</strong>
+                      </p>
+                      <p>
+                        Reference: <strong>{p.notes?.referenceId || p.notes?.payoutMeta?.payoutId || "-"}</strong>
+                      </p>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Order: {p.internalOrderId}</p>
                   </div>
