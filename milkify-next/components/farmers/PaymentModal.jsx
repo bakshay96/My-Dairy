@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import api from "@/lib/api";
 import { formatRupees } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,132 +9,45 @@ import { toast } from "sonner";
 
 export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, startDate = "", endDate = "" }) {
   const [loading, setLoading] = useState(false);
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [paymentMode, setPaymentMode] = useState("cash");
-  const [paymentChannel, setPaymentChannel] = useState("cash");
-  const [manualIntent, setManualIntent] = useState(null);
+  const [referenceId, setReferenceId] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [settlementHistory, setSettlementHistory] = useState([]);
 
   useEffect(() => {
-    // Dynamically load Razorpay SDK
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    script.onload = () => setRazorpayLoaded(true);
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
+    const fetchHistory = async () => {
+      if (!isOpen || !farmer?.farmerId) return;
+      try {
+        setHistoryLoading(true);
+        const res = await api.get(
+          `/payment/history?status=captured&pageSize=50&farmerId=${encodeURIComponent(String(farmer.farmerId))}`
+        );
+        setSettlementHistory(res.data?.payments || []);
+      } catch (e) {
+        console.error("Failed to fetch settlement history:", e);
+        setSettlementHistory([]);
+      } finally {
+        setHistoryLoading(false);
+      }
     };
-  }, []);
-
-  useEffect(() => {
-    setManualIntent(null);
-  }, [paymentMode, paymentChannel, farmer?.farmerId, startDate, endDate]);
+    fetchHistory();
+  }, [isOpen, farmer?.farmerId, paymentSuccess]);
 
   const handlePayment = async () => {
-    if (paymentMode === "online" && paymentChannel === "razorpay" && !razorpayLoaded) {
-      toast.error("Payment gateway is loading. Please try again in a moment.");
-      return;
-    }
-
     try {
       setLoading(true);
 
-      if (paymentMode === "cash") {
-        await api.post("/payment/settle", {
-          farmerId: farmer.farmerId,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
-          paymentMode,
-          paymentChannel,
-          paymentDbId: manualIntent?.paymentDbId || null,
-        });
-        setPaymentSuccess(true);
-        toast.success("Payment marked as paid");
-        setTimeout(() => onSuccess(), 1500);
-        return;
-      }
-
-      if (paymentMode === "online" && paymentChannel !== "razorpay") {
-        if (!manualIntent) {
-          const intentRes = await api.post("/payment/manual-intent", {
-            farmerId: farmer.farmerId,
-            startDate: startDate || undefined,
-            endDate: endDate || undefined,
-            paymentChannel,
-          });
-          setManualIntent(intentRes.data);
-          toast.success("Payment QR generated");
-          return;
-        }
-        await api.post("/payment/settle", {
-          farmerId: farmer.farmerId,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
-          paymentMode,
-          paymentChannel,
-          paymentDbId: manualIntent?.paymentDbId || null,
-        });
-        setPaymentSuccess(true);
-        toast.success("Online payment marked as settled");
-        setTimeout(() => onSuccess(), 1500);
-        return;
-      }
-
-      // 1. Create order on the backend
-      const res = await api.post("/payment/create-billing-order", {
+      await api.post("/payment/settle", {
         farmerId: farmer.farmerId,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        paymentMode: "cash",
+        paymentChannel: "cash",
+        referenceId,
       });
-
-      const { order, paymentDbId } = res.data;
-
-      // 2. Initialize Razorpay Checkout
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || order.keyId,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Milkify Payments",
-        description: `10-Day Billing: ${farmer.farmerName}`,
-        order_id: order.id,
-        handler: async function (response) {
-          // 3. Verify payment signature on backend
-          try {
-            await api.post("/payment/verify", {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              paymentDbId,
-            });
-            setPaymentSuccess(true);
-            toast.success("Payment verified successfully");
-            setTimeout(() => {
-              onSuccess();
-            }, 2000);
-          } catch (error) {
-            console.error("Payment verification failed:", error);
-            toast.error("Payment verification failed. Please contact support.");
-          }
-        },
-        prefill: {
-          name: farmer.farmerName,
-          contact: farmer.farmerMobile,
-        },
-        theme: {
-          color: "#2563eb", // blue-600 matching Tailwind primary
-        },
-      };
-
-      const rzp = new window.Razorpay(options);
-      
-      rzp.on("payment.failed", function (response) {
-        console.error("Payment failed:", response.error);
-        toast.error(`Payment failed: ${response.error.description}`);
-      });
-
-      rzp.open();
+      setPaymentSuccess(true);
+      toast.success("Cash settlement completed");
+      setTimeout(() => onSuccess(), 1500);
     } catch (error) {
       console.error("Failed to initiate payment:", error);
       toast.error(error.response?.data?.message || "Failed to initiate payment.");
@@ -191,88 +103,51 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
                 <div className="flex justify-between text-sm border-t pt-3 mt-3">
                   <span className="text-gray-500">Payment Method</span>
                   <span className="font-medium text-gray-900 flex items-center gap-2">
-                    {paymentMode === "cash" ? "Cash" : paymentChannel}
+                    Cash
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Mode</label>
-                  <select
-                    value={paymentMode}
-                    onChange={(e) => {
-                      const mode = e.target.value;
-                      setPaymentMode(mode);
-                      setPaymentChannel(mode === "cash" ? "cash" : "upi");
-                    }}
+                  <label className="text-xs text-gray-500">Reference ID (optional)</label>
+                  <input
+                    value={referenceId}
+                    onChange={(e) => setReferenceId(e.target.value)}
                     className="h-10 w-full rounded-md border px-3 text-sm"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="online">Online</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Channel</label>
-                  <select
-                    value={paymentChannel}
-                    onChange={(e) => setPaymentChannel(e.target.value)}
-                    disabled={paymentMode === "cash"}
-                    className="h-10 w-full rounded-md border px-3 text-sm disabled:opacity-60"
-                  >
-                    {paymentMode === "cash" ? (
-                      <option value="cash">Cash</option>
-                    ) : (
-                      <>
-                        <option value="upi">UPI</option>
-                        <option value="google_pay">Google Pay</option>
-                        <option value="phonepe">PhonePe</option>
-                        <option value="bhim">BHIM</option>
-                        <option value="other">Other App</option>
-                        <option value="razorpay">Razorpay</option>
-                      </>
-                    )}
-                  </select>
+                    placeholder="Cash receipt / UTR / txn id"
+                  />
                 </div>
               </div>
 
-              {paymentMode === "online" && paymentChannel !== "razorpay" && manualIntent && (
-                <div className="border rounded-lg p-3 space-y-2">
-                  <p className="text-xs text-gray-500">Internal Order ID</p>
-                  <p className="text-sm font-semibold break-all">{manualIntent.internalOrderId}</p>
-                  <Image src={manualIntent.qrCodeUrl} alt="Payment QR" width={160} height={160} className="mx-auto" unoptimized />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const url = manualIntent.upiIntent;
-                        window.location.href = url;
-                      }}
-                    >
-                      Open UPI
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const appUrl =
-                          paymentChannel === "google_pay"
-                            ? manualIntent.upiIntent.replace("upi://", "gpay://")
-                            : paymentChannel === "phonepe"
-                            ? manualIntent.upiIntent.replace("upi://", "phonepe://")
-                            : paymentChannel === "bhim"
-                            ? manualIntent.upiIntent.replace("upi://", "bhim://")
-                            : manualIntent.upiIntent;
-                        window.location.href = appUrl;
-                      }}
-                    >
-                      Open App
-                    </Button>
-                  </div>
-                  <p className="text-xs text-center text-gray-500">After receiving amount, click settle payment.</p>
+              <div className="border rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-gray-900">Settlement History</p>
+                  {historyLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
                 </div>
-              )}
+                {settlementHistory.length === 0 ? (
+                  <p className="text-xs text-gray-500">No settlements found for this farmer yet.</p>
+                ) : (
+                  <div className="max-h-40 overflow-auto space-y-2">
+                    {settlementHistory.map((p) => (
+                      <div key={p._id} className="text-xs flex items-center justify-between border rounded p-2">
+                        <div className="space-y-0.5">
+                          <p className="font-medium">
+                            {formatRupees((p.amount || 0) / 100)}{" "}
+                            <span className="text-gray-500">
+                              ({p.billingStartDate || p.notes?.cycleStart || "-"} → {p.billingEndDate || p.notes?.cycleEnd || "-"})
+                            </span>
+                          </p>
+                          <p className="text-gray-500">
+                            Ref: {p.notes?.referenceId || "-"} | Order: {p.internalOrderId || "-"}
+                          </p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700">Paid</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <Button 
                 className="w-full h-12 text-lg shadow-md" 
@@ -283,12 +158,8 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing...
                   </>
-                ) : paymentMode === "online" && paymentChannel !== "razorpay" && !manualIntent ? (
-                  "Generate QR"
-                ) : paymentMode === "online" && paymentChannel !== "razorpay" && manualIntent ? (
-                  "Mark as Settled"
                 ) : (
-                  `Pay ${formatRupees(farmer.totalAmount)} Now`
+                  `Settle ${formatRupees(farmer.totalAmount)} (Cash)`
                 )}
               </Button>
             </div>

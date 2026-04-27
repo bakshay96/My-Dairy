@@ -6,6 +6,93 @@ const { emitPaymentCaptured } = require("../services/socketService");
 const { getBillingCycleDate, getBillingCycleEnd } = require("../utils/milkCalculator");
 const mongoose = require("mongoose");
 
+async function razorpayXRequest(path, payload) {
+  const keyId = process.env.RAZORPAYX_KEY_ID || process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAYX_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET;
+  const accountNumber = process.env.RAZORPAYX_ACCOUNT_NUMBER;
+  if (!keyId || !keySecret || !accountNumber) {
+    throw new Error("RazorpayX is not configured. Set RAZORPAYX_KEY_ID, RAZORPAYX_KEY_SECRET and RAZORPAYX_ACCOUNT_NUMBER");
+  }
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const response = await fetch(`https://api.razorpay.com/v1/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json",
+      "X-Account-Number": accountNumber,
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error?.description || data?.message || "RazorpayX request failed");
+  }
+  return data;
+}
+
+async function executeRazorpayXPayout({
+  amountInPaise,
+  internalOrderId,
+  beneficiaryName,
+  beneficiaryMobile,
+  beneficiaryUpiId,
+  beneficiaryAccountNumber,
+  beneficiaryIfsc,
+}) {
+  const transferType = beneficiaryUpiId ? "upi" : "bank_account";
+  if (transferType === "upi" && !beneficiaryUpiId) {
+    throw new Error("Beneficiary UPI ID is required for UPI payout");
+  }
+  if (transferType === "bank_account" && (!beneficiaryAccountNumber || !beneficiaryIfsc)) {
+    throw new Error("Beneficiary account number and IFSC are required for bank payout");
+  }
+
+  const contact = await razorpayXRequest("contacts", {
+    name: beneficiaryName || "Farmer Beneficiary",
+    type: "vendor",
+    reference_id: `${internalOrderId}-CONTACT`,
+    contact: String(beneficiaryMobile || "").slice(0, 15) || undefined,
+  });
+
+  const fundAccountPayload =
+    transferType === "upi"
+      ? {
+          contact_id: contact.id,
+          account_type: "vpa",
+          vpa: { address: beneficiaryUpiId.trim() },
+        }
+      : {
+          contact_id: contact.id,
+          account_type: "bank_account",
+          bank_account: {
+            name: beneficiaryName || "Farmer Beneficiary",
+            ifsc: beneficiaryIfsc.trim(),
+            account_number: beneficiaryAccountNumber.trim(),
+          },
+        };
+
+  const fundAccount = await razorpayXRequest("fund_accounts", fundAccountPayload);
+  const payout = await razorpayXRequest("payouts", {
+    account_number: process.env.RAZORPAYX_ACCOUNT_NUMBER,
+    fund_account_id: fundAccount.id,
+    amount: amountInPaise,
+    currency: "INR",
+    mode: transferType === "upi" ? "UPI" : "IMPS",
+    purpose: "payout",
+    queue_if_low_balance: true,
+    reference_id: internalOrderId,
+    narration: `Milk settlement ${internalOrderId}`,
+  });
+
+  return {
+    transferType,
+    payoutId: payout.id,
+    payoutStatus: payout.status,
+    contactId: contact.id,
+    fundAccountId: fundAccount.id,
+  };
+}
+
 function getDateRange(startDate, endDate) {
   const now = new Date();
   const start = startDate ? new Date(startDate) : new Date(now);
@@ -23,18 +110,18 @@ function getDateRange(startDate, endDate) {
 
 function generateInternalOrderId({ startDate, endDate, adminId, farmerId }) {
   const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mm = String(now.getMinutes()).padStart(2, "0");
-  const ss = String(now.getSeconds()).padStart(2, "0");
-  const range = `${startDate?.replaceAll("-", "").slice(2) || "NA"}_${endDate?.replaceAll("-", "").slice(2) || "NA"}`;
-  const adminPart = String(adminId).slice(-4).toUpperCase();
+  const datePart = now.toISOString().split("T")[0].replaceAll("-", "").slice(2); // YYMMDD
   const farmerPart = String(farmerId || "GEN").slice(-4).toUpperCase();
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `MILKI-${y}${m}${d}-${range}-${adminPart}-${farmerPart}-${hh}${mm}${ss}-${rand}`;
+  const rand = Math.random().toString(36).slice(-3).toUpperCase(); // 3-char random string
+  
+  return `MLK-${datePart}-${farmerPart}-${rand}`;
 }
+
+// Meaningful Segments:
+// MLK: Identifies it as a Milkify settlement.
+// 260427: The date the settlement was generated.
+// 3AE9: The last 4 characters of the Farmer's ID for quick visual reference.
+// X2Y: A 3-character random code to ensure 100% uniqueness.
 
 async function markMilkEntriesPaid({ adminId, farmerId, start, end, paymentId, paymentMode, paymentChannel }) {
   return MilkModel.updateMany(
@@ -324,13 +411,22 @@ exports.createManualPaymentIntent = async (req, res) => {
 // ─── Settle Payment (Cash/UPI/apps) ───────────────────────────────────────────
 exports.settleBillingPayment = async (req, res) => {
   try {
-    const { farmerId, startDate, endDate, paymentMode = "cash", paymentChannel = "cash", referenceId = "", paymentDbId = null } = req.body;
+    const {
+      farmerId,
+      startDate,
+      endDate,
+      paymentMode = "cash",
+      paymentChannel = "cash",
+      referenceId = "",
+      paymentDbId = null,
+    } = req.body;
 
     if (!farmerId || !mongoose.Types.ObjectId.isValid(farmerId)) {
       return res.status(400).json({ message: "Valid farmerId is required" });
     }
-    if (!["cash", "online"].includes(paymentMode)) {
-      return res.status(400).json({ message: "paymentMode must be cash or online" });
+    // Cash-only settlement for now (Razorpay / UPI payouts disabled)
+    if (paymentMode !== "cash") {
+      return res.status(400).json({ message: "Online settlement is disabled. Use cash settlement only." });
     }
 
     const { start, end, startDate: cycleStart, endDate: cycleEnd } = getDateRange(startDate, endDate);
@@ -363,6 +459,14 @@ exports.settleBillingPayment = async (req, res) => {
 
     const amountInPaise = Math.round(Number(agg.totalAmount.toFixed(2)) * 100);
     let payment;
+    const settlementInternalOrderId = generateInternalOrderId({
+      startDate: cycleStart,
+      endDate: cycleEnd,
+      adminId: req.admin.id,
+      farmerId,
+    });
+    const normalizedChannel = "cash";
+
     if (paymentDbId) {
       payment = await PaymentModel.findOneAndUpdate(
         { _id: paymentDbId, adminId: req.admin.id },
@@ -372,7 +476,7 @@ exports.settleBillingPayment = async (req, res) => {
             isVerified: true,
             verifiedAt: new Date(),
             paymentMode,
-            paymentChannel,
+            paymentChannel: normalizedChannel,
             billingStartDate: cycleStart,
             billingEndDate: cycleEnd,
             notes: {
@@ -394,19 +498,14 @@ exports.settleBillingPayment = async (req, res) => {
       payment = await new PaymentModel({
         adminId: req.admin.id,
         farmerId,
-        internalOrderId: generateInternalOrderId({
-          startDate: cycleStart,
-          endDate: cycleEnd,
-          adminId: req.admin.id,
-          farmerId,
-        }),
+        internalOrderId: settlementInternalOrderId,
         amount: amountInPaise,
         currency: "INR",
         status: "captured",
         isVerified: true,
         verifiedAt: new Date(),
         paymentMode,
-        paymentChannel,
+        paymentChannel: normalizedChannel,
         billingStartDate: cycleStart,
         billingEndDate: cycleEnd,
         description: `Billing settled: ${cycleStart} to ${cycleEnd}`,
@@ -429,7 +528,7 @@ exports.settleBillingPayment = async (req, res) => {
       end,
       paymentId: payment._id,
       paymentMode,
-      paymentChannel,
+      paymentChannel: normalizedChannel,
     });
 
     return res.status(200).json({
@@ -438,8 +537,9 @@ exports.settleBillingPayment = async (req, res) => {
       payment: {
         id: payment._id,
         mode: paymentMode,
-        channel: paymentChannel,
+        channel: normalizedChannel,
         amount: payment.amountInRupees,
+        referenceId: payment.notes?.referenceId || "",
       },
     });
   } catch (error) {
@@ -594,17 +694,30 @@ exports.getPaymentHistory = async (req, res) => {
       filter.farmerId = farmerId;
     }
     if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        filter.createdAt.$gte = start;
+      const start = startDate ? new Date(startDate) : null;
+      if (start) start.setHours(0, 0, 0, 0);
+      const end = endDate ? new Date(endDate) : null;
+      if (end) end.setHours(23, 59, 59, 999);
+
+      filter.$or = [];
+      
+      // Match by creation date
+      const createdAtFilter = {};
+      if (start) createdAtFilter.$gte = start;
+      if (end) createdAtFilter.$lte = end;
+      if (Object.keys(createdAtFilter).length > 0) {
+        filter.$or.push({ createdAt: createdAtFilter });
       }
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        filter.createdAt.$lte = end;
+
+      // Match by billing cycle dates (as strings)
+      const billingFilter = {};
+      if (startDate) billingFilter.billingStartDate = { $gte: startDate };
+      if (endDate) billingFilter.billingEndDate = { $lte: endDate };
+      if (Object.keys(billingFilter).length > 0) {
+        filter.$or.push(billingFilter);
       }
+
+      if (filter.$or.length === 0) delete filter.$or;
     }
 
     const [payments, total] = await Promise.all([
