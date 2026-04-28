@@ -149,42 +149,48 @@ export default function BillingTable({ farmers, onPaymentSuccess, startDate = ""
                           (breakdownData[farmer.farmerId].entries || []).length > 0 ? (
                             <>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3 text-xs">
-                              <div className="p-2 rounded border">Entries: <strong>{breakdownData[farmer.farmerId].summary?.totalEntries || 0}</strong></div>
-                              <div className="p-2 rounded border">Paid/Unpaid: <strong>{breakdownData[farmer.farmerId].summary?.paidEntries || 0}/{breakdownData[farmer.farmerId].summary?.unpaidEntries || 0}</strong></div>
-                              <div className="p-2 rounded border">Avg FAT/SNF: <strong>{Number(breakdownData[farmer.farmerId].summary?.avgFat || 0).toFixed(2)}/{Number(breakdownData[farmer.farmerId].summary?.avgSnf || 0).toFixed(2)}</strong></div>
-                              <div className="p-2 rounded border">Rate/Ltr: <strong>{formatRupees(breakdownData[farmer.farmerId].summary?.ratePerLiter || 0)}</strong></div>
+                              <div className="p-2 rounded border bg-gray-50/50">Entries: <strong className="text-primary">{breakdownData[farmer.farmerId].summary?.totalEntries || 0}</strong></div>
+                              <div className="p-2 rounded border bg-gray-50/50">Paid/Unpaid: <strong className="text-primary">{breakdownData[farmer.farmerId].summary?.paidEntries || 0}/{breakdownData[farmer.farmerId].summary?.unpaidEntries || 0}</strong></div>
+                              <div className="p-2 rounded border bg-gray-50/50">Avg FAT/SNF: <strong className="text-primary">{Number(breakdownData[farmer.farmerId].summary?.avgFat || 0).toFixed(2)}/{Number(breakdownData[farmer.farmerId].summary?.avgSnf || 0).toFixed(2)}</strong></div>
+                              <div className="p-2 rounded border bg-gray-50/50">Rate/Ltr: <strong className="text-primary">{formatRupees(breakdownData[farmer.farmerId].summary?.ratePerLiter || 0)}</strong></div>
                             </div>
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto border rounded-md">
                               <table className="w-full text-xs text-left">
-                                <thead className="text-gray-500 border-b">
+                                <thead className="text-gray-500 bg-gray-50/80 border-b">
                                   <tr>
-                                    <th className="pb-2 font-medium">Date</th>
-                                    <th className="pb-2 font-medium">Shift</th>
-                                    <th className="pb-2 font-medium text-right">Liters</th>
-                                    <th className="pb-2 font-medium text-right">FAT</th>
-                                    <th className="pb-2 font-medium text-right">SNF</th>
-                                    <th className="pb-2 font-medium text-center">Status</th>
-                                    <th className="pb-2 font-medium text-right">Total</th>
+                                    <th className="px-3 py-2 font-semibold">Date</th>
+                                    <th className="px-3 py-2 font-semibold">Shift</th>
+                                    <th className="px-3 py-2 font-semibold">Category</th>
+                                    <th className="px-3 py-2 font-semibold text-right">Liters</th>
+                                    <th className="px-3 py-2 font-semibold text-right">FAT</th>
+                                    <th className="px-3 py-2 font-semibold text-right">SNF</th>
+                                    <th className="px-3 py-2 font-semibold text-center">Status</th>
+                                    <th className="px-3 py-2 font-semibold text-right">Total</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                   {(breakdownData[farmer.farmerId].entries || []).map((entry) => (
-                                    <tr key={entry._id} className="hover:bg-gray-50">
-                                      <td className="py-2">{formatIndianDate(entry.createdAt)}</td>
-                                      <td className="py-2 capitalize">
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] ${entry.shift === 'morning' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'}`}>
+                                    <tr key={entry._id} className="hover:bg-blue-50/30 transition-colors">
+                                      <td className="px-3 py-2.5 font-medium">{formatIndianDate(entry.createdAt)}</td>
+                                      <td className="px-3 py-2.5 capitalize">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${entry.shift === 'morning' ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'}`}>
                                           {entry.shift}
                                         </span>
                                       </td>
-                                      <td className="py-2 text-right">{entry.litter || 0} L</td>
-                                      <td className="py-2 text-right">{entry.fat}%</td>
-                                      <td className="py-2 text-right">{entry.snf || '-'}</td>
-                                      <td className="py-2 text-center">
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] ${entry.paymentStatus === "paid" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                                      <td className="px-3 py-2.5 capitalize">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${entry.category === 'cow' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+                                          {entry.category || 'N/A'}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2.5 text-right font-medium">{entry.litter || 0} L</td>
+                                      <td className="px-3 py-2.5 text-right">{entry.fat}%</td>
+                                      <td className="px-3 py-2.5 text-right">{entry.snf || '-'}</td>
+                                      <td className="px-3 py-2.5 text-center">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${entry.paymentStatus === "paid" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
                                           {entry.paymentStatus === "paid" ? "Paid" : "Unpaid"}
                                         </span>
                                       </td>
-                                      <td className="py-2 text-right font-medium text-green-600">
+                                      <td className="px-3 py-2.5 text-right font-bold text-green-600">
                                         {formatRupees(entry.calculatedAmount)}
                                       </td>
                                     </tr>
@@ -194,7 +200,9 @@ export default function BillingTable({ farmers, onPaymentSuccess, startDate = ""
                             </div>
                             </>
                           ) : (
-                            <p className="text-sm text-gray-500 py-2">No individual entries found for this period.</p>
+                            <div className="text-center py-6 border rounded-md border-dashed">
+                              <p className="text-sm text-gray-500">No individual entries found for this period.</p>
+                            </div>
                           )
                         ) : null}
                       </div>

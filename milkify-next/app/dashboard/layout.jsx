@@ -11,7 +11,7 @@ import ThemeToggle from "@/components/ui/ThemeToggle";
 import SessionTimer from "@/components/ui/SessionTimer";
 import { useEffect } from "react";
 import api from "@/lib/api";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -77,11 +77,13 @@ export default function DashboardLayout({ children }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50/60 dark:bg-slate-950">
+    <div className="flex h-screen overflow-hidden bg-transparent">
       {/* Sidebar (Desktop) */}
-      <aside className={cn("hidden border-r bg-white dark:bg-slate-900 dark:border-slate-800 flex-col md:flex transition-all duration-300", isCollapsed ? "w-20" : "w-64")}>
-        <div className={cn("relative flex h-16 items-center border-b dark:border-slate-800", isCollapsed ? "justify-center px-2" : "justify-between px-4")}>
-          <Brand compact={isCollapsed} />
+      <aside className={cn("hidden border-r border-white/50 bg-white/85 dark:bg-slate-900/90 dark:border-slate-800/80 backdrop-blur-md flex-col md:flex transition-all duration-300", isCollapsed ? "w-20" : "w-64")}>
+        <div className={cn("relative flex h-16 items-center border-b border-white/70 dark:border-slate-800/80", isCollapsed ? "justify-center px-2" : "justify-between px-4")}>
+          <Link href="/dashboard" className="transition-transform hover:scale-95 active:scale-90">
+            <Brand compact={isCollapsed} />
+          </Link>
           {!isCollapsed && (
             <button
               onClick={() => setIsCollapsed(true)}
@@ -108,10 +110,10 @@ export default function DashboardLayout({ children }) {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200",
+                  "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   pathname === item.href
-                    ? "bg-primary/10 text-primary"
-                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800",
+                    ? "bg-primary/12 text-primary shadow-sm"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-slate-100/80 dark:hover:bg-slate-800",
                   isCollapsed && "justify-center px-2"
                 )}
                 title={isCollapsed ? item.name : ""}
@@ -170,8 +172,10 @@ export default function DashboardLayout({ children }) {
       {/* Mobile Navbar & Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Mobile Header */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b bg-white dark:bg-slate-900 dark:border-slate-800 px-4 md:hidden">
-          <Brand />
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/70 bg-white/85 dark:bg-slate-900/90 dark:border-slate-800 backdrop-blur-md px-4 md:hidden">
+          <Link href="/dashboard" className="transition-transform hover:scale-95 active:scale-90">
+            <Brand />
+          </Link>
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="rounded-md p-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
@@ -215,7 +219,7 @@ export default function DashboardLayout({ children }) {
         )}
 
         {/* Main Content scrollable area */}
-        <main className="flex-1 overflow-y-auto bg-gray-50/50 dark:bg-slate-950 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto bg-transparent p-4 md:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl mb-3 flex justify-end">
             <SessionTimer />
           </div>

@@ -5,7 +5,7 @@ import api from "@/lib/api";
 import { formatRupees } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { X, Loader2, CheckCircle } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, startDate = "", endDate = "" }) {
   const [loading, setLoading] = useState(false);

@@ -12,7 +12,7 @@ import {
   Droplet, TrendingUp, Sun, Moon, Calculator
 } from "lucide-react";
 import { formatRupees } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 const formSchema = z.object({
@@ -203,97 +203,123 @@ export default function AddMilkForm() {
   const currentRate = activeRates[watchCategory];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-2xl mx-auto space-y-6 px-1 sm:px-0 pb-10">
       {/* ── Rate Status Banner ─────────────────────────────────────────────── */}
       {ratesLoading ? (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-sm">
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-sm backdrop-blur-sm animate-pulse">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading active rates...
+          Fetching live dairy rates...
         </div>
       ) : noRateError ? (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          {noRateError}
-          <a href="/dashboard/settings" className="ml-auto underline font-medium whitespace-nowrap">
-            Set Rate →
-          </a>
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-800 text-red-700 dark:text-red-300 text-sm backdrop-blur-sm">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <p className="flex-1">{noRateError}</p>
+          <Link href="/dashboard/settings" className="underline font-bold whitespace-nowrap hover:text-red-800">
+            Fix Now →
+          </Link>
         </div>
       ) : currentRate ? (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-          <TrendingUp className="h-4 w-4 shrink-0" />
-          <span>
-            Active rate for <strong>{watchCategory}</strong>:{" "}
-            <strong>{formatRupees(currentRate.ratePerFat)}/FAT unit</strong>
-            {currentRate.useSnf && ` + ${formatRupees(currentRate.ratePerSnf)}/SNF`}
-            {currentRate.useDegree && ` + ${formatRupees(currentRate.ratePerDegree)}/Degree`}
-          </span>
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm backdrop-blur-sm">
+          <TrendingUp className="h-5 w-5 shrink-0 text-emerald-600" />
+          <div className="flex-1">
+            <p className="font-semibold text-[13px]">Active {watchCategory} rate detected</p>
+            <p className="text-[12px] opacity-80">
+              {formatRupees(currentRate.ratePerFat)} per FAT unit
+              {currentRate.useSnf && ` + ${formatRupees(currentRate.ratePerSnf)}/SNF`}
+              {currentRate.useDegree && ` + ${formatRupees(currentRate.ratePerDegree)}/Degree`}
+            </p>
+          </div>
         </div>
       ) : null}
 
-      <Card className="shadow-sm dark:bg-slate-900 dark:border-slate-800">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <Droplet className="h-5 w-5 text-blue-500" />
-            Record Milk Collection
-          </CardTitle>
-          <CardDescription>
-            Rates are fetched live from Settings. The backend independently calculates
-            the final amount — no frontend trust required.
-          </CardDescription>
+      <Card className="shadow-xl border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg overflow-visible">
+        <CardHeader className="pb-6 border-b border-gray-100 dark:border-slate-800">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+              <Droplet className="h-6 w-6" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-black tracking-tight">Record Collection</CardTitle>
+              <CardDescription className="text-gray-500 font-medium">New milk entry for current cycle</CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="text-foreground">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <CardContent className="pt-8 pb-10">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
             {/* ── Farmer Search & Select ──────────────────────────────────── */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Farmer <span className="text-red-500">*</span>
+            <div className="space-y-2.5">
+              <label className="text-[13px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ml-1">
+                Farmer Selection <span className="text-primary">*</span>
               </label>
 
               {selectedFarmer ? (
-                <div className="flex items-center justify-between p-3 rounded-md border bg-blue-50 border-blue-200">
-                  <div>
-                    <p className="font-medium text-sm text-blue-900">{selectedFarmer.name}</p>
-                    <p className="text-xs text-blue-600">{selectedFarmer.mobile}</p>
+                <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 group transition-all animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                      {selectedFarmer.name?.[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white leading-none">{selectedFarmer.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{selectedFarmer.mobile}</p>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={handleClearFarmer}
-                    className="p-1 rounded-full hover:bg-blue-100 text-blue-600"
+                    className="p-2 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
               ) : (
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 transition-colors group-focus-within:text-primary" />
                   <input
                     type="text"
-                    placeholder="Search by name, mobile, or ID..."
+                    placeholder="Search by name or mobile..."
                     value={farmerSearch}
-                    onChange={(e) => setFarmerSearch(e.target.value)}
+                    onChange={(e) => {
+                      setFarmerSearch(e.target.value);
+                      setIsDropdownOpen(true);
+                    }}
                     onFocus={() => setIsDropdownOpen(true)}
-                    onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onBlur={() => setTimeout(() => setIsDropdownOpen(false), 250)}
+                    className="flex h-14 w-full rounded-2xl border-2 border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-2 text-base font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary"
                   />
                   {isDropdownOpen && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-[60] w-full mt-2 bg-white dark:bg-slate-900 border-2 border-gray-100 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                       {farmersLoading ? (
-                        <div className="p-3 text-center text-sm text-gray-500">Loading...</div>
+                        <div className="p-8 text-center text-gray-400 flex flex-col items-center gap-2">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                          <span className="text-sm font-medium">Searching records...</span>
+                        </div>
                       ) : filteredFarmers.length === 0 ? (
-                        <div className="p-3 text-center text-sm text-gray-500">No farmers found</div>
+                        <div className="p-8 text-center text-gray-400 flex flex-col items-center gap-2">
+                          <AlertCircle className="h-6 w-6" />
+                          <span className="text-sm font-medium">No farmer found</span>
+                        </div>
                       ) : (
-                        filteredFarmers.map((f) => (
-                          <button
-                            key={f._id}
-                            type="button"
-                            onClick={() => handleSelectFarmer(f)}
-                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm border-b last:border-0"
-                          >
-                            <span className="font-medium">{f.name}</span>
-                            <span className="ml-2 text-gray-400 text-xs">{f.mobile}</span>
-                          </button>
-                        ))
+                        <div className="max-h-72 overflow-y-auto">
+                          {filteredFarmers.map((f) => (
+                            <button
+                              key={f._id}
+                              type="button"
+                              onClick={() => handleSelectFarmer(f)}
+                              className="w-full text-left px-5 py-4 hover:bg-primary/5 transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0 group"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-500 group-hover:bg-primary group-hover:text-white transition-colors">
+                                  {f.name?.[0]?.toUpperCase()}
+                                </div>
+                                <div>
+                                  <span className="font-bold block text-gray-900 dark:text-white">{f.name}</span>
+                                  <span className="text-xs text-gray-400 dark:text-gray-500">{f.mobile}</span>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
@@ -302,34 +328,36 @@ export default function AddMilkForm() {
               {/* Hidden input for validation */}
               <input type="hidden" {...form.register("farmerId")} />
               {form.formState.errors.farmerId && (
-                <p className="text-xs text-red-500">{form.formState.errors.farmerId.message}</p>
+                <p className="text-[12px] text-red-500 font-bold ml-1 mt-1">{form.formState.errors.farmerId.message}</p>
               )}
             </div>
 
             {/* ── Category + Shift ────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium flex items-center justify-between">
-                  <span>Category <span className="text-red-500">*</span></span>
-                  {currentRate && (
-                    <span className="text-xs text-primary font-semibold">
-                      Rate: {formatRupees(currentRate.ratePerFat)}/Ltr per FAT
-                    </span>
-                  )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="space-y-2.5">
+                <label className="text-[13px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ml-1">
+                  Milk Type <span className="text-primary">*</span>
                 </label>
-                <select
-                  {...form.register("category")}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {["cow", "buffalo", "goat", "sheep"].map((c) => (
-                    <option key={c} value={c}>{CATEGORY_EMOJI[c]} {c.charAt(0).toUpperCase() + c.slice(1)}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    {...form.register("category")}
+                    className="flex h-14 w-full rounded-2xl border-2 border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 px-5 py-2 text-base font-bold appearance-none transition-all focus:border-primary focus:ring-0"
+                  >
+                    {["cow", "buffalo", "goat", "sheep"].map((c) => (
+                      <option key={c} value={c}>{CATEGORY_EMOJI[c]} {c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <TrendingUp className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Shift <span className="text-red-500">*</span></label>
-                <div className="flex rounded-md border overflow-hidden h-10">
+              <div className="space-y-2.5">
+                <label className="text-[13px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ml-1">
+                  Collection Shift <span className="text-primary">*</span>
+                </label>
+                <div className="flex p-1 rounded-2xl border-2 border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 h-14">
                   {["morning", "evening"].map((s) => {
                     const active = form.watch("shift") === s;
                     return (
@@ -337,11 +365,13 @@ export default function AddMilkForm() {
                         key={s}
                         type="button"
                         onClick={() => form.setValue("shift", s)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium transition-colors ${
-                          active ? "bg-primary text-white" : "bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"
+                        className={`flex-1 flex items-center justify-center gap-2 rounded-xl text-sm font-bold transition-all ${
+                          active 
+                            ? "bg-white dark:bg-slate-700 text-primary shadow-sm ring-1 ring-black/5" 
+                            : "text-gray-500 hover:text-gray-700"
                         }`}
                       >
-                        {s === "morning" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+                        {s === "morning" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                         {s.charAt(0).toUpperCase() + s.slice(1)}
                       </button>
                     );
@@ -351,74 +381,81 @@ export default function AddMilkForm() {
             </div>
 
             {/* ── Milk Quality Inputs ─────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5 pt-2">
               {[
-                { key: "fat", label: "FAT %", placeholder: "e.g. 3.5", required: true },
-                { key: "litter", label: "Quantity (L)", placeholder: "e.g. 5.5", required: true },
-                { key: "snf", label: "SNF %", placeholder: "e.g. 8.5", required: false },
-                { key: "degree", label: "Degree/CLR", placeholder: "e.g. 28.0", required: false },
+                { key: "fat", label: "FAT %", placeholder: "0.0", required: true },
+                { key: "litter", label: "Liters", placeholder: "0.0", required: true },
+                { key: "snf", label: "SNF", placeholder: "0.0", required: false },
+                { key: "degree", label: "Degree", placeholder: "0.0", required: false },
               ].map(({ key, label, placeholder, required }) => (
-                <div key={key} className="space-y-1.5">
-                  <label className="text-sm font-medium">
-                    {label} {required && <span className="text-red-500">*</span>}
-                    {!required && <span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-1">(optional)</span>}
+                <div key={key} className="space-y-2.5">
+                  <label className="text-[13px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ml-1">
+                    {label} {required && <span className="text-primary">*</span>}
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder={placeholder}
-                    {...form.register(key)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                  {form.formState.errors[key] && (
-                    <p className="text-xs text-red-500">{form.formState.errors[key].message}</p>
-                  )}
+                  <div className="relative group">
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder={placeholder}
+                      {...form.register(key)}
+                      className="flex h-14 w-full rounded-2xl border-2 border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 px-5 py-2 text-xl font-black transition-all focus:border-primary focus:ring-0 placeholder:text-gray-200 dark:placeholder:text-gray-700"
+                    />
+                    {form.formState.errors[key] && (
+                      <p className="text-[11px] text-red-500 font-bold absolute -bottom-5 left-1">{form.formState.errors[key].message}</p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
 
             {/* ── Live Amount Preview ─────────────────────────────────────── */}
             {previewAmount !== null && (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-slate-900 dark:to-slate-800 border border-green-200 dark:border-slate-700">
-                <div className="flex items-center gap-2 text-green-700">
-                  <Calculator className="h-4 w-4" />
-                  <span className="text-sm font-medium">Estimated Amount</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-green-700">{formatRupees(previewAmount)}</p>
-                  <p className="text-xs text-green-600 mt-0.5">
-                    {parseFloat(watchFat)} FAT × {formatRupees(currentRate?.ratePerFat)} × {parseFloat(watchLitter)}L
-                    {`  |  Per Litter: ${formatRupees((parseFloat(watchFat || 0) * Number(currentRate?.ratePerFat || 0)).toFixed(2))}`}
-                  </p>
+              <div className="relative overflow-hidden p-6 rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/20 mt-4 animate-in zoom-in-95 duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-primary">
+                      <Calculator className="h-5 w-5" />
+                      <span className="text-sm font-bold uppercase tracking-widest">Est. Amount</span>
+                    </div>
+                    <p className="text-[12px] text-gray-500 dark:text-gray-400 font-medium">
+                      Based on {parseFloat(watchFat)}% FAT @ {formatRupees(currentRate?.ratePerFat)}
+                    </p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-4xl font-black text-primary tracking-tight">{formatRupees(previewAmount)}</p>
+                    <p className="text-xs text-primary/60 font-bold mt-1">
+                      Rate per Ltr: {formatRupees((parseFloat(watchFat || 0) * Number(currentRate?.ratePerFat || 0)).toFixed(2))}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* ── Feedback Messages ───────────────────────────────────────── */}
             {successMsg && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-                <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-100 text-emerald-700 font-bold text-sm animate-in slide-in-from-bottom-2">
+                <CheckCircle2 className="h-6 w-6 shrink-0" />
                 {successMsg}
               </div>
             )}
             {submitError && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50 border-2 border-red-100 text-red-700 font-bold text-sm animate-in slide-in-from-bottom-2">
+                <AlertCircle className="h-6 w-6 shrink-0" />
                 {submitError}
               </div>
             )}
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full h-16 rounded-2xl text-lg font-black tracking-widest uppercase shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
               disabled={!canSubmit}
             >
               {loading ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                <><Loader2 className="mr-3 h-6 w-6 animate-spin" />Recording...</>
               ) : noRateError ? (
-                "Set Rate First"
+                "Configure Rate First"
               ) : (
-                "Save Entry"
+                "Submit Entry"
               )}
             </Button>
           </form>

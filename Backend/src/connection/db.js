@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+                                      const mongoose = require("mongoose");
 require("dotenv").config();
 
 const mongo_url =
@@ -16,7 +16,7 @@ if (!mongo_url) {
 
 // Note: useNewUrlParser and useUnifiedTopology are no longer needed in Mongoose 8+
 const mongoOptions = {
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 10000, // Increased timeout to 10s
   socketTimeoutMS: 45000,
   maxPoolSize: 10,
   minPoolSize: 2,
@@ -29,7 +29,12 @@ const connection = mongoose
     return mongoose;
   })
   .catch((error) => {
-    console.error("✗ MongoDB connection failed:", error.message);
+    console.error("✗ MongoDB connection failed!");
+    console.error("Error Name:", error.name);
+    console.error("Error Message:", error.message);
+    if (error.reason) {
+      console.error("Error Reason Topology:", JSON.stringify(error.reason, null, 2));
+    }
     return Promise.reject(error);
   });
 

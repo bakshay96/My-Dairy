@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/store";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import api from "@/lib/api";
 
 const SESSION_MS = 30 * 60 * 1000;

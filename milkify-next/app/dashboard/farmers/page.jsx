@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { formatRupees, formatIndianDate } from "@/lib/utils";
 import MilkifyLoader from "@/components/ui/Loader";
 import { Search, Eye, Pencil, X, Loader2, CheckCircle2, AlertCircle, Users, Phone, Calendar } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 // ─── Farmer Detail / Edit Drawer ──────────────────────────────────────────────
 function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
@@ -93,13 +93,13 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/30 z-40 transition-opacity"
+        className="fixed inset-0 bg-slate-950/45 backdrop-blur-[2px] z-40 transition-opacity"
         onClick={onClose}
       />
       {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-md bg-white shadow-2xl flex flex-col overflow-hidden">
+      <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-md bg-white/95 dark:bg-slate-900/95 shadow-2xl border-l border-white/70 dark:border-slate-800 flex flex-col overflow-hidden backdrop-blur-md">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/70 dark:border-slate-800 bg-gradient-to-r from-blue-50/80 to-indigo-50/70 dark:from-slate-900 dark:to-slate-900">
           <div>
             <h2 className="font-bold text-lg">{editing ? "Edit Farmer" : "Farmer Details"}</h2>
             <p className="text-xs text-gray-500 mt-0.5">{farmer?.name}</p>
@@ -110,14 +110,14 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
                 <Pencil className="h-3.5 w-3.5" /> Edit
               </Button>
             )}
-            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-200">
+            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors">
               <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-gradient-to-b from-transparent to-slate-50/40 dark:to-slate-950/20">
           {editing ? (
             /* ── Edit Form ─────────────────────────────────────────────── */
             <div className="space-y-4">
@@ -156,7 +156,7 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
             /* ── View Details ──────────────────────────────────────────── */
             <div className="space-y-5">
               {/* Profile card */}
-              <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50/70 to-cyan-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 border border-blue-100/80 dark:border-slate-700 shadow-sm">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl mb-3">
                   {farmer?.name?.[0]?.toUpperCase()}
                 </div>
@@ -186,7 +186,7 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
                 ) : (
                   <div className="space-y-2">
                     {milkHistory.map((m) => (
-                      <div key={m._id} className="flex items-center justify-between p-3 rounded-md bg-gray-50 border text-sm">
+                      <div key={m._id} className="flex items-center justify-between p-3 rounded-xl bg-white/90 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-sm shadow-sm">
                         <div>
                           <span className="font-medium capitalize">{m.shift}</span>
                           <span className="text-gray-500 ml-2">{m.date?.split(",")[0]}</span>
@@ -224,7 +224,7 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
 
         {/* Footer */}
         {editing && (
-          <div className="p-4 border-t bg-gray-50 flex gap-3">
+          <div className="p-4 border-t border-white/70 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100/70 dark:from-slate-900 dark:to-slate-900 flex gap-3">
             <Button variant="outline" className="flex-1" onClick={() => { setEditing(false); setError(""); }}>
               Cancel
             </Button>
@@ -283,11 +283,11 @@ function AddFarmerDrawer({ onClose, onSaved }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
-      <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-md bg-white shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50">
+      <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-[2px] z-40" onClick={onClose} />
+      <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-md bg-white/95 dark:bg-slate-900/95 shadow-2xl border-l border-white/70 dark:border-slate-800 flex flex-col backdrop-blur-md">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/70 dark:border-slate-800 bg-gradient-to-r from-indigo-50/80 to-blue-50/70 dark:from-slate-900 dark:to-slate-900">
           <h2 className="font-bold text-lg">Add New Farmer</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-200">
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -328,7 +328,7 @@ function AddFarmerDrawer({ onClose, onSaved }) {
             </div>
           )}
         </div>
-        <div className="p-4 border-t bg-gray-50 flex gap-3">
+        <div className="p-4 border-t border-white/70 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-slate-100/70 dark:from-slate-900 dark:to-slate-900 flex gap-3">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button className="flex-1" disabled={saving || success} onClick={handleAdd}>
             {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Adding...</> : "Add Farmer"}
@@ -405,13 +405,13 @@ export default function FarmersPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
           type="text"
           placeholder="Search by name, mobile or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-11 w-full rounded-xl border border-input/80 bg-white/90 dark:bg-slate-900 pl-10 pr-10 py-2 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-ring"
         />
         {search && (
           <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -421,7 +421,7 @@ export default function FarmersPage() {
       </div>
 
       {/* Table */}
-      <Card className="shadow-sm dark:bg-slate-900 dark:border-slate-800">
+      <Card className="shadow-md shadow-slate-900/5 dark:bg-slate-900/90 dark:border-slate-800">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex justify-center items-center py-16 min-h-[300px]">
@@ -437,7 +437,7 @@ export default function FarmersPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-slate-900 border-b text-xs text-gray-500 uppercase">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100/70 dark:from-slate-900 dark:to-slate-900 border-b text-xs text-gray-500 uppercase tracking-wide">
                   <tr>
                     <th className="px-4 py-3 text-left font-medium">#</th>
                     <th className="px-4 py-3 text-left font-medium">Name</th>
@@ -450,7 +450,7 @@ export default function FarmersPage() {
                 </thead>
                 <tbody className="divide-y">
                   {filtered.map((f, i) => (
-                    <tr key={f._id} className="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                    <tr key={f._id} className="hover:bg-slate-50/90 dark:hover:bg-slate-800/70 transition-colors">
                       <td className="px-4 py-3.5 text-gray-400">{i + 1}</td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2.5">
@@ -482,14 +482,14 @@ export default function FarmersPage() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => setDrawer({ farmer: f, mode: "view" })}
-                            className="p-1.5 rounded-md hover:bg-blue-50 text-blue-600 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 transition-colors"
                             title="View Details"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => setDrawer({ farmer: f, mode: "edit" })}
-                            className="p-1.5 rounded-md hover:bg-amber-50 text-amber-600 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-600 transition-colors"
                             title="Edit Farmer"
                           >
                             <Pencil className="h-4 w-4" />
