@@ -54,7 +54,7 @@ export default function BillingPage() {
     } catch (error) {
       console.error("Failed to fetch settlements:", error);
     }
-  }, []);
+  }, [startDate, endDate]);
 
   // Initial load only
   useEffect(() => {
