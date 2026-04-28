@@ -92,7 +92,7 @@ export default function AnalyticsPage() {
 
         <Card className="bg-gradient-to-br from-blue-400 to-cyan-500 border-0 shadow-lg shadow-cyan-200 dark:shadow-none">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-            <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-white/80">Today's Volume</CardTitle>
+            <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-white/80">Today&apos;s Volume</CardTitle>
             <Droplet className="h-4 w-4 text-white/60" />
           </CardHeader>
           <CardContent>
