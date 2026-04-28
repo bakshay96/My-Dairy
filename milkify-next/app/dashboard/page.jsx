@@ -8,6 +8,8 @@ import FarmerAnalyticsChart from "@/components/analytics/FarmerAnalyticsChart";
 import { Droplet, Users, IndianRupee, Percent } from "lucide-react";
 import MilkifyLoader from "@/components/ui/Loader";
 import { formatRupees } from "@/lib/utils";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardHome() {
   const user = useAuthStore((state) => state.user);
@@ -49,15 +51,22 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          Welcome back, {user?.name || "Admin"}
-        </h1>
-        <p className="text-muted-foreground mt-1">Here is your dairy collection overview.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            Welcome back, {user?.name || "Admin"}
+          </h1>
+          <p className="text-muted-foreground mt-1">Here is your dairy collection overview.</p>
+        </div>
+        <Link href="/dashboard/add-milk">
+          <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-md flex items-center gap-2 px-6 py-6 sm:py-2 text-lg sm:text-sm font-bold sm:font-medium">
+            <Droplet className="h-5 w-5 animate-pulse" /> Add Milk Entry
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-100 shadow-sm">
+        <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-100/80">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-indigo-900">Active Farmers</CardTitle>
             <Users className="h-4 w-4 text-indigo-600" />
@@ -68,7 +77,7 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-100 shadow-sm">
+        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-100/80">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900">Today&apos;s Milk</CardTitle>
             <Droplet className="h-4 w-4 text-blue-600" />
@@ -79,7 +88,7 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-100 shadow-sm">
+        <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-100/80">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-amber-900">Today&apos;s Avg FAT</CardTitle>
             <Percent className="h-4 w-4 text-amber-600" />
@@ -90,7 +99,7 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-100 shadow-sm">
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-100/80">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-900">Cycle Amount Owed</CardTitle>
             <IndianRupee className="h-4 w-4 text-green-600" />

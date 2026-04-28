@@ -14,7 +14,7 @@ import { Loader2 } from "lucide-react";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import AuthArt from "@/components/auth/AuthArt";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const loginSchema = z.object({
   mobile: z.string().min(10, "Mobile number must be at least 10 digits"),
@@ -84,13 +84,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gray-50/60 dark:bg-slate-950 p-4 md:p-6">
+    <div className="min-h-screen w-full bg-transparent p-4 md:p-6">
       <div className="mx-auto flex max-w-6xl items-center justify-end">
         <ThemeToggle />
       </div>
       <div className="mx-auto mt-4 grid max-w-6xl gap-6 lg:grid-cols-2 items-stretch">
         <AuthArt />
-      <Card className="w-full max-w-md shadow-lg border-t-4 border-t-primary">
+      <Card className="w-full max-w-md border-t-4 border-t-primary shadow-xl shadow-slate-900/10">
         <CardHeader className="space-y-2 text-center pb-6">
           <div className="flex justify-center mb-4">
             <Brand />
@@ -104,7 +104,7 @@ export default function LoginPage() {
               <label className="text-sm font-medium leading-none">Mobile Number</label>
               <input
                 {...form.register("mobile")}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-full rounded-lg border border-input bg-background/95 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Enter your mobile number"
               />
               {form.formState.errors.mobile && (
@@ -119,7 +119,7 @@ export default function LoginPage() {
               <input
                 type="password"
                 {...form.register("password")}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-full rounded-lg border border-input bg-background/95 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Enter your password"
               />
               {form.formState.errors.password && (

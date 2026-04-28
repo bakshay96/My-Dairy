@@ -32,9 +32,14 @@ export default function BillingPage() {
       let url = `/billing/10-day${buildDateQuery(overrideStartDate, overrideEndDate)}`;
 
       const res = await api.get(url);
-      setData(res.data);
+      // The axios interceptor already unwraps res.data.data to res.data
+      if (res.data) {
+        setData(res.data);
+      } else {
+        throw new Error("Invalid response format");
+      }
     } catch (err) {
-      console.error(err);
+      console.error("fetchBillingData error:", err);
       setError("Failed to load billing summary. Please try again.");
     } finally {
       setLoading(false);
@@ -49,15 +54,22 @@ export default function BillingPage() {
     } catch (error) {
       console.error("Failed to fetch settlements:", error);
     }
-  }, [startDate, endDate]);
+  }, []);
 
+  // Initial load only
   useEffect(() => {
     fetchBillingData(defaultRange.startDate, defaultRange.endDate);
     fetchSettlements(defaultRange.startDate, defaultRange.endDate);
-  }, [fetchBillingData, fetchSettlements, defaultRange]); // Initial load always shows last 10 days
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFilter = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    fetchBillingData(startDate, endDate);
+    fetchSettlements(startDate, endDate);
+  };
+
+  const handleRefresh = () => {
     fetchBillingData(startDate, endDate);
     fetchSettlements(startDate, endDate);
   };
@@ -65,6 +77,8 @@ export default function BillingPage() {
   const handleClearFilter = () => {
     setStartDate(defaultRange.startDate);
     setEndDate(defaultRange.endDate);
+    setFarmerSearch("");
+    setSelectedFarmerId("");
     fetchBillingData(defaultRange.startDate, defaultRange.endDate);
     fetchSettlements(defaultRange.startDate, defaultRange.endDate);
   };
@@ -135,7 +149,7 @@ export default function BillingPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Billing Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">Billing Management</h1>
           <p className="text-muted-foreground mt-1">Manage farmer payments and view historical cycles.</p>
         </div>
         
@@ -147,52 +161,55 @@ export default function BillingPage() {
                 {formatIndianDate(data.windowStart || data.cycleStart)} - {formatIndianDate(data.windowEnd || data.cycleEnd)}
               </span>
             </div>
-            <Button variant="outline" size="icon" onClick={handleDownloadSummary} title="Download summary CSV">
+            <Button variant="outline" size="icon" onClick={handleRefresh} title="Refresh Data" className="shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "animate-spin" : ""}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleDownloadSummary} title="Download summary CSV" className="shadow-sm">
               <Download className="h-4 w-4" />
             </Button>
           </div>
         )}
       </div>
 
-      <Card className="bg-gray-50/50 dark:bg-slate-900/30 border-dashed">
-        <CardContent className="p-4">
-          <form onSubmit={handleFilter} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-            <div className="space-y-1 w-full sm:w-auto">
-              <label className="text-xs font-medium text-gray-500">Start Date</label>
+      <Card className="bg-gray-50/50 dark:bg-slate-900/30 border shadow-sm overflow-hidden">
+        <CardContent className="p-4 sm:p-6">
+          <form onSubmit={handleFilter} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Start Date</label>
               <input 
                 type="date" 
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-10 w-full rounded-md border border-input bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
               />
             </div>
-            <div className="space-y-1 w-full sm:w-auto">
-              <label className="text-xs font-medium text-gray-500">End Date</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">End Date</label>
               <input 
                 type="date" 
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-10 w-full rounded-md border border-input bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
               />
             </div>
-            <div className="space-y-1 w-full">
-              <label className="text-xs font-medium text-gray-500">Search Farmer</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Search Farmer</label>
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   value={farmerSearch}
                   onChange={(e) => setFarmerSearch(e.target.value)}
-                  placeholder="Search name/mobile"
-                  className="flex h-10 w-full rounded-md border border-input bg-white dark:bg-slate-900 pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="Name or Mobile"
+                  className="flex h-10 w-full rounded-md border border-input bg-white dark:bg-slate-900 pl-9 pr-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
                 />
               </div>
             </div>
-            <div className="space-y-1 w-full">
-              <label className="text-xs font-medium text-gray-500">Select Farmer</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Select Farmer</label>
               <select
                 value={selectedFarmerId}
                 onChange={(e) => setSelectedFarmerId(e.target.value)}
-                className="h-10 w-full rounded-md border border-input bg-white dark:bg-slate-900 px-3 py-2 text-sm"
+                className="h-10 w-full rounded-md border border-input bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
               >
                 <option value="">All Farmers</option>
                 {farmerOptions.map((f) => (
@@ -202,17 +219,12 @@ export default function BillingPage() {
                 ))}
               </select>
             </div>
-            <div className="flex gap-2 w-full">
-              <Button type="submit" className="w-full sm:w-auto flex items-center gap-2">
-                <Filter className="h-4 w-4" /> Filter Records
+            <div className="flex flex-wrap gap-2 pt-2 sm:pt-0">
+              <Button type="submit" className="flex-1 sm:flex-none items-center gap-2 bg-primary hover:bg-primary/90">
+                <Filter className="h-4 w-4" /> Filter
               </Button>
-              {(startDate || endDate) && (
-                <Button type="button" variant="outline" onClick={handleClearFilter}>
-                  Clear
-                </Button>
-              )}
-              <Button variant="outline" type="button" onClick={handleDownloadSummary} title="Download CSV">
-                <Download className="h-4 w-4 mr-1" /> Download
+              <Button type="button" variant="ghost" onClick={handleClearFilter} className="flex-1 sm:flex-none">
+                Clear
               </Button>
             </div>
           </form>
@@ -245,30 +257,41 @@ export default function BillingPage() {
         </CardHeader>
         <CardContent>
           {data?.summary && (
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-5 mb-6">
-              <div className="border rounded-lg p-4 bg-gray-50/40 min-h-[110px] flex flex-col justify-between">
-                <p className="text-xs text-gray-500">Total Farmers</p>
-                <p className="text-2xl font-bold">{data.totalFarmers || 0}</p>
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-5 mb-8">
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-slate-800 dark:to-slate-900 border border-indigo-100 dark:border-slate-700 rounded-3xl p-5 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-1">Total Farmers</p>
+                <p className="text-3xl font-black text-indigo-900 dark:text-white leading-tight">{data.totalFarmers || 0}</p>
+                <div className="h-1 w-8 bg-indigo-500/20 rounded-full mt-2"></div>
               </div>
-              <div className="border rounded-lg p-4 bg-gray-50/40 min-h-[110px] flex flex-col justify-between">
-                <p className="text-xs text-gray-500">Total Liters</p>
-                <p className="text-2xl font-bold">{Number(data.summary.totalLiters || 0).toFixed(2)} L</p>
+              
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-slate-800 dark:to-slate-900 border border-blue-100 dark:border-slate-700 rounded-3xl p-5 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-1">Total Volume</p>
+                <p className="text-3xl font-black text-blue-900 dark:text-white leading-tight">
+                  {Number(data.summary.totalLiters || 0).toFixed(1)} <span className="text-sm opacity-50 font-bold">L</span>
+                </p>
+                <div className="h-1 w-8 bg-blue-500/20 rounded-full mt-2"></div>
               </div>
-              <div className="border rounded-lg p-4 bg-gray-50/40 min-h-[110px] flex flex-col justify-between">
-                <p className="text-xs text-gray-500">Total Entries</p>
-                <p className="text-2xl font-bold">{data.summary.totalEntries || 0}</p>
+
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-900 border border-amber-100 dark:border-slate-700 rounded-3xl p-5 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 dark:text-amber-400 mb-1">Total Entries</p>
+                <p className="text-3xl font-black text-amber-900 dark:text-white leading-tight">{data.summary.totalEntries || 0}</p>
+                <div className="h-1 w-8 bg-amber-500/20 rounded-full mt-2"></div>
               </div>
-              <div className="border rounded-lg p-4 bg-gray-50/40 min-h-[110px] flex flex-col justify-between">
-                <p className="text-xs text-gray-500">Total Amount</p>
-                <p className="text-2xl font-bold text-green-700">{formatRupees(data.summary.totalAmount || 0)}</p>
+
+              <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-slate-800 dark:to-slate-900 border border-emerald-100 dark:border-slate-700 rounded-3xl p-5 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 dark:text-emerald-400 mb-1">Cycle Amount</p>
+                <p className="text-3xl font-black text-emerald-700 dark:text-emerald-400 leading-tight">{formatRupees(data.summary.totalAmount || 0)}</p>
+                <div className="h-1 w-8 bg-emerald-500/20 rounded-full mt-2"></div>
               </div>
-              <div className="border rounded-lg p-4 bg-gray-50/40 min-h-[110px] flex flex-col justify-between">
-                <p className="text-xs text-gray-500">Avg Rate / Ltr</p>
-                <p className="text-2xl font-bold text-blue-700">
+
+              <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 border border-violet-100 dark:border-slate-700 rounded-3xl p-5 shadow-sm col-span-2 lg:col-span-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-violet-500 dark:text-violet-400 mb-1">Avg Rate/Ltr</p>
+                <p className="text-3xl font-black text-violet-900 dark:text-white leading-tight">
                   {Number(data.summary.totalLiters || 0) > 0
                     ? formatRupees((Number(data.summary.totalAmount || 0) / Number(data.summary.totalLiters || 1)).toFixed(2))
                     : "--"}
                 </p>
+                <div className="h-1 w-8 bg-violet-500/20 rounded-full mt-2"></div>
               </div>
             </div>
           )}

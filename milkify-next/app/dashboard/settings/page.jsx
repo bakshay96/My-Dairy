@@ -13,7 +13,7 @@ import {
   TrendingUp, RefreshCw, Plus, X
 } from "lucide-react";
 import { formatRupees, formatIndianDate } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const CATEGORY_CONFIG = {
   cow:     { label: "Cow Milk",     emoji: "🐄", color: "bg-amber-50 border-amber-200 text-amber-800" },

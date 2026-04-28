@@ -13,7 +13,7 @@ import { Loader2 } from "lucide-react";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import AuthArt from "@/components/auth/AuthArt";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/lib/store";
 
 const registerSchema = z.object({
@@ -95,13 +95,13 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gray-50/60 dark:bg-slate-950 p-4 md:p-6">
+    <div className="min-h-screen w-full bg-transparent p-4 md:p-6">
       <div className="mx-auto flex max-w-6xl items-center justify-end">
         <ThemeToggle />
       </div>
       <div className="mx-auto mt-4 grid max-w-6xl gap-6 lg:grid-cols-2 items-stretch">
       <AuthArt />
-      <Card className="w-full max-w-lg shadow-lg border-t-4 border-t-primary">
+      <Card className="w-full max-w-lg shadow-xl shadow-slate-900/10 border-t-4 border-t-primary">
         <CardHeader className="space-y-2 text-center pb-6">
           <div className="flex justify-center mb-4">
             <Brand />

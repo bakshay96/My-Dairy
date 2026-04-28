@@ -252,7 +252,7 @@ exports.getCurrentCycle = (req, res) => {
  */
 exports.getTenDayBilling = async (req, res) => {
   try {
-    const adminId = new mongoose.Types.ObjectId(req.admin._id);
+    const adminId = new mongoose.Types.ObjectId(req.admin.id || req.admin._id);
     const { start, end, startDate, endDate } = buildDateRange(req.query);
 
     const pipeline = [
@@ -502,7 +502,7 @@ exports.getBillingSlipData = async (req, res) => {
 exports.getFarmerBillingBreakdown = async (req, res) => {
   try {
     const { farmerId } = req.params;
-    const adminId = new mongoose.Types.ObjectId(req.admin._id);
+    const adminId = new mongoose.Types.ObjectId(req.admin.id || req.admin._id);
 
     if (!mongoose.Types.ObjectId.isValid(farmerId)) {
       return res.status(400).json({ success: false, message: "Invalid farmer ID" });
