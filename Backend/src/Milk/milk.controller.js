@@ -98,13 +98,24 @@ exports.addMilkData = async (req, res) => {
       }).catch((err) => console.error("SMS notification error:", err));
     }
 
-    // ── Email + response ───────────────────────────────────────────────────
-    sendMail(req, res, () => {
-      res.status(201).json({
-        message: "Milk data submitted successfully",
-        milk:    savedEntry,
-      });
+    // ── Send immediate response ───────────────────────────────────────────
+    res.status(201).json({
+      message: "Milk data submitted successfully",
+      milk:    savedEntry,
     });
+
+    // ── Background Tasks (Non-blocking) ───────────────────────────────────
+    // 1. Socket emission (already called above)
+    
+    // 2. Email notification
+    try {
+      sendMail(req, res, () => {
+        console.log(`[Mail] Background email process finished for farmer: ${name}`);
+      });
+    } catch (mailErr) {
+      console.error("[Mail] Background email error:", mailErr.message);
+    }
+
   } catch (error) {
     console.error("Error adding milk data:", error);
     if (error.name === "ValidationError") {

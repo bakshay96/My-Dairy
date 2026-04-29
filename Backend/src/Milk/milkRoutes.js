@@ -10,7 +10,7 @@ const MilkRouter=express.Router();
 MilkRouter.get("/",           authMiddleware, getfarmerMilkCollections);
 MilkRouter.get("/get",        authMiddleware, getfarmerMilkCollectionWithPagination);
 MilkRouter.get("/farmer/:id", authMiddleware, getSingleFarmerMilkData);   // ← NEW: explicit path
-MilkRouter.post("/:id",       authMiddleware, addMilkData, sendMail);
+MilkRouter.post("/:id",       authMiddleware, addMilkData);
 MilkRouter.get("/:id",        authMiddleware, getSingleFarmerMilkData);   // legacy
 MilkRouter.patch("/:id",      authMiddleware, updateMilkCollection);
 MilkRouter.delete("/farmer/:farmerId", authMiddleware, deleteFarmerMilkCollections);
