@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { useMemo, useState, useRef, useEffect} from "react";
 import { Download, Mail, X } from "lucide-react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -120,7 +120,7 @@ export default function BillingSlipModal({ slipData, isOpen, onClose, initialLan
     }
   };
   const t         = useMemo(() => languageText[language] || languageText.en, [language]);
-  const shiftText = useMemo(() => shiftMap[language]     || shiftMap.en,     [language]);
+  // const shiftText = useMemo(() => shiftMap[language]     || shiftMap.en,     [language]);
 
   if (!isOpen || !slipData) return null;
   const { farmer, entries, summary, dateRange, payment } = slipData;
