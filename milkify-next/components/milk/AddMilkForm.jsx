@@ -5,15 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2, AlertCircle, CheckCircle2, Search, X,
-  Droplet, TrendingUp, Sun, Moon, Calculator
+  Loader2, AlertCircle, CheckCircle2, Search, X, TrendingUp, Sun, Moon, Calculator
 } from "lucide-react";
 import { formatRupees } from "@/lib/utils";
 import { toast } from "@/lib/toast";
-import Link from "next/link";
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 const formSchema = z.object({
@@ -202,75 +200,87 @@ export default function AddMilkForm() {
 
   const canSubmit = !loading && !ratesLoading && !noRateError && !!selectedFarmer;
   const currentRate = activeRates[watchCategory];
+  const watchShift = form.watch("shift");
+
+  // Dynamic theme colors based on shift
+  const theme = watchShift === "morning" 
+    ? {
+        primary: "amber-600",
+        bg: "bg-amber-50/50",
+        border: "border-amber-200",
+        focusBorder: "focus:border-amber-600",
+        focusRing: "focus-visible:ring-amber-600/20",
+        activeRing: "ring-amber-600/30",
+        btn: "bg-amber-600 hover:bg-amber-700",
+        text: "text-amber-700",
+        icon: <Sun className="h-4 w-4" />,
+        shadow: "shadow-amber-100"
+      }
+    : {
+        primary: "indigo-600",
+        bg: "bg-indigo-50/50",
+        border: "border-indigo-200",
+        focusBorder: "focus:border-indigo-600",
+        focusRing: "focus-visible:ring-indigo-600/20",
+        activeRing: "ring-indigo-600/30",
+        btn: "bg-indigo-600 hover:bg-indigo-700",
+        text: "text-indigo-700",
+        icon: <Moon className="h-4 w-4" />,
+        shadow: "shadow-indigo-100"
+      };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 px-1 sm:px-0 pb-10">
-      {/* ── Rate Status Banner ─────────────────────────────────────────────── */}
-      {ratesLoading ? (
-        <div className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-sm backdrop-blur-sm animate-pulse">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Fetching live dairy rates...
-        </div>
-      ) : noRateError ? (
-        <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-800 text-red-700 dark:text-red-300 text-sm backdrop-blur-sm">
-          <AlertCircle className="h-5 w-5 shrink-0" />
-          <p className="flex-1">{noRateError}</p>
-          <Link href="/dashboard/settings" className="underline font-bold whitespace-nowrap hover:text-red-800">
-            Fix Now →
-          </Link>
-        </div>
-      ) : currentRate ? (
-        <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm backdrop-blur-sm">
-          <TrendingUp className="h-5 w-5 shrink-0 text-emerald-600" />
-          <div className="flex-1">
-            <p className="font-semibold text-[13px]">Active {watchCategory} rate detected</p>
-            <p className="text-[12px] opacity-80">
-              {formatRupees(currentRate.ratePerFat)} per FAT unit
-              {currentRate.useSnf && ` + ${formatRupees(currentRate.ratePerSnf)}/SNF`}
-              {currentRate.useDegree && ` + ${formatRupees(currentRate.ratePerDegree)}/Degree`}
-            </p>
-          </div>
-        </div>
-      ) : null}
+    <div className={`max-w-xl mx-auto px-1 sm:px-0 pb-4 transition-colors duration-500`}>
+      <Card className={`shadow-2xl border-2 ${theme.border} bg-white/90 dark:bg-slate-900/90 backdrop-blur-md overflow-hidden transition-all duration-500 ${theme.shadow}`}>
+        <CardHeader className={`py-2 px-4 border-b ${theme.border} ${theme.bg}`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-lg ${theme.bg} ${theme.text}`}>
+                {theme.icon}
+              </div>
+              <span className={`font-black text-xs ${theme.text} uppercase tracking-tight`}>{watchShift} Entry</span>
+            </div>
 
-      <Card className="shadow-xl border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg overflow-visible">
-        <CardHeader className="pb-6 border-b border-gray-100 dark:border-slate-800">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-              <Droplet className="h-6 w-6" />
-            </div>
-            <div>
-              <CardTitle className="text-2xl font-black tracking-tight">Record Collection</CardTitle>
-              <CardDescription className="text-gray-500 font-medium">New milk entry for current cycle</CardDescription>
-            </div>
+            {currentRate && (
+              <div className="flex flex-col items-end animate-in fade-in slide-in-from-right-1">
+                <div className={`flex items-center gap-1 ${theme.text}`}>
+                  <TrendingUp className="h-3 w-3" />
+                  <span className="text-[10px] font-black uppercase tracking-tighter">{watchCategory} Rate</span>
+                </div>
+                <p className="text-[10px] font-bold text-gray-600 dark:text-gray-300 leading-none mt-0.5">
+                  {formatRupees(currentRate.ratePerFat)}/fat
+                  {currentRate.useSnf && ` + ${formatRupees(currentRate.ratePerSnf)}/snf`}
+                </p>
+              </div>
+            )}
           </div>
         </CardHeader>
-        <CardContent className="pt-8 pb-10">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <CardContent className="p-3 sm:p-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
 
             {/* ── Farmer Search & Select ──────────────────────────────────── */}
-            <div className="space-y-2.5">
-              <label className="text-[13px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ml-1">
-                Farmer Selection <span className="text-primary">*</span>
+            <div className="space-y-1">
+              <label className={`text-[10px] font-black uppercase tracking-widest ${theme.text} opacity-70 ml-0.5`}>
+                Farmer <span className="text-red-500">*</span>
               </label>
 
               {selectedFarmer ? (
-                <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 group transition-all animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                <div className={`flex items-center justify-between p-2 rounded-xl border-2 ${theme.border} ${theme.bg} group transition-all animate-in fade-in slide-in-from-top-1`}>
+                  <div className="flex items-center gap-2">
+                    <div className={`h-8 w-8 rounded-full ${theme.bg} flex items-center justify-center ${theme.text} font-bold text-xs border ${theme.border}`}>
                       {selectedFarmer.name?.[0]?.toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900 dark:text-white leading-none">{selectedFarmer.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{selectedFarmer.mobile}</p>
+                      <p className={`font-black text-sm ${theme.text} leading-none`}>{selectedFarmer.name}</p>
+                      <p className={`text-[10px] font-medium opacity-70 ${theme.text} mt-0.5`}>{selectedFarmer.mobile}</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={handleClearFarmer}
-                    className="p-2 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors"
+                    className={`p-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors ${theme.text} opacity-50 hover:opacity-100`}
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
@@ -278,7 +288,7 @@ export default function AddMilkForm() {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 transition-colors group-focus-within:text-primary" />
                   <input
                     type="text"
-                    placeholder="Search by name or mobile..."
+                    placeholder="Search name or mobile..."
                     value={farmerSearch}
                     onChange={(e) => {
                       setFarmerSearch(e.target.value);
@@ -286,7 +296,7 @@ export default function AddMilkForm() {
                     }}
                     onFocus={() => setIsDropdownOpen(true)}
                     onBlur={() => setTimeout(() => setIsDropdownOpen(false), 250)}
-                    className="flex h-14 w-full rounded-2xl border-2 border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 pl-12 pr-4 py-2 text-base font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary"
+                    className={`flex h-10 w-full rounded-xl border-2 ${theme.border} ${theme.bg} pl-10 pr-4 py-1 text-sm font-bold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 ${theme.focusRing} ${theme.focusBorder}`}
                   />
                   {isDropdownOpen && (
                     <div className="absolute z-[60] w-full mt-2 bg-white dark:bg-slate-900 border-2 border-gray-100 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -334,46 +344,46 @@ export default function AddMilkForm() {
             </div>
 
             {/* ── Category + Shift ────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="space-y-2.5">
-                <label className="text-[13px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ml-1">
-                  Milk Type <span className="text-primary">*</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className={`text-[10px] font-black uppercase tracking-widest ${theme.text} opacity-70 ml-0.5`}>
+                  Animal <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <select
                     {...form.register("category")}
-                    className="flex h-14 w-full rounded-2xl border-2 border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 px-5 py-2 text-base font-bold appearance-none transition-all focus:border-primary focus:ring-0"
+                    className={`flex h-10 w-full rounded-xl border-2 ${theme.border} ${theme.bg} px-4 py-1 text-sm font-black appearance-none transition-all ${theme.focusBorder} focus:ring-0`}
                   >
                     {["cow", "buffalo", "goat", "sheep"].map((c) => (
                       <option key={c} value={c}>{CATEGORY_EMOJI[c]} {c.charAt(0).toUpperCase() + c.slice(1)}</option>
                     ))}
                   </select>
-                  <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <TrendingUp className="h-5 w-5 text-gray-400" />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <TrendingUp className="h-4 w-4 text-gray-400" />
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2.5">
-                <label className="text-[13px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ml-1">
-                  Collection Shift <span className="text-primary">*</span>
+              <div className="space-y-1.5">
+                <label className={`text-[10px] font-black uppercase tracking-widest ${theme.text} opacity-70 ml-0.5`}>
+                  Shift <span className="text-red-500">*</span>
                 </label>
-                <div className="flex p-1 rounded-2xl border-2 border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 h-14">
+                <div className={`flex p-1 rounded-xl border-2 ${theme.border} ${theme.bg} h-10`}>
                   {["morning", "evening"].map((s) => {
-                    const active = form.watch("shift") === s;
+                    const active = watchShift === s;
                     return (
                       <button
                         key={s}
                         type="button"
                         onClick={() => form.setValue("shift", s)}
-                        className={`flex-1 flex items-center justify-center gap-2 rounded-xl text-sm font-bold transition-all ${
+                        className={`flex-1 flex items-center justify-center gap-1 rounded-lg text-[10px] font-black uppercase transition-all duration-300 ${
                           active 
-                            ? "bg-white dark:bg-slate-700 text-primary shadow-sm ring-1 ring-black/5" 
-                            : "text-gray-500 hover:text-gray-700"
+                            ? `bg-white dark:bg-slate-700 ${theme.text} shadow-md ring-2 ${theme.activeRing} scale-105` 
+                            : "text-gray-400 hover:text-gray-600"
                         }`}
                       >
-                        {s === "morning" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                        {s === "morning" ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+                        <span>{s === "morning" ? "MOR" : "EVE"}</span>
                       </button>
                     );
                   })}
@@ -382,16 +392,16 @@ export default function AddMilkForm() {
             </div>
 
             {/* ── Milk Quality Inputs ─────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-5 pt-2">
+            <div className="grid grid-cols-2 gap-3 pt-1">
               {[
                 { key: "fat", label: "FAT %", placeholder: "0.0", required: true },
                 { key: "litter", label: "Liters", placeholder: "0.0", required: true },
                 { key: "snf", label: "SNF", placeholder: "0.0", required: false },
-                { key: "degree", label: "Degree", placeholder: "0.0", required: false },
+                { key: "degree", label: "CLR", placeholder: "0", required: false },
               ].map(({ key, label, placeholder, required }) => (
-                <div key={key} className="space-y-2.5">
-                  <label className="text-[13px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 ml-1">
-                    {label} {required && <span className="text-primary">*</span>}
+                <div key={key} className="space-y-1.5">
+                  <label className={`text-[10px] font-black uppercase tracking-widest ${theme.text} opacity-70 ml-0.5`}>
+                    {label} {required && <span className="text-red-500">*</span>}
                   </label>
                   <div className="relative group">
                     <input
@@ -399,10 +409,10 @@ export default function AddMilkForm() {
                       step="0.01"
                       placeholder={placeholder}
                       {...form.register(key)}
-                      className="flex h-14 w-full rounded-2xl border-2 border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 px-5 py-2 text-xl font-black transition-all focus:border-primary focus:ring-0 placeholder:text-gray-200 dark:placeholder:text-gray-700"
+                      className={`flex h-10 w-full rounded-xl border-2 ${theme.border} ${theme.bg} px-4 py-1 text-base font-black transition-all ${theme.focusBorder} focus:ring-0 placeholder:text-gray-300 dark:placeholder:text-gray-600`}
                     />
                     {form.formState.errors[key] && (
-                      <p className="text-[11px] text-red-500 font-bold absolute -bottom-5 left-1">{form.formState.errors[key].message}</p>
+                      <p className="text-[9px] text-red-500 font-bold absolute -bottom-3.5 left-0.5">{form.formState.errors[key].message}</p>
                     )}
                   </div>
                 </div>
@@ -411,21 +421,21 @@ export default function AddMilkForm() {
 
             {/* ── Live Amount Preview ─────────────────────────────────────── */}
             {previewAmount !== null && (
-              <div className="relative overflow-hidden p-6 rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/20 mt-4 animate-in zoom-in-95 duration-300">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-primary">
-                      <Calculator className="h-5 w-5" />
-                      <span className="text-sm font-bold uppercase tracking-widest">Est. Amount</span>
+              <div className={`relative overflow-hidden p-2 rounded-xl bg-gradient-to-br from-${theme.primary}/10 via-${theme.primary}/5 to-transparent border-2 ${theme.border} mt-0.5 animate-in zoom-in-95 duration-300`}>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0">
+                    <div className={`flex items-center gap-1 ${theme.text}`}>
+                      <Calculator className="h-3 w-3" />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Est. Amount</span>
                     </div>
-                    <p className="text-[12px] text-gray-500 dark:text-gray-400 font-medium">
-                      Based on {parseFloat(watchFat)}% FAT @ {formatRupees(currentRate?.ratePerFat)}
+                    <p className={`text-[8px] font-bold opacity-60 ${theme.text}`}>
+                      {parseFloat(watchFat)}% FAT @ {formatRupees(currentRate?.ratePerFat)}
                     </p>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-4xl font-black text-primary tracking-tight">{formatRupees(previewAmount)}</p>
-                    <p className="text-xs text-primary/60 font-bold mt-1">
-                      Rate per Ltr: {formatRupees((parseFloat(watchFat || 0) * Number(currentRate?.ratePerFat || 0)).toFixed(2))}
+                  <div className="text-right">
+                    <p className={`text-xl font-black ${theme.text} tracking-tight`}>{formatRupees(previewAmount)}</p>
+                    <p className={`text-[8px] font-black opacity-50 ${theme.text} leading-none`}>
+                      Rate/Ltr: {formatRupees((parseFloat(watchFat || 0) * Number(currentRate?.ratePerFat || 0)).toFixed(2))}
                     </p>
                   </div>
                 </div>
@@ -448,13 +458,13 @@ export default function AddMilkForm() {
 
             <Button
               type="submit"
-              className="w-full h-16 rounded-2xl text-lg font-black tracking-widest uppercase shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+              className={`w-full h-10 rounded-xl text-[11px] font-black tracking-widest uppercase shadow-md transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 ${theme.btn}`}
               disabled={!canSubmit}
             >
               {loading ? (
-                <><Loader2 className="mr-3 h-6 w-6 animate-spin" />Recording...</>
+                <><Loader2 className="mr-2 h-3 w-3 animate-spin" />Recording...</>
               ) : noRateError ? (
-                "Configure Rate First"
+                "No Rate Set"
               ) : (
                 "Submit Entry"
               )}
