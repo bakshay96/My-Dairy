@@ -1,30 +1,61 @@
-import React from "react";
-import { Milk } from "lucide-react";
+"use client";
 
-export default function MilkifyLoader({ text = "Milkify" }) {
+import Image from "next/image";
+import logo from "@/public/images/milkify-logo.png";
+
+export default function MilkifyLoader({ text = "Loading" }) {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-white/40 dark:bg-slate-950/40 backdrop-blur-md fixed inset-0 z-[100] transition-all duration-500">
-      <div className="flex flex-col items-center gap-5">
-        <div className="relative">
-          {/* Animated rings */}
-          <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
-          <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
-          
-          {/* Central Logo Container */}
-          <div className="relative h-20 w-20 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center shadow-2xl border border-primary/20 rotate-3 animate-[pulse_2s_ease-in-out_infinite]">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent opacity-50"></div>
-            <Milk className="h-10 w-10 text-primary" />
+    <div className="flex h-full w-full items-center justify-center bg-white/60 dark:bg-slate-950/60 backdrop-blur-sm fixed inset-0 z-[100]">
+      <div className="flex flex-col items-center gap-6">
+
+        {/* Animated Logo with Ripple */}
+        <div className="relative flex items-center justify-center">
+          {/* Ripple rings */}
+          <span className="absolute inline-flex h-24 w-24 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: "1.6s" }} />
+          <span className="absolute inline-flex h-20 w-20 rounded-full bg-primary/15 animate-ping" style={{ animationDuration: "2.1s", animationDelay: "0.3s" }} />
+
+          {/* Logo container */}
+          <div className="relative h-20 w-20 rounded-2xl bg-white dark:bg-slate-900 border border-primary/20 shadow-2xl flex items-center justify-center">
+            <Image
+              src={logo}
+              alt="Milkify"
+              width={52}
+              height={52}
+              className="object-contain drop-shadow-sm"
+              unoptimized
+              priority
+            />
           </div>
         </div>
-        
-        {/* Sleek Text Label */}
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-sm font-bold tracking-[0.3em] text-primary/80 uppercase ml-1">
+
+        {/* Animated Milk Drop */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-end gap-1 h-5">
+            {[0, 0.15, 0.3].map((delay, i) => (
+              <span
+                key={i}
+                className="w-1.5 rounded-full bg-primary"
+                style={{
+                  height: "100%",
+                  animation: `milkDrop 1s ease-in-out ${delay}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+
+          <span className="text-xs font-bold tracking-[0.3em] text-primary/70 uppercase">
             {text}
           </span>
-          <div className="h-0.5 w-8 bg-gradient-to-r from-transparent via-primary/40 to-transparent rounded-full animate-pulse"></div>
         </div>
       </div>
+
+      {/* Inline keyframes */}
+      <style>{`
+        @keyframes milkDrop {
+          0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+          50%       { transform: scaleY(1);   opacity: 1;   }
+        }
+      `}</style>
     </div>
   );
 }

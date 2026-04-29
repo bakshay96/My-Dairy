@@ -13,6 +13,9 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			required: [true, "Please add first and last name"],
 		},
+		memberId: {
+			type: String,
+		},
 		gender: {
 			type: String,
 			enum: ["Male", "Female", "Other"],

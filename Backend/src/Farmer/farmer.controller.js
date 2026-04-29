@@ -20,6 +20,10 @@ exports.createFarmer = async (req, res) => {
       farmerData.village = farmerData.address;
     }
 
+    // Generate unique memberId based on count (e.g. MI-001, MI-002)
+    const totalFarmers = await farmerModel.countDocuments({ adminId: req.admin.id });
+    farmerData.memberId = `MI-${(totalFarmers + 1).toString().padStart(3, '0')}`;
+
     const farmer = new farmerModel(farmerData);
     const newFarmer = await farmer.save();
 

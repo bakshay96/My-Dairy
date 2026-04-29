@@ -19,6 +19,7 @@ const { responseInterceptor }  = require("./src/middleware/responseHandler.middl
 const { generalLimiter, authLimiter } = require("./src/middleware/rateLimiter.middleware");
 const sanitizeInput            = require("./src/middleware/sanitize.middleware");
 const { initSocketService }    = require("./src/services/socketService");
+const { preloadDevanagariFonts } = require("./src/utils/fontManager");
 
 const PORT      = process.env.PORT      || 3030;
 const NODE_ENV  = process.env.NODE_ENV  || "development";
@@ -188,6 +189,9 @@ server.listen(PORT, async () => {
     console.log(`✓ Server running on http://localhost:${PORT}`);
     console.log(`✓ Socket.io ready`);
     console.log(`✓ Environment: ${NODE_ENV}`);
+
+    // Pre-download Devanagari fonts so Hindi/Marathi PDFs are instant
+    preloadDevanagariFonts().catch(() => {});
 
     transporter.verify((error) => {
       if (error) console.log("⚠ Email service error:", error.message);
