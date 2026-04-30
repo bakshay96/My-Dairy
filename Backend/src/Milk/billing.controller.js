@@ -434,6 +434,7 @@ exports.getBillingSlipData = async (req, res) => {
         adminId,
         farmerId: new mongoose.Types.ObjectId(farmerId),
         createdAt: { $gte: start, $lte: end },
+        paymentStatus: { $ne: "paid" },
       })
         .select("createdAt shift category litter fat snf calculatedAmount paymentStatus")
         .sort({ createdAt: 1 })
@@ -515,6 +516,7 @@ exports.generateBillingSlipPdf = async (req, res) => {
         adminId,
         farmerId: new mongoose.Types.ObjectId(farmerId),
         createdAt: { $gte: start, $lte: end },
+        paymentStatus: { $ne: "paid" },
       })
         .select("createdAt shift category litter fat snf calculatedAmount")
         .sort({ createdAt: 1 })
@@ -578,6 +580,7 @@ exports.sendBillingEmail = async (req, res) => {
         adminId,
         farmerId: new mongoose.Types.ObjectId(farmerId),
         createdAt: { $gte: start, $lte: end },
+        paymentStatus: { $ne: "paid" },
       })
         .select("createdAt shift category litter fat snf calculatedAmount")
         .sort({ createdAt: 1 })
@@ -614,40 +617,49 @@ exports.sendBillingEmail = async (req, res) => {
       entries,
     };
 
-    // Generate PDF as a buffer
-    const pdfBuffer = await generateBillingPdfBuffer(pdfData, lang);
+    // Respond immediately to prevent frontend timeout (Fire and Forget)
+    res.status(200).json({ success: true, message: `Processing bill delivery. It will arrive at ${farmer.email} shortly.` });
 
-    const emailOpts = {
-      farmerName:   farmer.name,
-      shopName:     req.admin.shopName || "Milkify Dairy",
-      startDate,
-      endDate,
-      totalLiters:  summary.totalLiters,
-      avgFat:       summary.avgFat,
-      avgSnf:       summary.avgSnf,
-      totalAmount:  summary.totalAmount,
-      totalEntries: entries.length,
-    };
+    // Generate PDF and send email asynchronously in the background
+    (async () => {
+      try {
+        const pdfBuffer = await generateBillingPdfBuffer(pdfData, lang);
 
-    await transporter.sendMail({
-      from:    `"${req.admin.shopName || "Milkify Dairy"}" <${process.env.SMTP_EMAIL}>`,
-      to:      farmer.email,
-      subject: `Your Milk Collection Bill – ${startDate} to ${endDate}`,
-      html:    billingEmailHtml(emailOpts),
-      text:    billingEmailText(emailOpts),
-      attachments: [{
-        filename:    `Bill_${farmer.name}_${startDate}.pdf`,
-        content:     pdfBuffer,
-        contentType: "application/pdf",
-      }],
-    });
+        const emailOpts = {
+          farmerName:   farmer.name,
+          shopName:     req.admin.shopName || "Milkify Dairy",
+          startDate,
+          endDate,
+          totalLiters:  summary.totalLiters,
+          avgFat:       summary.avgFat,
+          avgSnf:       summary.avgSnf,
+          totalAmount:  summary.totalAmount,
+          totalEntries: entries.length,
+        };
 
-    console.log(`[Billing] Bill emailed to ${farmer.email} for farmer ${farmer.name}`);
-    return res.status(200).json({ success: true, message: `Bill sent to ${farmer.email}` });
+        await transporter.sendMail({
+          from:    `"${req.admin.shopName || "Milkify Dairy"}" <${process.env.SMTP_EMAIL}>`,
+          to:      farmer.email,
+          subject: `📄 Milk Collection Bill Statement: ${startDate} to ${endDate} | ${req.admin.shopName || "Milkify Dairy"}`,
+          html:    billingEmailHtml(emailOpts),
+          text:    billingEmailText(emailOpts),
+          attachments: [{
+            filename:    `Bill_${farmer.name}_${startDate}.pdf`,
+            content:     pdfBuffer,
+            contentType: "application/pdf",
+          }],
+        });
+        console.log(`[Billing] Bill emailed to ${farmer.email} for farmer ${farmer.name}`);
+      } catch (bgError) {
+        console.error("[Billing] Background Email/PDF generation error:", bgError);
+      }
+    })();
 
   } catch (error) {
-    console.error("[Billing] Email send error:", error);
-    return res.status(500).json({ message: "Failed to send email", error: error.message });
+    console.error("[Billing] Email request error:", error);
+    if (!res.headersSent) {
+      return res.status(500).json({ message: "Failed to process email request", error: error.message });
+    }
   }
 };
 

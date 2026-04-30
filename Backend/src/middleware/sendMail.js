@@ -19,10 +19,10 @@ const sendMail = (req, res, next) => {
     return next();
   }
 
-  const shiftLabel  = shift === "morning" ? "🌅 Morning" : "🌆 Evening";
-  const catLabel    = category.charAt(0).toUpperCase() + category.slice(1);
-  const amountFmt   = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 }).format(calculatedAmount);
-  const rateFmt     = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 }).format(rate);
+  const shiftLabel = shift === "morning" ? "🌅 Morning" : "🌆 Evening";
+  const catLabel = category.charAt(0).toUpperCase() + category.slice(1);
+  const amountFmt = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 }).format(calculatedAmount);
+  const rateFmt = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 }).format(rate);
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -91,13 +91,14 @@ const sendMail = (req, res, next) => {
             <td colspan="2" style="padding:10px 16px;font-size:11px;font-weight:700;color:#475569;letter-spacing:1px;text-transform:uppercase;">Collection Details</td>
           </tr>
           ${[
-            ["📅 Date & Time", date],
-            ["🕐 Shift", shiftLabel],
-            ["🐄 Category", catLabel],
-            ["💧 Water", `${water}%`],
-            ["🌡️ Degree", `${degree}°`],
-            ["💰 Rate / Ltr", rateFmt],
-          ].map(([label, value], i) => `
+      ["📅 Date & Time", date],
+      ["🕐 Shift", shiftLabel],
+      ["🐄 Category", catLabel],
+      ["💧 Water", `${water}%`],
+      ["🌡️ Degree", `${degree}°`],
+      ["💰 Rate / Ltr", rateFmt],
+      ["🥛 Litter ", litter],
+    ].map(([label, value], i) => `
           <tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'};">
             <td style="padding:10px 16px;font-size:13px;color:#64748b;border-top:1px solid #f1f5f9;">${label}</td>
             <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#1e293b;text-align:right;border-top:1px solid #f1f5f9;">${value}</td>
@@ -127,14 +128,14 @@ const sendMail = (req, res, next) => {
 </html>`;
 
   transporter.sendMail({
-    from:    `"Milkify Dairy" <${process.env.SMTP_EMAIL}>`,
-    to:      email,
-    subject: `✅ Milk Collected — ${litter}L · ${amountFmt} | ${date}`,
+    from: `"Milkify Dairy" <${process.env.SMTP_EMAIL}>`,
+    to: email,
+    subject: `📄 Daily Milk Receipt: ${litter}L · ${amountFmt} | ${date}`,
     html,
     text: `Hello ${name},\nYour milk collection has been recorded.\n\nDate: ${date}\nShift: ${shift}\nCategory: ${category}\nVolume: ${litter} L\nFAT: ${fat}% | SNF: ${snf}\nAmount: ${amountFmt}\n\nThank you!\nMilkify`,
   }, (error, info) => {
     if (error) console.error("[Mail] Email error:", error.message);
-    else        console.log(`[Mail] Sent to ${email}:`, info.response);
+    else console.log(`[Mail] Sent to ${email}:`, info.response);
     next();
   });
 };
