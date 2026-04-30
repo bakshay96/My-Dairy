@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import BillingTable from "@/components/billing/BillingTable";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Calendar, Download, Filter, Search } from "lucide-react";
+import { Calendar, Download, Filter, Search, CheckCircle2, User, CreditCard, CalendarDays, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatIndianDate, formatRupees } from "@/lib/utils";
 import MilkifyLoader from "@/components/ui/Loader";
@@ -358,41 +358,86 @@ export default function BillingPage() {
       </Card>
       </>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Settlement History</CardTitle>
-            <CardDescription>Farmer-wise paid settlement records.</CardDescription>
+        <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+          <CardHeader className="border-b border-gray-100 dark:border-slate-800 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Settlement History</CardTitle>
+                <CardDescription>Verified payment records for settled cycles.</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             {filteredSettlements.length === 0 ? (
-              <p className="text-sm text-gray-500">No settled payments found.</p>
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-slate-500">
+                <Receipt className="h-12 w-12 mb-4 opacity-20" />
+                <p className="text-sm">No settled payments found for this period.</p>
+              </div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredSettlements.map((p) => (
-                  <div key={p._id} className="border rounded-md p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="font-semibold">{p.farmerId?.name || "Unknown Farmer"}</p>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Paid</span>
+                  <div key={p._id} className="group relative bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-5 hover:border-emerald-400 dark:hover:border-emerald-500/50 transition-all duration-300 shadow-sm hover:shadow-md">
+                    {/* Status Badge */}
+                    <div className="absolute top-4 right-4">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Settled
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-600">{p.farmerId?.mobile || "-"}</p>
-                    <p className="text-sm mt-1">
-                      Range: {formatIndianDate(p.billingStartDate || p.notes?.cycleStart)} - {formatIndianDate(p.billingEndDate || p.notes?.cycleEnd)}
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 text-xs">
-                      <p>Total Liters: <strong>{Number(p.notes?.totalLiters || 0).toFixed(2)}</strong></p>
-                      <p>Avg FAT: <strong>{Number(p.notes?.avgFat || 0).toFixed(2)}</strong></p>
-                      <p>Entries: <strong>{p.notes?.totalEntries || 0}</strong></p>
-                      <p>Amount: <strong>{formatRupees((p.amount || 0) / 100)}</strong></p>
+
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/30 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                        <User className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          {p.farmerId?.name || "Unknown Farmer"}
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                          {p.farmerId?.mobile || "N/A"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
-                      <p>
-                        Mode/Channel: <strong>{p.paymentMode || "-"} / {p.paymentChannel || "-"}</strong>
-                      </p>
-                      <p>
-                        Reference: <strong>{p.notes?.referenceId || p.notes?.payoutMeta?.payoutId || "-"}</strong>
-                      </p>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800/50">
+                        <CalendarDays className="h-4 w-4 text-blue-500" />
+                        <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                          {formatIndianDate(p.billingStartDate || p.notes?.cycleStart)} — {formatIndianDate(p.billingEndDate || p.notes?.cycleEnd)}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 py-1">
+                        <div className="bg-slate-50/50 dark:bg-slate-900/30 p-2 rounded-lg border border-slate-100/50 dark:border-slate-800/30">
+                          <p className="text-[10px] text-slate-500 uppercase font-bold mb-0.5">Volume</p>
+                          <p className="text-sm font-black dark:text-white">{Number(p.notes?.totalLiters || 0).toFixed(2)} <span className="text-[10px] font-medium opacity-60">Ltr</span></p>
+                        </div>
+                        <div className="bg-slate-50/50 dark:bg-slate-900/30 p-2 rounded-lg border border-slate-100/50 dark:border-slate-800/30">
+                          <p className="text-[10px] text-slate-500 uppercase font-bold mb-0.5">Avg FAT</p>
+                          <p className="text-sm font-black dark:text-white">{Number(p.notes?.avgFat || 0).toFixed(2)}<span className="text-[10px] font-medium opacity-60">%</span></p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-emerald-50/30 dark:bg-emerald-900/10 rounded-xl border border-emerald-100/50 dark:border-emerald-800/30">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-500 uppercase tracking-tight">{p.paymentMode || "Cash"}</span>
+                        </div>
+                        <p className="text-lg font-black text-emerald-700 dark:text-emerald-400">
+                          {formatRupees((p.amount || 0) / 100)}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <div className="flex justify-between items-center text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold">
+                          <span>Ref: {p.notes?.referenceId || p.notes?.payoutMeta?.payoutId || "CASH-SETTLED"}</span>
+                          <span>{p.internalOrderId?.slice(-8)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Order: {p.internalOrderId}</p>
                   </div>
                 ))}
               </div>

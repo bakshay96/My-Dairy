@@ -127,7 +127,7 @@ export default function BillingSlipModal({ slipData, isOpen, onClose, initialLan
   const isPaid = payment?.status === "paid";
 
   return (
-    <div className="fixed inset-0 z-[70] flex justify-end bg-black/50 backdrop-blur-sm print:bg-white print:static">
+    <div className="fixed inset-0 z-[70] flex justify-center bg-black/50 backdrop-blur-sm print:bg-white print:static">
       <div
         id="thermal-slip"
         ref={modalRef}
