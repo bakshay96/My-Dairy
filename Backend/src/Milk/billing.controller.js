@@ -2,6 +2,9 @@ const { MilkModel } = require("./milk.model");
 const { getBillingCycleDate, getBillingCycleEnd } = require("../utils/milkCalculator");
 const mongoose = require("mongoose");
 const { farmerModel } = require("../Farmer/farmer.model");
+const { generateBillingPdf, generateBillingPdfBuffer } = require("../utils/pdfGenerator");
+const { billingEmailHtml, billingEmailText } = require("../utils/billingEmailTemplate");
+const { transporter } = require("../connection/mailConnection");
 
 function getDefaultLastTenDayRange() {
   const end = new Date();
@@ -471,6 +474,7 @@ exports.getBillingSlipData = async (req, res) => {
         dateRange: { startDate, endDate },
         farmer: {
           id: farmer._id,
+          memberId: farmer.memberId,
           name: farmer.name,
           mobile: farmer.mobile,
           village: farmer.village,
@@ -494,11 +498,159 @@ exports.getBillingSlipData = async (req, res) => {
   }
 };
 
-// ─── GET /api/billing/breakdown/:farmerId ────────────────────────────────────
+// ─── GET /api/billing/pdf/:farmerId ──────────────────────────────────────────
 /**
- * Detailed array of every milk entry for a farmer within a date range.
+ * Generates and returns a premium PDF billing slip.
  * Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD)
  */
+exports.generateBillingSlipPdf = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+    const adminId = new mongoose.Types.ObjectId(req.admin._id);
+    const { start, end, startDate, endDate } = buildDateRange(req.query);
+
+    const [farmer, entries] = await Promise.all([
+      farmerModel.findOne({ _id: farmerId, adminId }).lean(),
+      MilkModel.find({
+        adminId,
+        farmerId: new mongoose.Types.ObjectId(farmerId),
+        createdAt: { $gte: start, $lte: end },
+      })
+        .select("createdAt shift category litter fat snf calculatedAmount")
+        .sort({ createdAt: 1 })
+        .lean(),
+    ]);
+
+    if (!farmer) return res.status(404).json({ message: "Farmer not found" });
+    if (!entries.length) return res.status(404).json({ message: "No entries found for this range" });
+
+    const totals = entries.reduce(
+      (acc, entry) => {
+        acc.totalLiters += Number(entry.litter || 0);
+        acc.totalAmount += Number(entry.calculatedAmount || 0);
+        acc.totalFat += Number(entry.fat || 0);
+        acc.totalSnf += Number(entry.snf || 0);
+        return acc;
+      },
+      { totalLiters: 0, totalAmount: 0, totalFat: 0, totalSnf: 0 }
+    );
+
+    const summary = {
+      totalLiters: totals.totalLiters,
+      totalAmount: totals.totalAmount,
+      avgFat: totals.totalFat / entries.length,
+      avgSnf: totals.totalSnf / entries.length,
+    };
+
+    const pdfData = {
+      adminShopName: req.admin.shopName || "Milkify Dairy",
+      dateRange: { startDate, endDate },
+      farmer: { id: farmer._id, memberId: farmer.memberId, name: farmer.name, mobile: farmer.mobile, village: farmer.village },
+      summary,
+      entries,
+    };
+
+    const lang = ["en", "hi", "mr"].includes(req.query.lang) ? req.query.lang : "en";
+
+    await generateBillingPdf(pdfData, res, lang);
+
+  } catch (error) {
+    console.error("[Billing] PDF Generation error:", error);
+    res.status(500).json({ message: "Error generating PDF", error: error.message });
+  }
+};
+
+// ─── POST /api/billing/email/:farmerId ──────────────────────────────────────────────────────
+/**
+ * Generates PDF billing slip and sends it to the farmer's email.
+ * Query params: startDate, endDate, lang
+ */
+exports.sendBillingEmail = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+    const adminId = new mongoose.Types.ObjectId(req.admin._id);
+    const { start, end, startDate, endDate } = buildDateRange(req.query);
+    const lang = ["en", "hi", "mr"].includes(req.query.lang) ? req.query.lang : "en";
+
+    const [farmer, entries] = await Promise.all([
+      farmerModel.findOne({ _id: farmerId, adminId }).lean(),
+      MilkModel.find({
+        adminId,
+        farmerId: new mongoose.Types.ObjectId(farmerId),
+        createdAt: { $gte: start, $lte: end },
+      })
+        .select("createdAt shift category litter fat snf calculatedAmount")
+        .sort({ createdAt: 1 })
+        .lean(),
+    ]);
+
+    if (!farmer)         return res.status(404).json({ message: "Farmer not found" });
+    if (!farmer.email)   return res.status(400).json({ message: "Farmer does not have an email address on record" });
+    if (!entries.length) return res.status(404).json({ message: "No entries found for this date range" });
+
+    const totals = entries.reduce(
+      (acc, e) => {
+        acc.totalLiters += Number(e.litter || 0);
+        acc.totalAmount += Number(e.calculatedAmount || 0);
+        acc.totalFat    += Number(e.fat || 0);
+        acc.totalSnf    += Number(e.snf || 0);
+        return acc;
+      },
+      { totalLiters: 0, totalAmount: 0, totalFat: 0, totalSnf: 0 }
+    );
+
+    const summary = {
+      totalLiters:  totals.totalLiters,
+      totalAmount:  totals.totalAmount,
+      avgFat:       totals.totalFat / entries.length,
+      avgSnf:       totals.totalSnf / entries.length,
+    };
+
+    const pdfData = {
+      adminShopName: req.admin.shopName || "Milkify Dairy",
+      dateRange: { startDate, endDate },
+      farmer: { id: farmer._id, memberId: farmer.memberId, name: farmer.name, mobile: farmer.mobile, village: farmer.village },
+      summary,
+      entries,
+    };
+
+    // Generate PDF as a buffer
+    const pdfBuffer = await generateBillingPdfBuffer(pdfData, lang);
+
+    const emailOpts = {
+      farmerName:   farmer.name,
+      shopName:     req.admin.shopName || "Milkify Dairy",
+      startDate,
+      endDate,
+      totalLiters:  summary.totalLiters,
+      avgFat:       summary.avgFat,
+      avgSnf:       summary.avgSnf,
+      totalAmount:  summary.totalAmount,
+      totalEntries: entries.length,
+    };
+
+    await transporter.sendMail({
+      from:    `"${req.admin.shopName || "Milkify Dairy"}" <${process.env.SMTP_EMAIL}>`,
+      to:      farmer.email,
+      subject: `Your Milk Collection Bill – ${startDate} to ${endDate}`,
+      html:    billingEmailHtml(emailOpts),
+      text:    billingEmailText(emailOpts),
+      attachments: [{
+        filename:    `Bill_${farmer.name}_${startDate}.pdf`,
+        content:     pdfBuffer,
+        contentType: "application/pdf",
+      }],
+    });
+
+    console.log(`[Billing] Bill emailed to ${farmer.email} for farmer ${farmer.name}`);
+    return res.status(200).json({ success: true, message: `Bill sent to ${farmer.email}` });
+
+  } catch (error) {
+    console.error("[Billing] Email send error:", error);
+    return res.status(500).json({ message: "Failed to send email", error: error.message });
+  }
+};
+
 exports.getFarmerBillingBreakdown = async (req, res) => {
   try {
     const { farmerId } = req.params;

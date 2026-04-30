@@ -7,6 +7,8 @@ const {
   getTenDayBilling,
   getFarmerBillingBreakdown,
   getBillingSlipData,
+  generateBillingSlipPdf,
+  sendBillingEmail,
 } = require("./billing.controller");
 
 const billingRouter = express.Router();
@@ -18,6 +20,8 @@ billingRouter.get("/slip/:farmerId",   getBillingSlipData);
 billingRouter.get("/all",              getAllFarmersBillingSummary);
 billingRouter.get("/farmer/:farmerId", getFarmerBillingSummary);
 billingRouter.get("/breakdown/:farmerId", getFarmerBillingBreakdown);
+billingRouter.get("/pdf/:farmerId",   generateBillingSlipPdf);
+billingRouter.post("/email/:farmerId", sendBillingEmail);
 
 module.exports = { billingRouter };
 // No extra code here.

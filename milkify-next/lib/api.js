@@ -21,6 +21,11 @@
               (response) => {
                 // If the backend returned a standardized response, extract the inner data
                 // The backend uses responseInterceptor.middleware.js which wraps the actual payload in response.data.data
+                // If the response is a Blob (for PDF downloads), don't try to unwrap it
+                if (response.data instanceof Blob) {
+                  return response;
+                }
+                
                 if (response.data && response.data.success !== undefined && response.data.data !== undefined) {
                   // Modify the response so res.data points directly to the actual payload
                   response.data = response.data.data;
