@@ -32,7 +32,6 @@ const userSchema = new mongoose.Schema(
 			maxlength: "10",
 			minlength: "10",
 			index: true,
-			unique: true,
 		},
 		status: {
 			type: String,
@@ -59,7 +58,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // Indexes for optimized queries
-userSchema.index({ adminId: 1, mobile: 1 });
+userSchema.index({ adminId: 1, mobile: 1 }, { unique: true });
 userSchema.index({ adminId: 1, name: 1 });
 userSchema.index({ adminId: 1, status: 1 });
 userSchema.index({ createdAt: -1 });

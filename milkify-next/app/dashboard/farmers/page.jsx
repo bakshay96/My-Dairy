@@ -6,8 +6,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatRupees, formatIndianDate } from "@/lib/utils";
 import MilkifyLoader from "@/components/ui/Loader";
-import { Search, Eye, Pencil, X, Loader2, CheckCircle2, AlertCircle, Users, Phone, Calendar } from "lucide-react";
+import { 
+  Search, Eye, Pencil, X, Loader2, CheckCircle2, 
+  AlertCircle, Users, Phone, Calendar, MessageCircle 
+} from "lucide-react";
 import { toast } from "@/lib/toast";
+
+// ─── Utility: Send WhatsApp Message ──────────────────────────────────────────
+const sendWhatsApp = (mobile, message = "") => {
+  // Ensure number is in international format (defaulting to Indian +91 if 10 digits)
+  const cleanNumber = mobile.replace(/\D/g, "");
+  const finalNumber = cleanNumber.length === 10 ? `91${cleanNumber}` : cleanNumber;
+  const url = `https://wa.me/${finalNumber}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
+  window.open(url, "_blank");
+};
 
 // ─── Farmer Detail / Edit Drawer ──────────────────────────────────────────────
 function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
@@ -161,8 +173,19 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
                   {farmer?.name?.[0]?.toUpperCase()}
                 </div>
                 <h3 className="font-bold text-gray-900">{farmer?.name}</h3>
-                <div className="flex items-center gap-1.5 mt-1 text-sm text-gray-600">
-                  <Phone className="h-3.5 w-3.5" />{farmer?.mobile}
+                <div className="flex items-center justify-between mt-1">
+                  <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                    <Phone className="h-3.5 w-3.5" />{farmer?.mobile}
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 gap-1.5 font-bold"
+                    onClick={() => sendWhatsApp(farmer?.mobile, `Hello ${farmer?.name}, this is regarding your milk collection at Milkify Dairy.`)}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
+                  </Button>
                 </div>
                 {farmer?.email && (
                   <p className="text-sm text-gray-500 mt-0.5">{farmer.email}</p>
@@ -480,6 +503,13 @@ export default function FarmersPage() {
                       </td>
                       <td className="px-4 py-3.5 text-center">
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => sendWhatsApp(f.mobile)}
+                            className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600 transition-colors"
+                            title="Message on WhatsApp"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </button>
                           <button
                             onClick={() => setDrawer({ farmer: f, mode: "view" })}
                             className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 transition-colors"

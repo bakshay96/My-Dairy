@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { AdminModel } = require("./admin.model");
+const { farmerModel } = require("../Farmer/farmer.model");
 const { transporter } = require("../connection/mailConnection");
 
 require("dotenv").config();
@@ -37,6 +38,26 @@ const adminRegistration = async (req, res) => {
         });
 
         const admin = await newAdmin.save();
+
+        // AUTO-CREATE FARMER ACCOUNT FOR ADMIN
+        try {
+          const selfFarmer = new farmerModel({
+            adminId: admin._id,
+            name: admin.name,
+            mobile: admin.mobile,
+            village: admin.village || "Self",
+            gender: admin.gender || "Male",
+            email: admin.email || "milkify@gmail.com",
+            memberId: "MI-000", // Special ID for owner
+            role: "Farmer",
+            status: "active"
+          });
+          await selfFarmer.save();
+        } catch (err) {
+          console.error("[Auth] Auto-farmer creation failed:", err.message);
+          // Don't fail the whole registration if this fails
+        }
+
         const payload = { id: admin.id };
 
         jwt.sign(
@@ -82,6 +103,24 @@ const registerAdmin = async (req, res) => {
 
     admin = new AdminModel({ ...req.body, key: password, password: hashedPassword });
     await admin.save();
+
+    // AUTO-CREATE FARMER ACCOUNT FOR ADMIN
+    try {
+      const selfFarmer = new farmerModel({
+        adminId: admin._id,
+        name: admin.name,
+        mobile: admin.mobile,
+        village: admin.village || "Self",
+        gender: admin.gender || "Male",
+        email: admin.email || "milkify@gmail.com",
+        memberId: "MI-000",
+        role: "Farmer",
+        status: "active"
+      });
+      await selfFarmer.save();
+    } catch (err) {
+      console.error("[Auth] Auto-farmer creation failed:", err.message);
+    }
 
     const payload = { id: admin.id };
     const token = jwt.sign(payload, process.env.JWT_SECRET, {

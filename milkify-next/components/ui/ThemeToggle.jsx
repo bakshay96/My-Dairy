@@ -30,18 +30,24 @@ export default function ThemeToggle() {
   const ActiveIcon = active.icon;
 
   return (
-    <button
-      onClick={() => {
-        const idx = order.indexOf(theme);
-        const next = order[(idx + 1) % order.length];
-        handleThemeChange(next);
-      }}
-      className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-xs hover:bg-muted transition-colors"
-      aria-label="Toggle theme mode"
-      title={`Theme: ${active.label}`}
-    >
-      <ActiveIcon className="h-3.5 w-3.5" />
-      <span>{active.label}</span>
-    </button>
+    <div className="flex items-center">
+      <button
+        onClick={() => {
+          const idx = order.indexOf(theme);
+          const next = order[(idx + 1) % order.length];
+          handleThemeChange(next);
+        }}
+        className="group relative flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm px-4 py-2 text-xs font-bold transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg hover:shadow-primary/5 active:scale-95"
+        aria-label="Toggle theme mode"
+      >
+        <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+          <ActiveIcon className="h-4 w-4" />
+        </div>
+        <div className="flex flex-col items-start leading-tight">
+          <span className="text-[10px] text-slate-400 uppercase tracking-tighter"></span>
+          <span className="text-slate-900 dark:text-white uppercase tracking-wider">{active.label}</span>
+        </div>
+      </button>
+    </div>
   );
 }
