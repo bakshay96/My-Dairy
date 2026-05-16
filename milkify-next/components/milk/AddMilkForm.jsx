@@ -129,6 +129,16 @@ export default function AddMilkForm() {
       setSuccessMsg(successText);
       toast.success("Milk entry added");
       
+      setAllFarmers(prev => prev.map(f => 
+        f._id === values.farmerId 
+          ? { 
+              ...f, 
+              submittedMorning: values.shift === "morning" ? true : f.submittedMorning,
+              submittedEvening: values.shift === "evening" ? true : f.submittedEvening
+            } 
+          : f
+      ));
+      
       form.reset({ category: values.category, fat: "", snf: "", degree: "", litter: "", farmerId: "", shift: values.shift });
       setSelectedFarmer(null);
       setTimeout(() => setSuccessMsg(""), 6000);
@@ -212,7 +222,12 @@ export default function AddMilkForm() {
                             >
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="font-bold text-sm text-slate-900 dark:text-white">{f.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-bold text-sm text-slate-900 dark:text-white">{f.name}</p>
+                                    {(watchShift === "morning" ? f.submittedMorning : f.submittedEvening) && (
+                                      <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[9px] px-1.5 py-0.5 rounded font-black tracking-widest uppercase">Submitted</span>
+                                    )}
+                                  </div>
                                   <p className="text-[10px] text-slate-500">{f.mobile}</p>
                                 </div>
                                 <div className="text-[10px] font-bold text-primary bg-primary/5 group-hover/row:bg-primary group-hover/row:text-white px-2 py-0.5 rounded transition-colors uppercase tracking-widest">Select</div>
@@ -232,6 +247,9 @@ export default function AddMilkForm() {
                         {selectedFarmer.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">{selectedFarmer.name}</span>
+                      {(watchShift === "morning" ? selectedFarmer.submittedMorning : selectedFarmer.submittedEvening) && (
+                        <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[9px] px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Submitted</span>
+                      )}
                     </div>
                     <button type="button" onClick={() => { setSelectedFarmer(null); form.setValue("farmerId", ""); }} className="text-slate-400 hover:text-red-500 transition-colors shrink-0">
                       <X className="h-4 w-4" />
@@ -343,6 +361,15 @@ export default function AddMilkForm() {
             </div>
 
             {/* Status Messages */}
+            {selectedFarmer && (watchShift === "morning" ? selectedFarmer.submittedMorning : selectedFarmer.submittedEvening) && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 rounded-xl text-[10px] sm:text-xs font-bold border border-amber-200 dark:border-amber-900/30 animate-in fade-in zoom-in-95">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">⚠️</span>
+                  Note: {selectedFarmer.name} has already submitted milk for the {watchShift} shift today.
+                </div>
+              </div>
+            )}
+
             {noRateError && (
               <div className="p-3 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-xl text-[10px] sm:text-xs font-bold border border-red-100 dark:border-red-900/30 animate-in fade-in zoom-in-95">
                 <div className="flex items-center gap-2">

@@ -1,4 +1,5 @@
 const { farmerModel } = require("./farmer.model");
+const { MilkModel } = require("../Milk/milk.model");
 
 // ─── Create Farmer ────────────────────────────────────────────────────────────
 exports.createFarmer = async (req, res) => {
@@ -49,8 +50,43 @@ exports.createFarmer = async (req, res) => {
 // ─── Get All Farmers (no pagination) ─────────────────────────────────────────
 exports.getAllFarmer = async (req, res) => {
   try {
-    const farmers = await farmerModel.find({ adminId: req.admin.id });
-    res.status(200).json({ count: farmers.length, farmers });
+    const farmers = await farmerModel.find({ adminId: req.admin.id }).lean();
+
+    // Determine current shift based on IST
+    const istHour = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })).getHours();
+    const currentShift = istHour < 12 ? "morning" : "evening";
+
+    // Get start of today in IST (stored as UTC)
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const nowIST = new Date(now.getTime() + istOffset);
+    nowIST.setUTCHours(0, 0, 0, 0);
+    const startOfTodayUTC = new Date(nowIST.getTime() - istOffset);
+
+    // Find all milk submissions for today
+    const todaySubmissions = await MilkModel.find({
+      adminId: req.admin.id,
+      createdAt: { $gte: startOfTodayUTC }
+    }).select('farmerId shift').lean();
+
+    const morningFarmerIds = new Set();
+    const eveningFarmerIds = new Set();
+
+    todaySubmissions.forEach(m => {
+      if (m.shift === 'morning') morningFarmerIds.add(m.farmerId.toString());
+      if (m.shift === 'evening') eveningFarmerIds.add(m.farmerId.toString());
+    });
+
+    const farmersWithStatus = farmers.map(f => {
+      const fId = f._id.toString();
+      return {
+        ...f,
+        submittedMorning: morningFarmerIds.has(fId),
+        submittedEvening: eveningFarmerIds.has(fId),
+      };
+    });
+
+    res.status(200).json({ count: farmersWithStatus.length, farmers: farmersWithStatus });
   } catch (error) {
     res.status(500).json({ message: "Something went wrong", error: error.message });
   }
