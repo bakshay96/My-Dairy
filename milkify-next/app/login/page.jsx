@@ -10,6 +10,7 @@ import {
   Loader2, Phone, Lock, User, MapPin, Building, Mail, 
   ChevronRight, Eye, EyeOff 
 } from "lucide-react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { Card, CardContent} from "@/components/ui/card";
@@ -120,7 +121,14 @@ function AuthContent() {
     checkSession();
   }, [router, setAuth]);
 
-  if (checkingSession) return null;
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p className="text-slate-500 font-medium animate-pulse">Checking secure session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 flex flex-col">
@@ -351,8 +359,9 @@ function AuthContent() {
         </div>
       </main>
       
-      <footer className="p-6 text-center text-slate-400 text-xs">
-        &copy; {new Date().getFullYear()} Milkify Dairy Systems. All rights reserved.
+      <footer className="p-6 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+        <span>&copy; {new Date().getFullYear()} Milkify Dairy Systems. All rights reserved.</span>
+        <Link href="/master/login" className="text-slate-300 hover:text-primary transition-colors">Master Access</Link>
       </footer>
     </div>
   );

@@ -33,12 +33,20 @@
                 return response;
               },
               (error) => {
+                if (error.response?.status === 402 && typeof window !== "undefined") {
+                  if (window.location.pathname !== "/dashboard/subscription") {
+                    window.location.href = "/dashboard/subscription";
+                  }
+                  return Promise.reject(error);
+                }
+
                 if (error.response?.status === 401 && typeof window !== "undefined") {
                   const requestUrl = String(error.config?.url || "");
                   const pathname = window.location.pathname;
-                  const isAuthPage = pathname === "/login" || pathname === "/register";
+                  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/master/login";
                   const isAuthEndpoint =
                     requestUrl.includes("/admin/login") ||
+                    requestUrl.includes("/master/login") ||
                     requestUrl.includes("/admin/register") ||
                     requestUrl.includes("/admin/me");
 
