@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Tag, DollarSign, LogOut, Loader2, ArrowRight } from "lucide-react";
+import { LayoutDashboard, Tag, DollarSign, LogOut, Loader2, ArrowRight, Settings } from "lucide-react";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ const navItems = [
   { name: "Overview", href: "/master/dashboard", icon: LayoutDashboard },
   { name: "Pricing Plans", href: "/master/dashboard/pricing", icon: DollarSign },
   { name: "Promo Codes", href: "/master/dashboard/promos", icon: Tag },
+  { name: "Settings & Team", href: "/master/dashboard/settings", icon: Settings },
 ];
 
 export default function MasterDashboardLayout({ children }) {
@@ -40,11 +41,33 @@ export default function MasterDashboardLayout({ children }) {
     checkAuth();
   }, [router]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("master_token");
     delete api.defaults.headers.common["Authorization"];
     router.push("/master/login");
-  };
+  }, [router]);
+
+  // Session Inactivity Timeout (30 mins)
+  useEffect(() => {
+    let timeout;
+    const resetTimer = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        handleLogout();
+        toast.error("Master session expired due to inactivity");
+      }, 30 * 60 * 1000); // 30 minutes
+    };
+
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keypress", resetTimer);
+    resetTimer();
+
+    return () => {
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keypress", resetTimer);
+      clearTimeout(timeout);
+    };
+  }, [handleLogout]);
 
   if (loading) {
     return (

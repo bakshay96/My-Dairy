@@ -21,6 +21,8 @@ const sanitizeInput = (req, res, next) => {
     for (const [key, value] of Object.entries(req.body)) {
       if (typeof value === 'string') {
         sanitizedBody[key] = sanitizeString(value);
+      } else if (Array.isArray(value)) {
+        sanitizedBody[key] = value;
       } else if (typeof value === 'object' && value !== null) {
         // Deep sanitize for nested objects
         sanitizedBody[key] = sanitizeObject(value);
@@ -60,8 +62,8 @@ const sanitizeInput = (req, res, next) => {
   next();
 };
 
-// Helper function for deep object sanitization
 function sanitizeObject(obj) {
+  if (Array.isArray(obj)) return obj;
   const sanitized = {};
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === 'string') {
@@ -72,7 +74,9 @@ function sanitizeObject(obj) {
         .replace(/'/g, '&#x27;')
         .replace(/\//g, '&#x2F;')
         .trim();
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    } else if (Array.isArray(value)) {
+      sanitized[key] = value;
+    } else if (typeof value === 'object' && value !== null) {
       sanitized[key] = sanitizeObject(value);
     } else {
       sanitized[key] = value;

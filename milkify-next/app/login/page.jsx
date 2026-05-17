@@ -29,10 +29,14 @@ const registerSchema = z.object({
   name: z.string().min(2, "Name is required"),
   mobile: z.string().regex(/^\d{10}$/, "Mobile number must be exactly 10 digits"),
   password: z.string().min(4, "Password must be at least 4 characters"),
+  confirmPassword: z.string().min(4, "Password confirmation is required"),
   village: z.string().min(2, "Village is required"),
   shopName: z.string().min(2, "Shop name is required"),
   email: z.string().email("Please enter a valid email"),
   gender: z.enum(["Male", "Female", "Other"]).default("Male"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 import { Suspense } from "react";
@@ -46,6 +50,19 @@ function AuthContent() {
   const [errorMsg, setErrorMsg] = useState("");
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "register" ? "register" : "login");
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Forgot password state
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+
+  // Registration Email OTP verification states
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Login Form
   const loginForm = useForm({
@@ -60,6 +77,7 @@ function AuthContent() {
       name: "",
       mobile: "",
       password: "",
+      confirmPassword: "",
       village: "",
       shopName: "",
       email: "",
@@ -85,11 +103,63 @@ function AuthContent() {
     }
   };
 
+  const sendEmailVerificationOtp = async () => {
+    const email = registerForm.getValues("email");
+    if (!email) {
+      toast.error("Please enter an email address first");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setSendingOtp(true);
+    try {
+      const res = await api.post("/admin/send-email-otp", { email });
+      if (res.data?.success) {
+        setOtpSent(true);
+        toast.success("Verification code sent successfully!");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send verification code");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const verifyEmailVerificationOtp = async () => {
+    const email = registerForm.getValues("email");
+    if (!otpCode || otpCode.trim().length !== 6) {
+      toast.error("Please enter a valid 6-digit OTP code");
+      return;
+    }
+
+    setVerifyingOtp(true);
+    try {
+      const res = await api.post("/admin/verify-email-otp", { email, otp: otpCode });
+      if (res.data?.success) {
+        setEmailVerified(true);
+        toast.success("Email verified successfully!");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Invalid or expired OTP code");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const onRegisterSubmit = async (values) => {
+    if (!emailVerified) {
+      toast.error("Please verify your email address using OTP first");
+      return;
+    }
     setLoading(true);
     setErrorMsg("");
     try {
-      const res = await api.post("/admin/register", values);
+      const registerData = { ...values };
+      delete registerData.confirmPassword;
+      const res = await api.post("/admin/register", registerData);
       if (res.data?.admin) {
         setAuth(res.data.admin, null, res.data.sessionExpiresAt || null);
       }
@@ -100,6 +170,22 @@ function AuthContent() {
       setErrorMsg(error.response?.data?.message || "Registration failed.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return toast.error("Please enter your email");
+    setForgotLoading(true);
+    try {
+      await api.post("/admin/forgot-password", { email: forgotEmail });
+      toast.success("New password sent to your email!");
+      setForgotModalOpen(false);
+      setForgotEmail("");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to reset password");
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -140,12 +226,10 @@ function AuthContent() {
       <main className="flex-1 flex items-center justify-center p-4 md:p-6 -mt-12">
         <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-12 items-center">
           
-          {/* Left Side: Visuals (Hidden on mobile) */}
           <div className="hidden lg:block">
             <AuthArt />
           </div>
 
-          {/* Right Side: Auth Form */}
           <div className="flex justify-center lg:justify-start">
             <Card className="w-full max-w-md border-none shadow-2xl bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
               <div className="p-1 flex bg-slate-100 dark:bg-slate-800 m-6 rounded-2xl">
@@ -223,6 +307,12 @@ function AuthContent() {
                           {loginForm.formState.errors.password && (
                             <p className="text-[10px] text-red-500 font-bold ml-1">{loginForm.formState.errors.password.message}</p>
                           )}
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button type="button" onClick={() => setForgotModalOpen(true)} className="text-sm font-bold text-primary hover:text-primary/80 transition-colors">
+                            Forgot Password?
+                          </button>
                         </div>
 
                         {errorMsg && (
@@ -304,33 +394,107 @@ function AuthContent() {
 
                         <div className="space-y-1.5">
                           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Email Address</label>
-                          <div className="relative group">
-                            <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
-                            <input
-                              type="email"
-                              {...registerForm.register("email")}
-                              placeholder="example@milkify.com"
-                              className="w-full h-10 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                            />
+                          <div className="flex gap-2">
+                            <div className="relative flex-1 group">
+                              <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+                              <input
+                                type="email"
+                                disabled={emailVerified}
+                                {...registerForm.register("email")}
+                                placeholder="example@milkify.com"
+                                className="w-full h-10 bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                              />
+                            </div>
+                            {!emailVerified && (
+                              <button
+                                type="button"
+                                disabled={sendingOtp}
+                                onClick={sendEmailVerificationOtp}
+                                className="h-10 px-4 text-xs font-extrabold bg-primary text-white rounded-xl hover:bg-primary/95 transition-all duration-200 disabled:opacity-50 flex items-center gap-1.5 shadow-md shadow-primary/10"
+                              >
+                                {sendingOtp ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                                {otpSent ? "Resend" : "Send OTP"}
+                              </button>
+                            )}
                           </div>
+                          {emailVerified && (
+                            <p className="text-[11px] text-green-600 dark:text-green-400 font-extrabold flex items-center gap-1 mt-1 ml-1 animate-fade-in">
+                              <span>✓</span> Email successfully verified!
+                            </p>
+                          )}
                         </div>
 
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Create Password</label>
-                          <div className="relative group">
-                            <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
-                            <input
-                              type={showPassword ? "text" : "password"}
-                              {...registerForm.register("password")}
-                              className="w-full h-10 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-primary transition-colors"
-                            >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
+                        {otpSent && !emailVerified && (
+                          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800/80 rounded-2xl space-y-2.5 animate-scale-up">
+                            <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Enter 6-Digit OTP</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                maxLength={6}
+                                placeholder="123456"
+                                value={otpCode}
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                                className="w-full h-10 tracking-[0.5em] text-center font-black border dark:border-slate-800 dark:bg-slate-950 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-base"
+                              />
+                              <button
+                                type="button"
+                                disabled={verifyingOtp}
+                                onClick={verifyEmailVerificationOtp}
+                                className="h-10 px-4 text-xs font-extrabold bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                              >
+                                {verifyingOtp ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                                Verify
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-slate-400 leading-normal">
+                              We sent a secure validation code to your email. Please enter it above.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Create Password</label>
+                            <div className="relative group">
+                              <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+                              <input
+                                type={showPassword ? "text" : "password"}
+                                {...registerForm.register("password")}
+                                className="w-full h-10 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-3 p-0.5 text-slate-400 hover:text-primary transition-colors"
+                              >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                            </div>
+                            {registerForm.formState.errors.password && (
+                              <p className="text-[10px] text-red-500 font-bold ml-1">{registerForm.formState.errors.password.message}</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Confirm Password</label>
+                            <div className="relative group">
+                              <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+                              <input
+                                type={showConfirmPassword ? "text" : "password"}
+                                {...registerForm.register("confirmPassword")}
+                                className="w-full h-10 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute right-3 top-3 p-0.5 text-slate-400 hover:text-primary transition-colors"
+                              >
+                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                            </div>
+                            {registerForm.formState.errors.confirmPassword && (
+                              <p className="text-[10px] text-red-500 font-bold ml-1">{registerForm.formState.errors.confirmPassword.message}</p>
+                            )}
                           </div>
                         </div>
 
@@ -340,15 +504,27 @@ function AuthContent() {
                           </div>
                         )}
 
-                        <Button type="submit" className="w-full h-12 rounded-xl text-sm font-bold shadow-lg shadow-primary/20 group" disabled={loading}>
-                          {loading ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                            <span className="flex items-center justify-center gap-2">
-                              Create Account <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                            </span>
+                        <div className="space-y-2 pt-2">
+                          <Button 
+                            type="submit" 
+                            className="w-full h-12 rounded-xl text-sm font-bold shadow-lg shadow-primary/20 group" 
+                            disabled={loading || !emailVerified}
+                          >
+                            {loading ? (
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <span className="flex items-center justify-center gap-2">
+                                Create Account <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                              </span>
+                            )}
+                          </Button>
+
+                          {!emailVerified && (
+                            <p className="text-[10px] text-center text-amber-600 dark:text-amber-400 font-extrabold flex items-center justify-center gap-1 py-1">
+                              ⚠️ Email verification with OTP is required to unlock registration.
+                            </p>
                           )}
-                        </Button>
+                        </div>
                       </form>
                     </motion.div>
                   )}
@@ -363,6 +539,42 @@ function AuthContent() {
         <span>&copy; {new Date().getFullYear()} Milkify Dairy Systems. All rights reserved.</span>
         <Link href="/master/login" className="text-slate-300 hover:text-primary transition-colors">Master Access</Link>
       </footer>
+
+      {/* Forgot Password Modal */}
+      {forgotModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
+            <button onClick={() => setForgotModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Reset Password</h2>
+            <p className="text-slate-500 text-sm mb-6">Enter your registered email address to receive a new temporary password.</p>
+            <form onSubmit={handleForgotPassword}>
+              <div className="space-y-4 mb-6">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="admin@example.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold flex items-center justify-center transition-all disabled:opacity-70"
+              >
+                {forgotLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Mail className="h-5 w-5 mr-2" />}
+                Send New Password
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

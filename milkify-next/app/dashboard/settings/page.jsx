@@ -5,15 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Settings, User, Loader2, CheckCircle2, AlertCircle,
+  Settings, Loader2, CheckCircle2, AlertCircle,
   TrendingUp, RefreshCw, Plus, X
 } from "lucide-react";
 import { formatRupees, formatIndianDate } from "@/lib/utils";
-import { toast } from "@/lib/toast";
 
 const CATEGORY_CONFIG = {
   cow:     { label: "Cow Milk",     emoji: "🐄", color: "bg-amber-50 border-amber-200 text-amber-800" },
@@ -189,17 +186,7 @@ function RateSidebarForm({ initialCategory, onClose, onSuccess }) {
 
 // ─── Main Settings Page ───────────────────────────────────────────────────────
 export default function SettingsPage() {
-  const user = useAuthStore((state) => state.user);
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const token = useAuthStore((state) => state.token);
-  const [profileForm, setProfileForm] = useState({
-    name: user?.name || "",
-    mobile: user?.mobile || "",
-    email: user?.email || "",
-    shopName: user?.shopName || "",
-    village: user?.village || "",
-  });
-  const [profileSaving, setProfileSaving] = useState(false);
+
 
   const [activeRates, setActiveRates] = useState([]);
   const [ratesLoading, setRatesLoading] = useState(true);
@@ -243,54 +230,8 @@ export default function SettingsPage() {
         <p className="text-muted-foreground mt-1">Manage rates and account configuration.</p>
       </div>
 
-      {/* ── Admin Profile ──────────────────────────────────────────────────── */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <User className="h-4 w-4 text-primary" /> Admin Profile
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            {[
-              { key: "name", label: "Name" },
-              { key: "mobile", label: "Mobile" },
-              { key: "email", label: "Email" },
-              { key: "shopName", label: "Shop" },
-              { key: "village", label: "Village" },
-            ].map(({ key, label }) => (
-              <div key={key}>
-                <label className="text-muted-foreground text-xs uppercase tracking-wide font-medium">{label}</label>
-                <input
-                  value={profileForm[key] || ""}
-                  onChange={(e) => setProfileForm((p) => ({ ...p, [key]: e.target.value }))}
-                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-                />
-              </div>
-            ))}
-          </div>
-          <div className="mt-4">
-            <Button
-              disabled={profileSaving}
-              onClick={async () => {
-                try {
-                  setProfileSaving(true);
-                  const res = await api.put("/admin/profile", profileForm);
-                  const updatedAdmin = res.data?.admin || res.data?.data?.admin;
-                  if (updatedAdmin) setAuth(updatedAdmin, token);
-                  toast.success("Profile updated");
-                } catch (error) {
-                  toast.error(error.response?.data?.message || "Profile update failed");
-                } finally {
-                  setProfileSaving(false);
-                }
-              }}
-            >
-              {profileSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Profile"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* ── Milk Rates Section ─────────────────────────────────────────────── */}
+
 
       {/* ── Milk Rates Section ─────────────────────────────────────────────── */}
       <div>

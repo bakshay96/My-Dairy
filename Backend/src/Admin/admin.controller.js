@@ -1,8 +1,9 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 const { AdminModel } = require("./admin.model");
-const { farmerModel } = require("../Farmer/farmer.model");
 const { transporter } = require("../connection/mailConnection");
+const { farmerModel } = require("../Farmer/farmer.model");
 
 require("dotenv").config();
 
@@ -276,6 +277,203 @@ const message = async (req, res) => {
   });
 };
 
+// ─── Forgot Password ──────────────────────────────────────────────────────────
+const adminForgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const admin = await AdminModel.findOne({ email });
+    if (!admin) return res.status(404).json({ success: false, message: "Email not found" });
+
+    const newPassword = Math.random().toString(36).slice(-8);
+    const salt = await bcrypt.genSalt(10);
+    admin.password = await bcrypt.hash(newPassword, salt);
+    admin.key = newPassword; // Store it for legacy support/debugging if needed
+    await admin.save();
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Your New Password - Milkify Admin",
+      text: `Hello ${admin.name},\n\nYour new temporary password is: ${newPassword}\n\nPlease log in and change it from the settings page.`
+    };
+
+    await transporter.sendMail(mailOptions);
+    return res.status(200).json({ success: true, message: "New password sent to your email" });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const changeAdminPassword = async (req, res) => {
+  try {
+    const oldPassword = req.body.oldPassword?.trim();
+    const newPassword = req.body.newPassword?.trim();
+
+    if (!oldPassword || !newPassword) {
+      return res.sendError("Old password and new password are required", 400);
+    }
+
+    if (oldPassword === newPassword) {
+      return res.sendError("New password cannot be the same as the old password", 400);
+    }
+    
+    const admin = await AdminModel.findById(req.admin.id);
+    if (!admin) return res.sendError("Admin not found", 404);
+
+    let passwordMatch = false;
+    if (admin.password && typeof admin.password === "string" && admin.password.startsWith("$2")) {
+      passwordMatch = await bcrypt.compare(oldPassword, admin.password);
+    } else if (admin.password) {
+      passwordMatch = admin.password === oldPassword;
+    }
+    if (!passwordMatch && admin.key) {
+      passwordMatch = admin.key === oldPassword;
+    }
+    if (!passwordMatch) {
+      return res.sendError("Incorrect old password", 401);
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    admin.password = await bcrypt.hash(newPassword, salt);
+    admin.key = newPassword;
+    await admin.save();
+
+    // Send security notification email immediately
+    const senderEmail = process.env.SMTP_EMAIL || process.env.EMAIL_USER || "care.abtech@gmail.com";
+    if (admin.email) {
+      const mailOptions = {
+        from: senderEmail,
+        to: admin.email,
+        subject: "Security Notification: Password Changed - Milkify",
+        html: `
+          <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px; color: #333; background-color: #f8fafc;">
+              <div style="max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: #ffffff;">
+                <div style="background-color: #2563eb; color: white; padding: 20px; text-align: center;">
+                  <h2 style="margin: 0; font-size: 24px;">Security Alert</h2>
+                </div>
+                <div style="padding: 24px; line-height: 1.6;">
+                  <p>Hello <strong>${admin.name}</strong>,</p>
+                  <p>This is a security notification confirming that your account password for <strong>Milkify</strong> was updated successfully on <strong>${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</strong>.</p>
+                  <p>If you did initiate this change, no further action is required.</p>
+                  <div style="background-color: #f8fafc; border-left: 4px solid #ef4444; padding: 12px; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #ef4444; font-weight: bold;">If you did not request this password change:</p>
+                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #475569;">Please contact our support team immediately or request a password recovery from the login page to secure your account.</p>
+                  </div>
+                  <p>Best regards,<br/><strong>Team Milkify Security</strong></p>
+                </div>
+                <div style="background-color: #f1f5f9; text-align: center; padding: 12px; font-size: 12px; color: #64748b;">
+                  This is an automated notification. Please do not reply to this email.
+                </div>
+              </div>
+            </body>
+          </html>
+        `
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`[Security] Password change notification email sent to ${admin.email}`);
+      } catch (emailErr) {
+        console.error("[Security] Failed to send password change notification email:", emailErr.message);
+      }
+    }
+
+    return res.sendSuccess(null, "Password changed successfully");
+  } catch (error) {
+    return res.sendError(error.message, 500);
+  }
+};
+
+// ─── OTP Schema & Model ───────────────────────────────────────────────────────
+const otpSchema = new mongoose.Schema({
+  email: { type: String, required: true, index: true },
+  otp: { type: String, required: true },
+  expiresAt: { type: Date, default: () => new Date(Date.now() + 10 * 60 * 1000), index: { expires: 0 } }
+});
+const OtpModel = mongoose.models.Otp || mongoose.model("Otp", otpSchema);
+
+// ─── Send Email OTP ───────────────────────────────────────────────────────────
+const sendEmailOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    // Generate random 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Overwrite previous OTPs for this email
+    await OtpModel.findOneAndDelete({ email });
+    const newOtp = new OtpModel({ email, otp });
+    await newOtp.save();
+
+    const senderEmail = process.env.SMTP_EMAIL || process.env.EMAIL_USER || "care.abtech@gmail.com";
+    const mailOptions = {
+      from: senderEmail,
+      to: email,
+      subject: "Verification Code: Register Admin - Milkify",
+      html: `
+        <html>
+          <body style="font-family: Arial, sans-serif; padding: 20px; color: #333; background-color: #f8fafc;">
+            <div style="max-width: 550px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: #ffffff;">
+              <div style="background-color: #2563eb; color: white; padding: 24px; text-align: center;">
+                <h2 style="margin: 0; font-size: 22px;">Email Verification</h2>
+              </div>
+              <div style="padding: 24px; line-height: 1.6;">
+                <p>Hello,</p>
+                <p>Thank you for choosing <strong>Milkify</strong>. To complete your administrator registration, please use the secure One-Time Password (OTP) verification code below:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <span style="font-size: 32px; font-weight: 900; letter-spacing: 6px; color: #2563eb; background-color: #eff6ff; padding: 12px 30px; border-radius: 8px; border: 1px dashed #bfdbfe;">
+                    ${otp}
+                  </span>
+                </div>
+                <p style="font-size: 13px; color: #64748b;">This verification code is secure and valid for <strong>10 minutes</strong>. Please do not share this OTP with anyone.</p>
+                <p>Best regards,<br/><strong>Team Milkify Support</strong></p>
+              </div>
+              <div style="background-color: #f1f5f9; text-align: center; padding: 12px; font-size: 11px; color: #94a3b8;">
+                If you did not request this code, you can safely ignore this email.
+              </div>
+            </div>
+          </body>
+        </html>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[OTP] Email verification OTP sent successfully to ${email}`);
+    return res.status(200).json({ success: true, message: "Verification code sent to your email" });
+  } catch (error) {
+    console.error("[OTP] Failed to send email verification OTP:", error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ─── Verify Email OTP ────────────────────────────────────────────────────────
+const verifyEmailOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: "Email and OTP code are required" });
+    }
+
+    const record = await OtpModel.findOne({ email });
+    if (!record) {
+      return res.status(400).json({ success: false, message: "OTP has expired or email is invalid. Please request a new code." });
+    }
+
+    if (record.otp !== otp.trim()) {
+      return res.status(400).json({ success: false, message: "Invalid OTP code. Please check and try again." });
+    }
+
+    await OtpModel.deleteOne({ _id: record._id });
+    return res.status(200).json({ success: true, message: "Email successfully verified!" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   adminRegistration,
   adminLogin,
@@ -284,4 +482,8 @@ module.exports = {
   updateAdminProfile,
   logoutUser,
   registerAdmin,
+  adminForgotPassword,
+  changeAdminPassword,
+  sendEmailOtp,
+  verifyEmailOtp,
 };

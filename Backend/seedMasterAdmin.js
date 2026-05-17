@@ -9,9 +9,9 @@ const mongoose = require("mongoose");
 const bcrypt   = require("bcrypt");
 const { MasterAdminModel } = require("./src/MasterAdmin/masterAdmin.model");
 
-const USERNAME  = process.env.MASTER_USERNAME || "masteradmin";
-const PASSWORD  = process.env.MASTER_PASSWORD || "Milkify@Master2024";
-const EMAIL     = process.env.MASTER_EMAIL    || "master@milkify.app";
+const USERNAME  = process.env.MASTER_USERNAME;
+const PASSWORD  = process.env.MASTER_PASSWORD;
+const EMAIL     = process.env.MASTER_EMAIL;
 
 async function seed() {
   await mongoose.connect(process.env.mongo_url);
