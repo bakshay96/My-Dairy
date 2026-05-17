@@ -281,7 +281,17 @@ const message = async (req, res) => {
 const adminForgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const admin = await AdminModel.findOne({ email });
+
+    if (typeof email !== "string") {
+      return res.status(400).json({ success: false, message: "Valid email is required" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      return res.status(400).json({ success: false, message: "Valid email is required" });
+    }
+
+    const admin = await AdminModel.findOne({ email: { $eq: normalizedEmail } });
     if (!admin) return res.status(404).json({ success: false, message: "Email not found" });
 
     const newPassword = Math.random().toString(36).slice(-8);
