@@ -19,7 +19,7 @@ async function seed() {
 
   const exists = await MasterAdminModel.findOne({ username: USERNAME });
   if (exists) {
-    console.log(`⚠  Master admin '${USERNAME}' already exists. Aborting.`);
+    console.log("⚠  Master admin already exists. Aborting.");
     process.exit(0);
   }
 
