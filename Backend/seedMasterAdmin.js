@@ -37,9 +37,7 @@ async function seed() {
   });
 
   console.log("✅ Master admin created successfully!");
-  console.log(`   Username : ${USERNAME}`);
-  console.log(`   Password : ${PASSWORD}`);
-  console.log(`   Email    : ${EMAIL}`);
+  console.log("   Credentials were configured from environment/default values (not displayed).");
   console.log("\n⚠  Change the password in production via the Master Admin panel.");
   process.exit(0);
 }
