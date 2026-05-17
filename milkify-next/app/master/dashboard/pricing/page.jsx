@@ -4,11 +4,10 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { Loader2, DollarSign, Save } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function PricingConfigPage() {
-  const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -26,7 +25,6 @@ export default function PricingConfigPage() {
         const res = await api.get("/master/plan-config");
         const data = res.data.config;
         if (data) {
-          setConfig(data);
           setFormData({
             monthlyPrice: data.monthlyPrice,
             quarterlyPrice: data.quarterlyPrice,
@@ -35,7 +33,7 @@ export default function PricingConfigPage() {
             currency: data.currency || "INR",
           });
         }
-      } catch (err) {
+      } catch {
         toast.error("Failed to load pricing configuration");
       } finally {
         setLoading(false);
@@ -56,10 +54,9 @@ export default function PricingConfigPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await api.put("/master/plan-config", formData);
-      setConfig(res.data.config);
+      await api.put("/master/plan-config", formData);
       toast.success("Pricing configuration updated successfully!");
-    } catch (err) {
+    } catch {
       toast.error("Failed to update pricing");
     } finally {
       setSaving(false);

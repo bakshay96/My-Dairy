@@ -22,7 +22,7 @@ export default function MasterDashboardOverview() {
       ]);
       setStats(statsRes.data.stats);
       setAdmins(adminsRes.data.admins);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
@@ -39,7 +39,7 @@ export default function MasterDashboardOverview() {
       await api.patch(`/master/admins/${adminId}/status`, { status: newStatus });
       toast.success(`Admin account ${newStatus.toLowerCase()}d successfully`);
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error("Status update failed");
     }
   };
@@ -51,7 +51,7 @@ export default function MasterDashboardOverview() {
       toast.success(`Subscription extended by ${extendDays} days`);
       setExtending(null);
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error("Failed to extend subscription");
     }
   };

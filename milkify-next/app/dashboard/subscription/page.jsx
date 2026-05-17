@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/store";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
-import { Loader2, ShieldCheck, Crown, Tag, CreditCard, CheckCircle2, Clock } from "lucide-react";
+import { Loader2, ShieldCheck, Crown, CreditCard, CheckCircle2, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -34,7 +34,7 @@ export default function SubscriptionPage() {
       if (res.data?.subscription?.plan && res.data.subscription.plan !== "trial") {
         setSelectedPlan(res.data.subscription.plan);
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to load subscription details.");
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export default function SubscriptionPage() {
         promoCode: appliedPromo ? appliedPromo.promo.code : null,
       });
 
-      const { order, keyId, finalPrice } = orderRes.data;
+      const { order, keyId } = orderRes.data;
 
       const options = {
         key: keyId,
@@ -88,7 +88,7 @@ export default function SubscriptionPage() {
             });
             toast.success("Subscription activated successfully!");
             fetchData();
-          } catch (err) {
+          } catch {
             toast.error("Payment verification failed");
           }
         },
@@ -103,7 +103,7 @@ export default function SubscriptionPage() {
       };
 
       const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", function (response) {
+      rzp.on("payment.failed", function () {
         toast.error("Payment failed. Please try again.");
       });
       rzp.open();

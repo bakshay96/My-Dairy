@@ -30,7 +30,7 @@ export default function MasterDashboardLayout({ children }) {
         api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         const res = await api.get("/master/me");
         setMaster(res.data.master);
-      } catch (err) {
+      } catch {
         toast.error("Master session expired");
         router.push("/master/login");
       } finally {

@@ -28,7 +28,7 @@ export default function PromosPage() {
     try {
       const res = await api.get("/master/promo-codes");
       setPromos(res.data.promos);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load promo codes");
     } finally {
       setLoading(false);
@@ -61,7 +61,7 @@ export default function PromosPage() {
       await api.delete(`/master/promo-codes/${id}`);
       toast.success("Promo code deleted");
       fetchPromos();
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete promo");
     }
   };
@@ -71,7 +71,7 @@ export default function PromosPage() {
       await api.patch(`/master/promo-codes/${id}`, { isActive: !currentStatus });
       toast.success("Status updated");
       fetchPromos();
-    } catch (err) {
+    } catch {
       toast.error("Failed to update status");
     }
   };
