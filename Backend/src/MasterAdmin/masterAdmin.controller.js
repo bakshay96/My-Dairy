@@ -8,6 +8,7 @@ const { MasterAdminModel }  = require("./masterAdmin.model");
 const { AdminModel }        = require("../Admin/admin.model");
 const { SubscriptionModel } = require("./subscription.model");
 const { PromoCodeModel, PlanConfigModel } = require("./promoCode.model");
+const { transporter }       = require("../connection/mailConnection");
 
 // ────────────────────────────────────────────────────────────
 // Razorpay instance
@@ -94,6 +95,173 @@ const masterMe = async (req, res) => {
 };
 
 // ────────────────────────────────────────────────────────────
+// 2A. MASTER ADMIN PROFILE & CREDENTIALS
+// ────────────────────────────────────────────────────────────
+
+const updateMasterProfile = async (req, res) => {
+  try {
+    const { email, username, password } = req.body;
+    const master = await MasterAdminModel.findById(req.masterId);
+    if (!master) return res.status(404).json({ success: false, message: "Master not found" });
+
+    if (email) master.email = email;
+    if (username) master.username = username;
+    if (password) {
+      master.password = password;
+      master.key = password;
+    }
+    await master.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: { master }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const createMasterAdmin = async (req, res) => {
+  try {
+    const { firstName, lastName, mobile, email, username, password } = req.body;
+    
+    const existing = await MasterAdminModel.findOne({ $or: [{ username }, { email }] });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Username or Email already exists" });
+    }
+
+    const newMaster = new MasterAdminModel({
+      firstName,
+      lastName,
+      mobile,
+      email,
+      username,
+      password,
+      key: password,
+      role: "master_admin"
+    });
+    await newMaster.save();
+
+    // Send professional Welcome & Guidelines email
+    const senderEmail = process.env.SMTP_EMAIL || process.env.EMAIL_USER || "care.abtech@gmail.com";
+    if (email) {
+      const mailOptions = {
+        from: senderEmail,
+        to: email,
+        subject: "Welcome to the Milkify Master Admin Network!",
+        html: `
+          <html>
+            <body style="font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #334155; background-color: #f8fafc; margin: 0;">
+              <div style="max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); background-color: #ffffff;">
+                <div style="background: linear-gradient(135deg, #7c3aed, #2563eb); color: white; padding: 32px 24px; text-align: center;">
+                  <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">Welcome to Milkify!</h1>
+                  <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">You are now an official Master Administrator</p>
+                </div>
+                
+                <div style="padding: 32px 24px; line-height: 1.7;">
+                  <p style="font-size: 15px; margin-top: 0;">Hello <strong>${firstName} ${lastName}</strong>,</p>
+                  <p>Congratulations! You have been successfully registered as a <strong>Master Administrator</strong> within the <strong>Milkify Dairy Management Ecosystem</strong>. Your account has been provisioned with elevated superadmin privileges.</p>
+                  
+                  <div style="background-color: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 12px; padding: 20px; margin: 24px 0;">
+                    <h3 style="margin: 0 0 12px 0; font-size: 14px; text-transform: uppercase; tracking-wider; color: #7c3aed;">Your Account Credentials</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                      <tr>
+                        <td style="padding: 6px 0; color: #64748b; width: 100px;">Username:</td>
+                        <td style="padding: 6px 0; font-weight: bold; color: #1e1b4b;">${username}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; color: #64748b;">Password:</td>
+                        <td style="padding: 6px 0; font-weight: bold; color: #1e1b4b;">${password}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; color: #64748b;">Access Level:</td>
+                        <td style="padding: 6px 0;"><span style="background-color: #ede9fe; color: #7c3aed; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">Super Master Admin</span></td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <h3 style="margin: 24px 0 12px 0; font-size: 15px; font-weight: bold; color: #1e293b;">Key Responsibilities & Guidelines:</h3>
+                  <ul style="padding-left: 20px; margin: 0; font-size: 14px; line-height: 1.8;">
+                    <li style="margin-bottom: 8px;"><strong>SaaS Oversight:</strong> Monitor subscription cycles, manage pricing parameters, and administer promotional campaigns.</li>
+                    <li style="margin-bottom: 8px;"><strong>Platform Integrity:</strong> You have authorization to extend tenant cycles, delete users securely, and audit system status.</li>
+                    <li style="margin-bottom: 8px;"><strong>Security Best Practice:</strong> We highly encourage changing your temporary credentials immediately from the settings dashboard.</li>
+                  </ul>
+
+                  <h3 style="margin: 24px 0 12px 0; font-size: 15px; font-weight: bold; color: #1e293b;">Terms and Conditions:</h3>
+                  <p style="font-size: 12px; color: #64748b; line-height: 1.5; margin: 0;">
+                    As a Master Administrator, you agree to treat tenant/farmer data with absolute confidentiality. Deletions and status modifications perform irreversible system mutations. Ensure all administrative purges strictly comply with Milkify system regulations and legal compliance audits.
+                  </p>
+
+                  <div style="text-align: center; margin-top: 32px;">
+                    <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/master/login" style="background: linear-gradient(135deg, #7c3aed, #2563eb); color: white; padding: 12px 30px; border-radius: 10px; font-weight: bold; text-decoration: none; display: inline-block; box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.25);">
+                      Go to Master Panel
+                    </a>
+                  </div>
+                </div>
+
+                <div style="background-color: #f8fafc; text-align: center; padding: 16px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+                  This is a secure system notification from Milkify Dairy Systems.
+                </div>
+              </div>
+            </body>
+          </html>
+        `
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`[MasterAdmin] Welcome email sent successfully to ${email}`);
+      } catch (emailErr) {
+        console.error("[MasterAdmin] Failed to send welcome email:", emailErr.message);
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "New Master Admin created successfully",
+      data: { master: newMaster }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getAllMasterAdmins = async (req, res) => {
+  try {
+    const masters = await MasterAdminModel.find().select("-password");
+    return res.status(200).json({
+      success: true,
+      data: { masters }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const forgotPasswordMaster = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const master = await MasterAdminModel.findOne({ email });
+    if (!master) return res.status(404).json({ success: false, message: "Email not found" });
+
+    const plainPassword = master.key || "Contact superadmin (No key found)";
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Master Admin Password Recovery - Milkify",
+      text: `Hello ${master.username},\n\nYour Master Admin password is: ${plainPassword}\n\nPlease keep it secure.`
+    };
+
+    await transporter.sendMail(mailOptions);
+    return res.status(200).json({ success: true, message: "Recovery email sent successfully" });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ────────────────────────────────────────────────────────────
 // 3. GET ALL ADMINS WITH SUBSCRIPTION STATUS
 // ────────────────────────────────────────────────────────────
 const getAllAdmins = async (req, res) => {
@@ -142,6 +310,65 @@ const updateAdminStatus = async (req, res) => {
     ).select("-password");
     if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
     return res.status(200).json({ success: true, message: "Status updated", data: { admin } });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const deleteAdmin = async (req, res) => {
+  try {
+    const adminId = req.params.adminId;
+    const admin = await AdminModel.findById(adminId);
+    if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
+
+    // Delete associated data
+    const { farmerModel }         = require("../Farmer/farmer.model");
+    const { MilkModel }           = require("../Milk/milk.model");
+    const { rateSettingModel }    = require("../Milk/RateSetting/rateSetting.model");
+    const { PaymentModel }        = require("../Payment/payment.model");
+    const { AiInsightCacheModel } = require("../Analytics/aiInsightCache.model");
+
+    await farmerModel.deleteMany({ adminId });
+    await SubscriptionModel.deleteMany({ adminId });
+    await MilkModel.deleteMany({ adminId });
+    await rateSettingModel.deleteMany({ adminId });
+    await PaymentModel.deleteMany({ adminId });
+    await AiInsightCacheModel.deleteMany({ adminId });
+
+    // Finally delete the admin document
+    await AdminModel.findByIdAndDelete(adminId);
+
+    return res.status(200).json({ success: true, message: "Admin deleted completely from database" });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const bulkDeleteAdmins = async (req, res) => {
+  try {
+    const { adminIds } = req.body;
+    if (!Array.isArray(adminIds) || adminIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No admins selected for deletion" });
+    }
+
+    const { farmerModel }         = require("../Farmer/farmer.model");
+    const { MilkModel }           = require("../Milk/milk.model");
+    const { rateSettingModel }    = require("../Milk/RateSetting/rateSetting.model");
+    const { PaymentModel }        = require("../Payment/payment.model");
+    const { AiInsightCacheModel } = require("../Analytics/aiInsightCache.model");
+
+    const query = { adminId: { $in: adminIds } };
+
+    await farmerModel.deleteMany(query);
+    await SubscriptionModel.deleteMany(query);
+    await MilkModel.deleteMany(query);
+    await rateSettingModel.deleteMany(query);
+    await PaymentModel.deleteMany(query);
+    await AiInsightCacheModel.deleteMany(query);
+
+    await AdminModel.deleteMany({ _id: { $in: adminIds } });
+
+    return res.status(200).json({ success: true, message: `${adminIds.length} Admins deleted completely from database` });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -538,4 +765,10 @@ module.exports = {
   getMySubscription,
   getMasterDashboardStats,
   _createTrialSubscription,
+  updateMasterProfile,
+  createMasterAdmin,
+  getAllMasterAdmins,
+  forgotPasswordMaster,
+  deleteAdmin,
+  bulkDeleteAdmins,
 };

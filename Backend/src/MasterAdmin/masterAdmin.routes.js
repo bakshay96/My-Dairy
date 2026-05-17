@@ -16,7 +16,14 @@ const {
   createSubscriptionOrder,
   verifySubscriptionPayment,
   getMySubscription,
+
   getMasterDashboardStats,
+  updateMasterProfile,
+  createMasterAdmin,
+  getAllMasterAdmins,
+  forgotPasswordMaster,
+  deleteAdmin,
+  bulkDeleteAdmins,
 } = require("./masterAdmin.controller");
 
 const masterAuthMiddleware = require("../middleware/masterAuthMiddleware");
@@ -26,6 +33,7 @@ const masterRouter = express.Router();
 
 // ─── Public ───────────────────────────────────────────────
 masterRouter.post("/login", masterLogin);
+masterRouter.post("/forgot-password", forgotPasswordMaster);
 
 // ─── Promo code validation (authenticated admin, not master) ──
 masterRouter.post("/subscription/validate-promo", authMiddleware, validatePromoCode);
@@ -35,14 +43,19 @@ masterRouter.post("/subscription/create-order",  authMiddleware, createSubscript
 masterRouter.post("/subscription/verify-payment", authMiddleware, verifySubscriptionPayment);
 masterRouter.get("/subscription/my",              authMiddleware, getMySubscription);
 
-// ─── Protected – Master only ──────────────────────────────────
+// ─── Profile & Credentials (Master Auth) ────────────────
 masterRouter.get("/me",                    masterAuthMiddleware, masterMe);
-masterRouter.get("/dashboard/stats",       masterAuthMiddleware, getMasterDashboardStats);
+masterRouter.put("/profile",               masterAuthMiddleware, updateMasterProfile);
+masterRouter.post("/credentials",          masterAuthMiddleware, createMasterAdmin);
+  masterRouter.get("/credentials/list",      masterAuthMiddleware, getAllMasterAdmins);
+  masterRouter.get("/dashboard/stats",       masterAuthMiddleware, getMasterDashboardStats);
 
-// Admins
+// ─── Admins Management (Master Auth) ────────────────────
 masterRouter.get("/admins",                masterAuthMiddleware, getAllAdmins);
+masterRouter.post("/admins/bulk-delete",   masterAuthMiddleware, bulkDeleteAdmins);
 masterRouter.get("/admins/:adminId",       masterAuthMiddleware, getAdminDetail);
 masterRouter.patch("/admins/:adminId/status", masterAuthMiddleware, updateAdminStatus);
+masterRouter.delete("/admins/:adminId",    masterAuthMiddleware, deleteAdmin);
 masterRouter.patch("/admins/:adminId/subscription/extend", masterAuthMiddleware, extendSubscription);
 
 // Plan config

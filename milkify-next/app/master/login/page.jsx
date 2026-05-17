@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
-import { Loader2, KeyRound, User, Lock } from "lucide-react";
+import { Loader2, KeyRound, User, Lock, Mail, Shield, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Brand from "@/components/ui/Brand";
@@ -22,6 +22,11 @@ export default function MasterLoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -39,9 +44,25 @@ export default function MasterLoginPage() {
         router.push("/master/dashboard");
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || "Invalid master credentials");
+      setErrorMsg(err.response?.data?.message || "Invalid credentials. Access denied.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return toast.error("Please enter your email");
+    setForgotLoading(true);
+    try {
+      await api.post("/master/forgot-password", { email: forgotEmail });
+      toast.success("Master Admin password sent to your email!");
+      setForgotModalOpen(false);
+      setForgotEmail("");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to recover password");
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -85,11 +106,25 @@ export default function MasterLoginPage() {
                 <div className="relative group">
                   <Lock className="absolute left-3 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     {...form.register("password")}
-                    className="w-full h-12 bg-slate-950/50 border border-slate-800 rounded-xl pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all"
+                    className="w-full h-12 bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-300 transition-colors"
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button type="button" onClick={() => setForgotModalOpen(true)} className="text-sm font-bold text-purple-400 hover:text-purple-300 transition-colors">
+                  Lost Access?
+                </button>
               </div>
 
               {errorMsg && (
@@ -109,6 +144,42 @@ export default function MasterLoginPage() {
       <div className="absolute top-6 right-6 z-20">
         <ThemeToggle />
       </div>
+
+      {/* Forgot Password Modal */}
+      {forgotModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
+            <button onClick={() => setForgotModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-slate-300">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h2 className="text-2xl font-black text-white mb-2 flex items-center gap-2"><Shield className="h-6 w-6 text-purple-500" /> Recovery</h2>
+            <p className="text-slate-400 text-sm mb-6">Enter your master admin email to receive your secure credentials.</p>
+            <form onSubmit={handleForgotPassword}>
+              <div className="space-y-4 mb-6">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-3.5 h-5 w-5 text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="master@milkify.app"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full h-12 bg-slate-950 border border-slate-800 text-white rounded-xl pl-12 pr-4 focus:ring-2 focus:ring-purple-500 outline-none"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold flex items-center justify-center transition-all disabled:opacity-70"
+              >
+                {forgotLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Mail className="h-5 w-5 mr-2" />}
+                Send Secure Credentials
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
