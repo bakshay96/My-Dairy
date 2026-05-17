@@ -3,10 +3,6 @@
  * Run once to create the master admin account:
  *   node seedMasterAdmin.js
  *
- * Credentials are read from env vars:
- *   MASTER_USERNAME   (default: masteradmin)
- *   MASTER_PASSWORD   (default: Milkify@Master2024)
- *   MASTER_EMAIL      (default: master@milkify.app)
  */
 require("dotenv").config();
 const mongoose = require("mongoose");
