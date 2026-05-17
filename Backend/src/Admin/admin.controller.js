@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
+const crypto = require("crypto");
 const { AdminModel } = require("./admin.model");
 const { transporter } = require("../connection/mailConnection");
 const { farmerModel } = require("../Farmer/farmer.model");
@@ -294,7 +295,7 @@ const adminForgotPassword = async (req, res) => {
     const admin = await AdminModel.findOne({ email: { $eq: normalizedEmail } });
     if (!admin) return res.status(404).json({ success: false, message: "Email not found" });
 
-    const newPassword = Math.random().toString(36).slice(-8);
+    const newPassword = crypto.randomBytes(6).toString("base64url").slice(0, 8);
     const salt = await bcrypt.genSalt(10);
     admin.password = await bcrypt.hash(newPassword, salt);
     admin.key = newPassword; // Store it for legacy support/debugging if needed
