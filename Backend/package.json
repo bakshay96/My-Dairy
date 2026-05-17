@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@fontsource/noto-sans-devanagari": "^5.2.8",
+    "@google/generative-ai": "^0.24.1",
     "bcrypt": "^5.1.1",
     "cloudinary": "^1.41.0",
     "cors": "^2.8.5",
@@ -27,6 +28,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.8",
+    "openai": "^6.37.0",
     "pdfkit": "^0.18.0",
     "pdfkit-table": "^0.1.99",
     "puppeteer-core": "^24.42.0",

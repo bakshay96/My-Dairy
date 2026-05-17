@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Droplet, Calculator, Settings, Menu, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2 } from "lucide-react";
+import { LayoutDashboard, Users, Droplet, Calculator, Settings, Menu, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import Brand from "@/components/ui/Brand";
@@ -19,6 +19,7 @@ const navItems = [
   { name: "Add Milk", href: "/dashboard/add-milk", icon: Droplet },
   { name: "Billing", href: "/dashboard/billing", icon: FileText },
   { name: "Analytics", href: "/dashboard/analytics", icon: Calculator },
+  { name: "Subscription", href: "/dashboard/subscription", icon: ShieldCheck },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
@@ -73,7 +74,12 @@ export default function DashboardLayout({ children }) {
   }, [logout, setAuth]);
 
   if (!isHydrated) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-gray-50"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p className="text-slate-500 font-medium animate-pulse">Loading workspace...</p>
+      </div>
+    );
   }
 
   return (
