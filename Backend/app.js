@@ -14,6 +14,9 @@ const { billingRouter }        = require("./src/Milk/billingRoutes");
 const { transporter }          = require("./src/connection/mailConnection");
 const rateRouter               = require("./src/Milk/RateSetting/rateSettingRoutes");
 const { paymentRouter }        = require("./src/Payment/paymentRoutes");
+const { masterRouter }         = require("./src/MasterAdmin/masterAdmin.routes");
+const authMiddleware           = require("./src/middleware/authMiddleware");
+const subscriptionGuard        = require("./src/middleware/subscriptionGuard");
 const { analyticsRouter }      = require("./src/Analytics/analyticsRoutes");
 const { responseInterceptor }  = require("./src/middleware/responseHandler.middleware");
 const { generalLimiter, authLimiter } = require("./src/middleware/rateLimiter.middleware");
@@ -148,12 +151,15 @@ app.get("/health", (req, res) =>
 // API ROUTES
 // ============================================================
 app.use("/api/admin",   AdminRouter);
-app.use("/api/farmer",  farmerRouter);
-app.use("/api/milk",    MilkRouter);
-app.use("/api/billing", billingRouter);   // ← NEW: 10-day billing
-app.use("/api/rate",    rateRouter);
-app.use("/api/payment", paymentRouter);
-app.use("/api/analytics", analyticsRouter);
+app.use("/api/master",  masterRouter);             // ← Master admin APIs
+
+// Core dairy routes — guarded by subscription after authMiddleware
+app.use("/api/farmer",    authMiddleware, subscriptionGuard, farmerRouter);
+app.use("/api/milk",      authMiddleware, subscriptionGuard, MilkRouter);
+app.use("/api/billing",   authMiddleware, subscriptionGuard, billingRouter);
+app.use("/api/rate",      authMiddleware, subscriptionGuard, rateRouter);
+app.use("/api/payment",   authMiddleware, subscriptionGuard, paymentRouter);
+app.use("/api/analytics", authMiddleware, subscriptionGuard, analyticsRouter);
 
 // ============================================================
 // 404 HANDLER
