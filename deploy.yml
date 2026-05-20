@@ -21,9 +21,11 @@ jobs:
       - name: Build Frontend
         run: |
           cd milkify-next
+          echo "${{ secrets.ENV_FILE }}" > .env
           npm install
           npm run build
           cd ..
+    ```
 
       - name: Compress Full Stack
         # GitHub starts with a fresh copy of your code, so there are no heavy node_modules in the Backend folder yet to slow down the zip!
