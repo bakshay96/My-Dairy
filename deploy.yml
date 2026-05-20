@@ -28,8 +28,7 @@ jobs:
       - name: Compress Full Stack
         # GitHub starts with a fresh copy of your code, so there are no heavy node_modules in the Backend folder yet to slow down the zip!
         run: |
-          tar -czf deploy.tar.gz milkify-next/.next milkify-next/public milkify-next/package.json milkify-next/package-lock.json Backend/
-
+          tar -czf deploy.tar.gz milkify-next/.next milkify-next/public milkify-next/package.json milkify-next/package-lock.json milkify-next/next.config.* Backend/
       - name: Send files to EC2
         uses: appleboy/scp-action@master
         with:
