@@ -36,14 +36,14 @@ function isSnoozed(adId) {
 function decodeHtmlEntities(str) {
   if (!str || typeof str !== "string") return "";
   return str
-    .replace(/&amp;/gi, "&")
     .replace(/&#x2F;/gi, "/")
     .replace(/&#47;/gi, "/")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
     .replace(/&quot;/gi, '"')
     .replace(/&#x27;/gi, "'")
-    .replace(/&nbsp;/gi, " ");
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&");
 }
 
 // ── Type styles ───────────────────────────────────────────────────────────────
