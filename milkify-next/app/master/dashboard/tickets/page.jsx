@@ -81,7 +81,36 @@ function TicketRow({ ticket, onClick }) {
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// Synthesized chime via HTML5 Web Audio API
+const playNotificationSound = () => {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem("milkify-sound-disabled") === "true") return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const playTone = (freq, startTime, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.15, startTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    const now = ctx.currentTime;
+    playTone(784, now, 0.12);        // G5
+    playTone(1046.5, now + 0.08, 0.15); // C6
+    playTone(1318.5, now + 0.16, 0.25); // E6
+  } catch (e) {
+    console.warn("Could not play synthesized sound:", e);
+  }
+};
+
 export default function MasterTicketsPage() {
   const user = useAuthStore((s) => s.user);
   const [tickets, setTickets]   = useState([]);
@@ -128,7 +157,7 @@ export default function MasterTicketsPage() {
     if (!socket.connected) socket.connect();
     socket.emit("join_master_room", user._id);
     
-    const onUpdate = ({ ticket }) => {
+    const onUpdate = ({ ticket, replyFrom }) => {
       if (!ticket) return;
       setTickets((prev) => {
         const idx = prev.findIndex((t) => t._id === ticket._id);
@@ -143,6 +172,11 @@ export default function MasterTicketsPage() {
       
       // Update stats on socket event
       api.get(`/tickets/master/stats?t=${Date.now()}`).then(r => setStats(r.data || {})).catch(() => {});
+
+      // Play chime if the interaction is from admin or brand new ticket
+      if (!replyFrom || replyFrom === "admin") {
+        playNotificationSound();
+      }
     };
     
     socket.on("ticket_created", onUpdate);
@@ -163,9 +197,10 @@ export default function MasterTicketsPage() {
       fd.append("message", reply);
       if (replyStatus && replyStatus !== active.status) fd.append("status", replyStatus);
       replyFiles.forEach((f) => fd.append("images", f));
-      const res = await api.post(`/tickets/master/${active._id}/reply`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      // Let Axios automatically manage multi-part boundaries
+      const res = await api.post(`/tickets/master/${active._id}/reply`, fd);
       setActive(res.data?.ticket || res.data); setReply(""); setReplyFiles([]); load();
-      toast.success("Reply sent");
+      toast.success("Reply sent successfully!");
     } catch { toast.error("Reply failed"); }
     finally { setReplying(false); }
   };
@@ -321,6 +356,32 @@ export default function MasterTicketsPage() {
         ))}
       </div>
 
+      {/* Filter tabs */}
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-fit flex-wrap">
+        {["all", "open", "in_progress", "resolved", "closed"].map((s) => {
+          const getStatCount = (st) => {
+            if (st === "all") return stats.total || 0;
+            if (st === "open") return stats.open || 0;
+            if (st === "in_progress") return stats.inProgress || 0;
+            if (st === "resolved") return stats.resolved || 0;
+            if (st === "closed") return stats.closed || 0;
+            return 0;
+          };
+          const isSelected = (filterStatus || "all") === s;
+          return (
+            <button key={s} onClick={() => setFilterStatus(s === "all" ? "" : s)} className={cn("px-3 py-1.5 rounded-lg text-xs font-bold transition-all capitalize flex items-center gap-1.5",
+              isSelected ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow" : "text-slate-500 dark:text-slate-400")}>
+              <span>{s.replace("_", " ")}</span>
+              <span className={cn("px-1.5 py-0.5 rounded-full text-[9px] font-black leading-none", 
+                isSelected ? "bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300" : "bg-slate-200 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400"
+              )}>
+                {getStatCount(s)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
@@ -329,10 +390,6 @@ export default function MasterTicketsPage() {
                 className="w-full h-10 pl-9 pr-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 dark:text-white" />
         </div>
         <div className="flex gap-2">
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none dark:text-white">
-                <option value="">All Statuses</option>
-                {Object.entries(STATUS_CFG).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
             <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none dark:text-white">
                 <option value="">All Categories</option>
                 {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}

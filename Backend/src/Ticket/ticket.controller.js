@@ -215,6 +215,23 @@ exports.closeTicket = async (req, res) => {
   }
 };
 
+// PATCH /api/tickets/:id/reopen — admin can reopen their own ticket
+exports.reopenTicket = async (req, res) => {
+  try {
+    const ticket = await TicketModel.findOneAndUpdate(
+      { _id: req.params.id, adminId: req.admin._id },
+      { $set: { status: "open", closedAt: null } },
+      { new: true }
+    );
+    if (!ticket) return res.status(404).json({ success: false, message: "Ticket not found" });
+    emitTicket("ticket_updated", { ticket });
+    return res.status(200).json({ success: true, data: { ticket }, message: "Ticket reopened" });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
 // GET /api/tickets/unread-count — for notification badge
 exports.getUnreadCount = async (req, res) => {
   try {

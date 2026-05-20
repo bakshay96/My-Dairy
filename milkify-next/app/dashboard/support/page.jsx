@@ -87,6 +87,36 @@ function TicketRow({ ticket, onClick }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+// Synthesized chime via HTML5 Web Audio API
+const playNotificationSound = () => {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem("milkify-sound-disabled") === "true") return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const playTone = (freq, startTime, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.15, startTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    const now = ctx.currentTime;
+    playTone(784, now, 0.12);        // G5
+    playTone(1046.5, now + 0.08, 0.15); // C6
+    playTone(1318.5, now + 0.16, 0.25); // E6
+  } catch (e) {
+    console.warn("Could not play synthesized sound:", e);
+  }
+};
+
 export default function SupportPage() {
   const user = useAuthStore((s) => s.user);
   const [tickets, setTickets]   = useState([]);
@@ -122,12 +152,16 @@ export default function SupportPage() {
     if (!user?._id) return;
     if (!socket.connected) socket.connect();
     socket.emit("join_room", `admin:${user._id}`);
-    const onUpdate = ({ ticket }) => {
+    const onUpdate = ({ ticket, replyFrom }) => {
       if (!ticket) return;
       setTickets((prev) => prev.find((t) => t._id === ticket._id)
         ? prev.map((t) => t._id === ticket._id ? ticket : t)
         : [ticket, ...prev]);
       if (active?._id === ticket._id) setActive(ticket);
+      // Play premium sound on incoming master replies
+      if (replyFrom === "master") {
+        playNotificationSound();
+      }
     };
     socket.on("ticket_created", onUpdate);
     socket.on("ticket_reply",   onUpdate);
@@ -146,7 +180,8 @@ export default function SupportPage() {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
       files.forEach((f) => fd.append("images", f));
-      const res = await api.post("/tickets", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      // Removed manual multipart header to avoid boundary stripping issues
+      await api.post("/tickets", fd);
       toast.success("Ticket created successfully! We'll respond within 48 hours.");
       setForm({ title: "", description: "", category: "technical" });
       setSubjectMode("dropdown");
@@ -161,10 +196,34 @@ export default function SupportPage() {
       const fd = new FormData();
       fd.append("message", reply);
       replyFiles.forEach((f) => fd.append("images", f));
-      const res = await api.post(`/tickets/${active._id}/reply`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      // Let Axios append standard boundaries automatically
+      const res = await api.post(`/tickets/${active._id}/reply`, fd);
       setActive(res.data?.ticket || res.data); setReply(""); setReplyFiles([]); load();
+      toast.success("Reply sent successfully!");
     } catch { toast.error("Reply failed"); }
     finally { setReplying(false); }
+  };
+
+  const handleCloseTicket = async () => {
+    try {
+      await api.patch(`/tickets/${active._id}/close`);
+      toast.success("Ticket closed successfully!");
+      setView("list");
+      load();
+    } catch {
+      toast.error("Failed to close ticket");
+    }
+  };
+
+  const handleReopenTicket = async () => {
+    try {
+      const res = await api.patch(`/tickets/${active._id}/reopen`);
+      setActive(res.data?.ticket || res.data);
+      toast.success("Ticket reopened successfully!");
+      load();
+    } catch {
+      toast.error("Failed to reopen ticket");
+    }
   };
 
   const filtered = filter === "all" ? tickets : tickets.filter((t) => t.status === filter);
@@ -282,6 +341,19 @@ export default function SupportPage() {
               <h2 className="font-black text-slate-900 dark:text-white">{active.title}</h2>
               <p className="text-xs text-slate-400 mt-0.5">{new Date(active.createdAt).toLocaleString()}</p>
             </div>
+
+            {/* Close & Reopen buttons */}
+            <div className="flex items-center gap-2">
+              {active.status !== "closed" ? (
+                <button onClick={handleCloseTicket} className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-bold transition-all">
+                  Close Ticket
+                </button>
+              ) : (
+                <button onClick={handleReopenTicket} className="px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 dark:bg-green-950/20 dark:hover:bg-green-950/40 border border-green-200 dark:border-green-900 text-green-600 dark:text-green-400 text-xs font-bold transition-all">
+                  Reopen Ticket
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4">
@@ -345,6 +417,12 @@ export default function SupportPage() {
     );
   }
 
+  // Calculate dynamic tab counts
+  const getCount = (st) => {
+    if (st === "all") return tickets.length;
+    return tickets.filter(t => t.status === st).length;
+  };
+
   // ── LIST VIEW ─────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
@@ -363,9 +441,14 @@ export default function SupportPage() {
       {/* Filter tabs */}
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-fit flex-wrap">
         {["all", "open", "in_progress", "resolved", "closed"].map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={cn("px-3 py-1.5 rounded-lg text-xs font-bold transition-all capitalize",
+          <button key={s} onClick={() => setFilter(s)} className={cn("px-3 py-1.5 rounded-lg text-xs font-bold transition-all capitalize flex items-center gap-1.5",
             filter === s ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow" : "text-slate-500 dark:text-slate-400")}>
-            {s.replace("_", " ")}
+            <span>{s.replace("_", " ")}</span>
+            <span className={cn("px-1.5 py-0.5 rounded-full text-[9px] font-black leading-none", 
+              filter === s ? "bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300" : "bg-slate-200 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400"
+            )}>
+              {getCount(s)}
+            </span>
           </button>
         ))}
       </div>

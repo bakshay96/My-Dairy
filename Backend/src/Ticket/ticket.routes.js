@@ -5,7 +5,7 @@ const { upload }           = require("../middleware/upload.middleware");
 
 const {
   createTicket, getMyTickets, getTicketById, addAdminReply,
-  closeTicket, getUnreadCount,
+  closeTicket, reopenTicket, getUnreadCount,
   masterGetAllTickets, masterGetTicket, masterReplyToTicket,
   masterUpdateStatus, masterGetStats,
 } = require("./ticket.controller");
@@ -26,5 +26,6 @@ router.post  ("/",                      authMiddleware, upload.array("images", 5
 router.get   ("/:id",                   authMiddleware,             getTicketById);
 router.post  ("/:id/reply",             authMiddleware, upload.array("images", 3), addAdminReply);
 router.patch ("/:id/close",             authMiddleware,             closeTicket);
+router.patch ("/:id/reopen",            authMiddleware,             reopenTicket);
 
 module.exports = router;
