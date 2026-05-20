@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/lib/store";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
-import { Loader2, ShieldCheck, Crown, CreditCard, CheckCircle2, Clock } from "lucide-react";
+import { Loader2, ShieldCheck, Crown, CreditCard, CheckCircle2, Clock, AlertTriangle, Zap, Gift, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getAdvertisementHistory } from "@/components/ui/AlertBanner";
 
 const loadRazorpay = () => {
   return new Promise((resolve) => {
@@ -26,6 +27,7 @@ export default function SubscriptionPage() {
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState("monthly");
+  const [adHistory, setAdHistory] = useState([]);
 
   const fetchData = async () => {
     try {
@@ -43,6 +45,8 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     fetchData();
+    // Fetch advertisement history
+    setAdHistory(getAdvertisementHistory());
   }, []);
 
   const handleApplyPromo = async () => {
@@ -121,6 +125,30 @@ export default function SubscriptionPage() {
       </div>
     );
   }
+
+  // Helper to get icon for ad type
+  const getAdTypeIcon = (type) => {
+    const icons = {
+      info: Info,
+      success: CheckCircle2,
+      warning: AlertTriangle,
+      promo: Gift,
+      update: Zap,
+    };
+    return icons[type] || Info;
+  };
+
+  // Helper to get badge color for ad type
+  const getAdTypeBadgeColor = (type) => {
+    const colors = {
+      info: "bg-blue-100 text-blue-700",
+      success: "bg-emerald-100 text-emerald-700",
+      warning: "bg-amber-100 text-amber-700",
+      promo: "bg-purple-100 text-purple-700",
+      update: "bg-cyan-100 text-cyan-700",
+    };
+    return colors[type] || "bg-slate-100 text-slate-700";
+  };
 
   const sub = data?.subscription;
   const config = data?.config || {};
@@ -277,6 +305,50 @@ export default function SubscriptionPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Advertisement History Section */}
+      {adHistory && adHistory.length > 0 && (
+        <Card className="shadow-lg border-slate-200">
+          <CardHeader className="bg-slate-50 border-b">
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" /> Advertisement History
+            </CardTitle>
+            <p className="text-sm text-slate-600 font-normal mt-2">View all alerts and notifications you&apos;ve dismissed.</p>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              {adHistory.map((ad) => {
+                const TypeIcon = getAdTypeIcon(ad.type);
+                const dismissedDate = new Date(ad.dismissedAt);
+                return (
+                  <div key={ad._id} className="flex items-start gap-4 p-4 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors">
+                    <div className={`p-2 rounded-lg ${getAdTypeBadgeColor(ad.type)}`}>
+                      <TypeIcon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-slate-900">{ad.title}</h4>
+                      <p className="text-sm text-slate-600 line-clamp-2">{ad.message}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Dismissed on {dismissedDate.toLocaleDateString()} at {dismissedDate.toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold px-2 py-1 rounded ${getAdTypeBadgeColor(ad.type)}`}>
+                        {ad.type}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {adHistory.length === 0 && (
+              <div className="text-center py-8 text-slate-500">
+                <p>No dismissed alerts yet.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

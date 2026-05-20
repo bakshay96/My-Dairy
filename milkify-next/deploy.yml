@@ -1,0 +1,59 @@
+name: Deploy Next.js to EC2
+
+    on:
+      push:
+        branches:
+          - main # Change this if your branch is named 'master' or something else
+
+    jobs:
+      build-and-deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+          - name: Checkout Code
+            uses: actions/checkout@v4
+
+          - name: Setup Node.js
+            uses: actions/setup-node@v4
+            with:
+              node-version: '18.20.8'
+
+          - name: Install Dependencies
+            run: npm install
+
+          - name: Build Next.js App
+            run: npm run build
+
+          - name: Compress built files
+            run: tar -czf deploy.tar.gz .next public package.json package-lock.json
+
+          - name: Send files to EC2
+            uses: appleboy/scp-action@master
+            with:
+              host: ${{ secrets.EC2_HOST }}
+              username: ${{ secrets.EC2_USERNAME }}
+              key: ${{ secrets.EC2_SSH_KEY }}
+              source: "deploy.tar.gz"
+              target: "/home/ubuntu/My-Dairy/milkify-next"
+
+          - name: Unzip and Restart PM2
+            uses: appleboy/ssh-action@master
+            with:
+              host: ${{ secrets.EC2_HOST }}
+              username: ${{ secrets.EC2_USERNAME }}
+              key: ${{ secrets.EC2_SSH_KEY }}
+              script: |
+                cd /home/ubuntu/My-Dairy/milkify-next
+                tar -xzf deploy.tar.gz
+                npm install --omit=dev
+                pm2 restart my-dairy-frontend
+    ```
+  
+
+  
+    Save the file, commit your changes, and push it to GitHub:
+    `git add .`
+    `git commit -m "Set up CI/CD pipeline"`
+    `git push`
+    
+    Immediately go to the **Actions** tab on your GitHub repository. You will see a yellow spinning circle as GitHub automatically builds and deploys your code to AWS!

@@ -5,14 +5,16 @@ import api from "@/lib/api";
 import { socket } from "@/lib/socket";
 import { useAuthStore } from "@/lib/store";
 import {
-  X, ChevronDown, ChevronUp, ExternalLink,
+  X, ChevronDown, ChevronUp, ExternalLink, ChevronLeft, ChevronRight,
   Info, CheckCircle2, AlertTriangle, Gift, Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Snooze helpers (localStorage-based, not DB) ───────────────────────────────
 const SNOOZE_KEY    = "milkify_ad_snooze";
+const HISTORY_KEY   = "milkify_ad_history"; // track permanently dismissed ads
 const SNOOZE_HOURS  = 1; // re-show after 1 hour
+const AUTO_DISMISS_SECONDS = 8; // auto-close after 8 seconds
 
 function getSnoozed() {
   try { return JSON.parse(localStorage.getItem(SNOOZE_KEY) || "{}"); } catch { return {}; }
@@ -29,6 +31,24 @@ function isSnoozed(adId) {
   const map = getSnoozed();
   if (!map[adId]) return false;
   return Date.now() - map[adId] < SNOOZE_HOURS * 3600 * 1000;
+}
+
+// ── Ad History: track all dismissed ads ──────────────────────────────────────
+function getAdHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
+}
+function addToHistory(ad) {
+  const history = getAdHistory();
+  const exists = history.find((h) => h._id === ad._id);
+  if (!exists) {
+    history.push({ ...ad, dismissedAt: new Date().toISOString() });
+    // Keep only last 50 dismissed ads
+    if (history.length > 50) history.shift();
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  }
+}
+export function getAdvertisementHistory() {
+  return getAdHistory();
 }
 
 // ── Decode any HTML entities that may exist in stored URLs ───────────────────
@@ -199,112 +219,259 @@ export default function AlertBanner({ suppress = false }) {
     };
   }, [suppress, adminId, fetchAds]);
 
-  // ── Dismiss = 1-hour snooze (re-appears after snooze period) ─────────────
-  const dismiss = (adId) => {
-    snoozeAd(adId); // localStorage, no DB call
-    setAds((prev) => prev.filter((a) => a._id !== adId));
+  // ── Carousel state: auto-rotate through ads ─────────────────────────────────
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [autoDismissCountdown, setAutoDismissCountdown] = useState(AUTO_DISMISS_SECONDS);
+
+  // Get current ad early so it can be used in useEffect
+  const currentAd = ads.length > 0 ? ads[currentIndex] : null;
+
+  // ── Auto-dismiss timer (8 seconds) ────────────────────────────────────────
+  useEffect(() => {
+    if (suppress || ads.length === 0 || !currentAd) return;
+    
+    const timer = setInterval(() => {
+      setAutoDismissCountdown((prev) => {
+        if (prev <= 1) {
+          // Auto-dismiss current ad
+          const adToDismiss = currentAd;
+          addToHistory(adToDismiss);
+          snoozeAd(adToDismiss._id);
+          setAds((prevAds) => prevAds.filter((a) => a._id !== adToDismiss._id));
+          setAutoDismissCountdown(AUTO_DISMISS_SECONDS);
+          setAutoRotate(true);
+          return AUTO_DISMISS_SECONDS;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [suppress, currentAd, ads.length]);
+
+  // ── Auto-rotate every 5 seconds ───────────────────────────────────────────
+  useEffect(() => {
+    if (suppress || ads.length <= 1 || !autoRotate) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % ads.length);
+    }, 5000); // 5 second rotation
+    return () => clearInterval(interval);
+  }, [suppress, ads.length, autoRotate]);
+
+  // ── Manual navigation ────────────────────────────────────────────────────
+  const handlePrev = () => {
+    setAutoRotate(false);
+    setCurrentIndex((prev) => (prev - 1 + ads.length) % ads.length);
   };
+
+  const handleNext = () => {
+    setAutoRotate(false);
+    setCurrentIndex((prev) => (prev + 1) % ads.length);
+  };
+
+  const goToSlide = (index) => {
+    setAutoRotate(false);
+    setCurrentIndex(index);
+  };
+
+  // ── Dismiss = 1-hour snooze (re-appears after snooze period) ─────────────
+  const dismiss = useCallback((adId) => {
+    const adToDismiss = ads.find((a) => a._id === adId);
+    if (adToDismiss) {
+      addToHistory(adToDismiss); // Save to permanent history
+    }
+    snoozeAd(adId); // localStorage snooze for 1 hour
+    const newAds = ads.filter((a) => a._id !== adId);
+    setAds(newAds);
+    if (newAds.length > 0) {
+      setCurrentIndex(Math.min(currentIndex, newAds.length - 1));
+      setAutoRotate(true); // resume auto-rotation after dismiss
+      setAutoDismissCountdown(AUTO_DISMISS_SECONDS); // reset countdown
+    }
+  }, [ads, currentIndex]);
 
   if (suppress || ads.length === 0) return null;
 
+  const cfg = getCfg(currentAd.type);
+  const isExpand = expanded === currentAd._id;
+  const ctaUrl = decodeHtmlEntities(currentAd.ctaUrl);
+
   return (
-    <div className="flex flex-col gap-2 mb-4">
-      {ads.map((ad) => {
-        const cfg      = getCfg(ad.type);
-        const isExpand = expanded === ad._id;
-        const ctaUrl   = decodeHtmlEntities(ad.ctaUrl);
+    <div className="mb-4 w-full">
+      {/* Main Alert Card */}
+      <div
+        className={cn(
+          "relative rounded-xl border overflow-hidden shadow-md",
+          "transition-all duration-300 animate-in fade-in",
+          cfg.bg,
+          cfg.border
+        )}
+      >
+        {/* High priority pulse strip */}
+        {(currentAd.priority || 0) >= 7 && (
+          <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-xl animate-pulse", cfg.dot)} />
+        )}
 
-        return (
-          <div
-            key={ad._id}
-            className={cn(
-              "relative rounded-xl border overflow-hidden shadow-sm",
-              "transition-all duration-300",
-              cfg.bg, cfg.border
-            )}
-          >
-            {/* High priority pulse strip */}
-            {(ad.priority || 0) >= 7 && (
-              <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-xl", cfg.dot)} />
-            )}
+        {/* Main content */}
+        <div className={cn("flex items-start gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-4", (currentAd.priority || 0) >= 7 && "pl-4 sm:pl-5")}>
+          {/* Type icon */}
+          <div className={cn("mt-0.5 shrink-0", cfg.icon)}>
+            <cfg.Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+          </div>
 
-            <div className={cn("flex items-start gap-3 px-4 py-3", (ad.priority || 0) >= 7 && "pl-5")}>
-              {/* Type icon */}
-              <div className={cn("mt-0.5 shrink-0", cfg.icon)}>
-                <cfg.Icon className="h-4 w-4" />
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                {/* Title + badge row */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className={cn("text-sm font-bold leading-snug", cfg.title)}>
-                    {ad.title}
-                  </p>
-                  <span className={cn(
-                    "hidden sm:inline-flex text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded text-white",
-                    cfg.badge
-                  )}>
-                    {ad.type}
-                  </span>
-                  {(ad.priority || 0) >= 7 && (
-                    <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-500 text-white animate-pulse">
-                      urgent
-                    </span>
-                  )}
-                </div>
-
-                {/* Body — collapsible */}
-                <p className={cn(
-                  "mt-0.5 text-xs leading-relaxed",
-                  cfg.body,
-                  !isExpand && "line-clamp-1 sm:line-clamp-2"
-                )}>
-                  {ad.message}
-                </p>
-
-                {/* Actions row */}
-                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                  {ctaUrl && ad.ctaLabel && (
-                    <a
-                      href={ctaUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        "inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors",
-                        cfg.cta
-                      )}
-                    >
-                      {ad.ctaLabel}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                  <button
-                    onClick={() => setExpanded(isExpand ? null : ad._id)}
-                    className={cn("inline-flex items-center gap-0.5 text-[11px] font-medium transition-opacity hover:opacity-70", cfg.body)}
-                  >
-                    {isExpand
-                      ? <><ChevronUp className="h-3 w-3" />Less</>
-                      : <><ChevronDown className="h-3 w-3" />More</>}
-                  </button>
-                </div>
-              </div>
-
-              {/* Dismiss */}
-              <button
-                onClick={() => dismiss(ad._id)}
-                aria-label="Dismiss alert"
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            {/* Title + badge row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className={cn("text-sm sm:text-base font-bold leading-snug", cfg.title)}>
+                {currentAd.title}
+              </p>
+              <span
                 className={cn(
-                  "shrink-0 mt-0.5 p-1.5 rounded-full transition-colors",
-                  cfg.dismiss
+                  "text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded text-white",
+                  cfg.badge
                 )}
               >
-                <X className="h-3.5 w-3.5" />
+                {currentAd.type}
+              </span>
+              {(currentAd.priority || 0) >= 7 && (
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-500 text-white animate-pulse">
+                  urgent
+                </span>
+              )}
+            </div>
+
+            {/* Body — collapsible */}
+            <p
+              className={cn(
+                "mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed",
+                cfg.body,
+                !isExpand && "line-clamp-2 sm:line-clamp-3"
+              )}
+            >
+              {currentAd.message}
+            </p>
+
+            {/* Actions row */}
+            <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-3 flex-wrap">
+              {ctaUrl && currentAd.ctaLabel && (
+                <a
+                  href={ctaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-1 rounded-lg transition-colors",
+                    cfg.cta
+                  )}
+                >
+                  {currentAd.ctaLabel}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+              {isExpand && (
+                <button
+                  onClick={() => setExpanded(isExpand ? null : currentAd._id)}
+                  className={cn(
+                    "inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-medium transition-opacity hover:opacity-70",
+                    cfg.body
+                  )}
+                >
+                  <ChevronUp className="h-3 w-3" />
+                  Less
+                </button>
+              )}
+              {!isExpand && (
+                <button
+                  onClick={() => setExpanded(currentAd._id)}
+                  className={cn(
+                    "inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-medium transition-opacity hover:opacity-70",
+                    cfg.body
+                  )}
+                >
+                  <ChevronDown className="h-3 w-3" />
+                  More
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Dismiss */}
+          <button
+            onClick={() => dismiss(currentAd._id)}
+            aria-label="Dismiss alert"
+            className={cn(
+              "shrink-0 mt-0.5 p-1.5 rounded-full transition-colors",
+              cfg.dismiss
+            )}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Carousel controls - only show if more than 1 ad */}
+        {ads.length > 1 && (
+          <div className="border-t px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2 bg-opacity-50">
+            {/* Previous button */}
+            <button
+              onClick={handlePrev}
+              className={cn(
+                "p-1.5 rounded-lg transition-colors",
+                cfg.dismiss
+              )}
+              aria-label="Previous alert"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+
+            {/* Pagination dots */}
+            <div className="flex items-center gap-1.5 flex-wrap justify-center">
+              {ads.map((ad, idx) => (
+                <button
+                  key={ad._id}
+                  onClick={() => goToSlide(idx)}
+                  className={cn(
+                    "h-2 rounded-full transition-all",
+                    idx === currentIndex
+                      ? "w-6 sm:w-8 " + cfg.badge
+                      : "w-2 bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500"
+                  )}
+                  aria-label={`Go to alert ${idx + 1}`}
+                />
+              ))}
+            </div>
+
+            {/* Counter, Auto-dismiss timer, and Next button */}
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="text-[10px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                  {currentIndex + 1}/{ads.length}
+                </span>
+                <span className="text-[8px] sm:text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                  Close in {autoDismissCountdown}s
+                </span>
+              </div>
+              <button
+                onClick={handleNext}
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  cfg.dismiss
+                )}
+                aria-label="Next alert"
+              >
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
-        );
-      })}
+        )}
+      </div>
+
+      {/* Auto-play indicator (mobile-friendly) */}
+      {ads.length > 1 && autoRotate && (
+        <div className="mt-2 text-center text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400">
+          Auto-rotating • Tap to manual browse
+        </div>
+      )}
     </div>
   );
 }
