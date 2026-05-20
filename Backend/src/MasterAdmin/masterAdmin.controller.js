@@ -1,8 +1,9 @@
 require("dotenv").config();
-const bcrypt  = require("bcrypt");
-const jwt     = require("jsonwebtoken");
-const Razorpay = require("razorpay");
-const crypto  = require("crypto");
+const bcrypt   = require("bcrypt");
+const jwt      = require("jsonwebtoken");
+const crypto   = require("crypto");
+// Use the shared Razorpay service (same singleton used by payment.controller)
+const { getRazorpay } = require("../services/razorpay.service");
 
 const { MasterAdminModel }  = require("./masterAdmin.model");
 const { AdminModel }        = require("../Admin/admin.model");
@@ -10,18 +11,6 @@ const { SubscriptionModel } = require("./subscription.model");
 const { PromoCodeModel, PlanConfigModel } = require("./promoCode.model");
 const { transporter }       = require("../connection/mailConnection");
 
-// ────────────────────────────────────────────────────────────
-// Razorpay instance
-// ────────────────────────────────────────────────────────────
-let razorpay;
-try {
-  razorpay = new Razorpay({
-    key_id:     process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-  });
-} catch (e) {
-  console.warn("[MasterAdmin] Razorpay init failed:", e.message);
-}
 
 // ────────────────────────────────────────────────────────────
 // Helper: sign master JWT
@@ -565,7 +554,7 @@ const createSubscriptionOrder = async (req, res) => {
     const finalPrice = parseFloat((basePrice - discountAmount).toFixed(2));
     const amountPaise = Math.round(finalPrice * 100); // Razorpay uses smallest currency unit
 
-    const order = await razorpay.orders.create({
+    const order = await getRazorpay().orders.create({
       amount:   amountPaise,
       currency: config.currency || "INR",
       notes: {

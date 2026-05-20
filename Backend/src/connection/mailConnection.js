@@ -2,25 +2,34 @@ const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 // ── Gmail SMTP transporter ───────────────────────────────────────────────────
-// SMTP_EMAIL = Gmail address (e.g. care.abtech@gmail.com)
-// SMTP_PASS  = 16-char App Password from Google Account → Security → App Passwords
+
+const smtpUser = process.env.SMTP_EMAIL;
+const smtpPass = (process.env.SMTP_PASS || "").replace(/\s/g, "");
+const smtpPort = parseInt(process.env.SMTP_PORT);
+
+if (!smtpUser || !smtpPass) {
+  console.warn("[Mail] ⚠ SMTP_EMAIL or SMTP_PASS is not set — email service will be disabled.");
+} else {
+  console.log(`[Mail] ✓ SMTP configured → ${smtpUser} via port ${smtpPort} (pass length: ${smtpPass.length})`);
+}
+
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.SMTP_PORT) || 465,
-  secure: parseInt(process.env.SMTP_PORT) === 465 ? true : false,
+  host: process.env.SMTP_HOST,
+  port: smtpPort,
+  secure: true,
   auth: {
-    user: process.env.SMTP_EMAIL,
-    pass: process.env.SMTP_PASS,
+    user: smtpUser,
+    pass: smtpPass,
   },
   tls: {
     rejectUnauthorized: false, // allow self-signed certs in dev
   },
-  pool: true, // Use pooled connections for better performance
-  maxConnections: 3, // Limit simultaneous connections
-  maxMessages: 100, // max messages per connection
-  connectionTimeout: 10000, // 10s connection timeout
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
+  pool: true,                 // reuse connections — avoids repeated handshake overhead
+  maxConnections: 4,  
+  maxMessages: 100,
+  connectionTimeout: 30000,   // 10s to establish TCP connection
+  greetingTimeout: 30000,     // 10s for server greeting
+  socketTimeout: 30000,       // 15s idle socket timeout
 });
 
 module.exports = { transporter };

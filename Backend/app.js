@@ -15,6 +15,7 @@ const { transporter }          = require("./src/connection/mailConnection");
 const rateRouter               = require("./src/Milk/RateSetting/rateSettingRoutes");
 const { paymentRouter }        = require("./src/Payment/paymentRoutes");
 const { masterRouter }         = require("./src/MasterAdmin/masterAdmin.routes");
+const ticketRouter             = require("./src/Ticket/ticket.routes");
 const authMiddleware           = require("./src/middleware/authMiddleware");
 const subscriptionGuard        = require("./src/middleware/subscriptionGuard");
 const { analyticsRouter }      = require("./src/Analytics/analyticsRoutes");
@@ -53,7 +54,25 @@ io.on("connection", (socket) => {
   socket.on("join_admin_room", (adminId) => {
     if (adminId) {
       socket.join(`admin:${adminId}`);
-      console.log(`[Socket] Admin ${adminId} joined room`);
+      console.log(`[Socket] Admin ${adminId} joined room admin:${adminId}`);
+    }
+  });
+
+  // Generic room join — used for 'ads' broadcast room and future chat rooms
+  // Also handles 'admin:{adminId}' rooms from the AlertBanner component
+  socket.on("join_room", (room) => {
+    if (room && typeof room === "string") {
+      socket.join(room);
+      console.log(`[Socket] ${socket.id} joined room: ${room}`);
+    }
+  });
+
+  // Master admin room (foundation for future admin↔master chat)
+  socket.on("join_master_room", (masterId) => {
+    if (masterId) {
+      socket.join(`master:${masterId}`);
+      socket.join("master_room"); // general master broadcast room (for ticket notifications)
+      console.log(`[Socket] Master ${masterId} joined room`);
     }
   });
 
@@ -152,6 +171,7 @@ app.get("/health", (req, res) =>
 // ============================================================
 app.use("/api/admin",   AdminRouter);
 app.use("/api/master",  masterRouter);             // ← Master admin APIs
+app.use("/api/tickets", ticketRouter);             // ← Ticket/Support system
 
 // Core dairy routes — guarded by subscription after authMiddleware
 app.use("/api/farmer",    authMiddleware, subscriptionGuard, farmerRouter);

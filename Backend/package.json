@@ -12,6 +12,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.967.0",
+    "@aws-sdk/s3-request-presigner": "^3.967.0",
     "@fontsource/noto-sans-devanagari": "^5.2.8",
     "@google/generative-ai": "^0.24.1",
     "bcrypt": "^5.1.1",

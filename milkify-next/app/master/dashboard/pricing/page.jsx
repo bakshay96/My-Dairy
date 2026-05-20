@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
-import { Loader2, DollarSign, Save } from "lucide-react";
+import { Loader2, Tag, Save } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -71,7 +71,7 @@ export default function PricingConfigPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-          <DollarSign className="h-8 w-8 text-purple-500" /> Pricing Configuration
+          <Tag className="h-8 w-8 text-purple-500" /> Pricing Configuration
         </h1>
         <p className="text-slate-500 mt-1">Set the global subscription pricing for the Milkify platform.</p>
       </div>
