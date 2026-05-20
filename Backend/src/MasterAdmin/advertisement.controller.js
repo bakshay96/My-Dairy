@@ -17,15 +17,16 @@ const computeExpiry = (visibleFrom, hours) => {
 // ── Helper: sanitize a URL (strip any HTML entity encoding) ──────────────────
 const sanitizeUrl = (url = "") => {
   if (!url) return "";
-  // Decode HTML entities that might arrive from body-parsers / copy-paste
+  // Decode HTML entities that might arrive from body-parsers / copy-paste.
+  // Important: decode "&amp;" last to avoid double-unescaping (e.g. "&amp;lt;" -> "<").
   return url
-    .replace(/&amp;/gi, "&")
     .replace(/&#x2F;/gi, "/")
     .replace(/&#47;/gi, "/")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
     .replace(/&quot;/gi, '"')
     .replace(/&#x27;/gi, "'")
+    .replace(/&amp;/gi, "&")
     .trim();
 };
 
