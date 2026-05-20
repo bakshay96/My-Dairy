@@ -7,8 +7,8 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import {
   TicketIcon, Plus, X, Send, Loader2, Image, ChevronDown,
-  ChevronRight, Clock, CheckCircle2, AlertTriangle, Zap,
-  Tag, Upload, Bold, Italic, Code, Hash,
+  ChevronRight, Clock, CheckCircle2, Zap,
+  Upload, Bold, Italic, Code, Hash,
 } from "lucide-react";
 
 // ── Config ────────────────────────────────────────────────────────────────────

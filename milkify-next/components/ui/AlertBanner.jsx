@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "@/lib/api";
 import { socket } from "@/lib/socket";
 import { useAuthStore } from "@/lib/store";
-import { toast } from "@/lib/toast";
 import {
-  X, ChevronDown, ChevronUp, ExternalLink, Bell,
+  X, ChevronDown, ChevronUp, ExternalLink,
   Info, CheckCircle2, AlertTriangle, Gift, Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -133,7 +132,6 @@ export default function AlertBanner({ suppress = false }) {
   const adminId        = user?._id || user?.id;
   const [ads, setAds]  = useState([]);
   const [expanded, setExpanded] = useState(null);
-  const dismissedRef   = useRef(new Set()); // client-side guard to avoid flicker
 
   // ── Initial HTTP fetch ────────────────────────────────────────────────────
   const fetchAds = useCallback(async () => {

@@ -15,7 +15,7 @@ export default function MasterSettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [creatingAdmin, setCreatingAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState({});
-  const [soundTrigger, setSoundTrigger] = useState(0);
+  const [, setSoundTrigger] = useState(0);
 
   // New Master Admin Email verification states
   const [emailVerified, setEmailVerified] = useState(false);

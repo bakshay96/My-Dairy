@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Tag, DollarSign, LogOut, Loader2, ArrowLeftRight,
-  Settings, Menu, X, PanelLeftClose, PanelLeftOpen, ChevronDown, Shield,
+  Settings, Menu, X, PanelLeftClose, PanelLeftOpen, Shield,
   Megaphone, TicketIcon,
 } from "lucide-react";
 import Brand from "@/components/ui/Brand";
@@ -33,7 +33,6 @@ export default function MasterDashboardLayout({ children }) {
   const [master,           setMaster]           = useState(null);
   const [isCollapsed,      setIsCollapsed]      = useState(false);
   const [isMobileOpen,     setIsMobileOpen]     = useState(false);
-  const [isUserMenuOpen,   setIsUserMenuOpen]   = useState(false);
   const [ticketUnread,     setTicketUnread]     = useState(0);
 
   // ── Auth check ────────────────────────────────────────────────────────────
