@@ -289,6 +289,76 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* ── Sound & Notifications Section ─────────────────────────────────── */}
+      <div className="border-t pt-6">
+        <h2 className="text-xl font-bold tracking-tight flex items-center gap-2 mb-4">
+          <svg className="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          </svg>
+          Sound &amp; Audio Notifications
+        </h2>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-sm text-slate-900 dark:text-white">Synthesize Live Activity Sound</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Plays a sleek triple-tone sound synthesizer chime immediately on incoming support desk replies.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                const disabled = localStorage.getItem("milkify-sound-disabled") === "true";
+                localStorage.setItem("milkify-sound-disabled", disabled ? "false" : "true");
+                setSuccessMsg(`✓ Notification chime ${disabled ? "enabled" : "disabled"} successfully!`);
+                setTimeout(() => setSuccessMsg(""), 3000);
+                // force re-render
+                fetchRates();
+              }}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                localStorage.getItem("milkify-sound-disabled") !== "true" ? "bg-purple-600" : "bg-slate-300 dark:bg-slate-700"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  localStorage.getItem("milkify-sound-disabled") !== "true" ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+
+            <button
+              onClick={() => {
+                try {
+                  const AudioContext = window.AudioContext || window.webkitAudioContext;
+                  if (!AudioContext) return;
+                  const ctx = new AudioContext();
+                  const playTone = (freq, startTime, duration) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = "sine";
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0, startTime);
+                    gain.gain.linearRampToValueAtTime(0.15, startTime + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(startTime);
+                    osc.stop(startTime + duration);
+                  };
+                  const now = ctx.currentTime;
+                  playTone(784, now, 0.12);
+                  playTone(1046.5, now + 0.08, 0.15);
+                  playTone(1318.5, now + 0.16, 0.25);
+                } catch {}
+              }}
+              className="px-3 h-8 text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-all"
+            >
+              Test Chime
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* ── Rate Slide-In Sidebar ─────────────────────────────────────────── */}
       {sidebarOpen && (
         <RateSidebarForm

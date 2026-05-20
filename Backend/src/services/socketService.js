@@ -1,10 +1,13 @@
 /**
  * socketService.js
  * Centralizes all Socket.io emit calls so controllers stay clean.
- * 
- * Usage in controllers:
- *   const { emitMilkAdded } = require('../services/socketService');
- *   emitMilkAdded(farmerId, milkEntry);
+ *
+ * Room convention:
+ *   admin:{adminId}   — standard admin dashboard users
+ *   master:{masterId} — master admin sessions (future chat)
+ *
+ * Usage:
+ *   const { emitMilkAdded, emitNewAdvertisement } = require('../services/socketService');
  */
 
 let _io = null;
@@ -22,16 +25,12 @@ function getIo() {
   return _io;
 }
 
-// ─── Emit Helpers ─────────────────────────────────────────────
+// ─── Emit Helpers ─────────────────────────────────────────────────────────────
 
-/**
- * Emit when a new milk entry is created.
- * Frontend components subscribed to 'milk_entry_added' will update their tables live.
- */
+/** Emit when a new milk entry is created. */
 function emitMilkAdded(farmerId, milkData) {
   const io = getIo();
   if (!io) return;
-  // Emit to admin room so only the owning admin sees the update
   io.to(`admin:${milkData.adminId}`).emit("milk_entry_added", {
     farmerId: farmerId.toString(),
     milk: milkData,
@@ -39,9 +38,7 @@ function emitMilkAdded(farmerId, milkData) {
   });
 }
 
-/**
- * Emit when a farmer profile is updated.
- */
+/** Emit when a farmer profile is updated. */
 function emitFarmerUpdated(adminId, farmerData) {
   const io = getIo();
   if (!io) return;
@@ -51,10 +48,7 @@ function emitFarmerUpdated(adminId, farmerData) {
   });
 }
 
-/**
- * Emit when a Razorpay payment is captured/verified.
- * Triggers the frontend to instantly update the billing table.
- */
+/** Emit when a Razorpay payment is captured/verified. */
 function emitPaymentCaptured(adminId, paymentData) {
   const io = getIo();
   if (!io) return;
@@ -64,4 +58,54 @@ function emitPaymentCaptured(adminId, paymentData) {
   });
 }
 
-module.exports = { initSocketService, emitMilkAdded, emitFarmerUpdated, emitPaymentCaptured };
+/**
+ * Emit a new/updated advertisement to the relevant admin rooms.
+ *
+ * @param {Object} ad          - The advertisement document (lean)
+ * @param {'new'|'updated'|'removed'} action
+ *
+ * If targetAdmins is empty → broadcast to ALL connected admins via 'ads' room.
+ * If targetAdmins has IDs  → emit only to those specific admin rooms.
+ *
+ * This is also the foundation for the future admin↔master chat system:
+ * replace event name 'advertisement_push' with 'chat_message' using the same room logic.
+ */
+function emitNewAdvertisement(ad, action = "new") {
+  const io = getIo();
+  if (!io) return;
+
+  const payload = {
+    action,           // "new" | "updated" | "removed"
+    advertisement: ad,
+    timestamp: new Date().toISOString(),
+  };
+
+  const targets = ad.targetAdmins || [];
+
+  if (targets.length === 0) {
+    // Broadcast to all admins subscribed to the 'ads' room
+    io.to("ads").emit("advertisement_push", payload);
+  } else {
+    // Targeted: emit only to the specific admin rooms
+    targets.forEach((adminId) => {
+      io.to(`admin:${adminId.toString()}`).emit("advertisement_push", payload);
+    });
+  }
+}
+
+/** Emit when an admin dismisses an ad (useful for future read-receipts / chat) */
+function emitAdDismissed(adminId, adId) {
+  const io = getIo();
+  if (!io) return;
+  io.to(`admin:${adminId}`).emit("advertisement_dismissed", { adId });
+}
+
+module.exports = {
+  initSocketService,
+  getIo,
+  emitMilkAdded,
+  emitFarmerUpdated,
+  emitPaymentCaptured,
+  emitNewAdvertisement,
+  emitAdDismissed,
+};

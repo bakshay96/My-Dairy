@@ -26,6 +26,15 @@ const {
   bulkDeleteAdmins,
 } = require("./masterAdmin.controller");
 
+const {
+  createAdvertisement,
+  getAllAdvertisements,
+  updateAdvertisement,
+  deleteAdvertisement,
+  getMyAdvertisements,
+  dismissAdvertisement,
+} = require("./advertisement.controller");
+
 const masterAuthMiddleware = require("../middleware/masterAuthMiddleware");
 const authMiddleware       = require("../middleware/authMiddleware");
 
@@ -67,5 +76,16 @@ masterRouter.get("/promo-codes",           masterAuthMiddleware, getAllPromoCode
 masterRouter.post("/promo-codes",          masterAuthMiddleware, createPromoCode);
 masterRouter.patch("/promo-codes/:id",     masterAuthMiddleware, updatePromoCode);
 masterRouter.delete("/promo-codes/:id",    masterAuthMiddleware, deletePromoCode);
+
+// ── Advertisements (Master admin manages, admin users view) ──────────────────
+// Master: full CRUD
+masterRouter.get("/advertisements",           masterAuthMiddleware, getAllAdvertisements);
+masterRouter.post("/advertisements",          masterAuthMiddleware, createAdvertisement);
+masterRouter.patch("/advertisements/:id",     masterAuthMiddleware, updateAdvertisement);
+masterRouter.delete("/advertisements/:id",    masterAuthMiddleware, deleteAdvertisement);
+
+// Admin: fetch their active ads + dismiss
+masterRouter.get("/advertisements/my",        authMiddleware, getMyAdvertisements);
+masterRouter.patch("/advertisements/:id/dismiss", authMiddleware, dismissAdvertisement);
 
 module.exports = { masterRouter };

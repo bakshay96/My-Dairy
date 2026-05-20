@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Droplet, Calculator, Settings, Menu, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { LayoutDashboard, Users, Droplet, Calculator, Settings, Menu, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, Eye, EyeOff, TicketIcon } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import SessionTimer from "@/components/ui/SessionTimer";
+import AlertBanner, { useLiveAlertCount, useLiveTicketCount, AlertDot } from "@/components/ui/AlertBanner";
 import { useEffect } from "react";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
@@ -20,6 +21,7 @@ const navItems = [
   { name: "Billing", href: "/dashboard/billing", icon: FileText },
   { name: "Analytics", href: "/dashboard/analytics", icon: Calculator },
   { name: "Subscription", href: "/dashboard/subscription", icon: ShieldCheck },
+  { name: "Support", href: "/dashboard/support", icon: TicketIcon },
   { name: "Rate Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
@@ -33,6 +35,9 @@ export default function DashboardLayout({ children }) {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const setAuth = useAuthStore((state) => state.setAuth);
+  const alertCount = useLiveAlertCount();  // live ad count for sidebar badge
+  const ticketCount = useLiveTicketCount(); // live ticket count for support badge
+  const isAddMilk = pathname === "/dashboard/add-milk"; // suppress alerts on add-milk
 
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({
@@ -115,10 +120,19 @@ export default function DashboardLayout({ children }) {
   };
 
   useEffect(() => {
-    // Wait for Zustand persistence to hydrate
+    // Mark as hydrated once Zustand persistence loads
     setIsHydrated(true);
 
     const checkSession = async () => {
+      // Only call /api/admin/me if we already have a user in the store.
+      // Without this guard, every fresh browser visit fires an unauthenticated
+      // request that always returns 401 and floods the logs unnecessarily.
+      const storedUser = useAuthStore.getState().user;
+      if (!storedUser) {
+        // No prior session — redirect straight to login, no network call needed.
+        window.location.href = "/login";
+        return;
+      }
       try {
         const me = await api.get("/admin/me");
         if (me.data?.admin) {
@@ -127,7 +141,6 @@ export default function DashboardLayout({ children }) {
           throw new Error("No admin data");
         }
       } catch (err) {
-        console.error("Session check failed:", err);
         const status = err?.response?.status;
         // Only force logout when server explicitly says session is invalid.
         if (status === 401) {
@@ -136,7 +149,7 @@ export default function DashboardLayout({ children }) {
           return;
         }
         // For transient/network/proxy issues, avoid hard redirect loop.
-        toast.error("Session check failed. Please refresh once.");
+        console.warn("Session refresh failed (non-401). Keeping local state.");
       }
     };
 
@@ -155,7 +168,7 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="flex h-screen overflow-hidden bg-transparent">
       {/* Sidebar (Desktop) */}
-      <aside className={cn("hidden border-r border-white/50 bg-white/85 dark:bg-slate-900/90 dark:border-slate-800/80 backdrop-blur-md flex-col md:flex transition-all duration-300", isCollapsed ? "w-20" : "w-64")}>
+      <aside className={cn("hidden border-r border-white/50 bg-white/85 dark:bg-slate-900/90 dark:border-slate-800/80 backdrop-blur-md flex-col md:flex transition-all duration-300", isCollapsed ? "w-14" : "w-56")}>
         <div className={cn("relative flex h-16 items-center border-b border-white/70 dark:border-slate-800/80", isCollapsed ? "justify-center px-2" : "justify-between px-4")}>
           <Link href="/dashboard" className="transition-transform hover:scale-95 active:scale-90">
             <Brand compact={isCollapsed} />
@@ -194,8 +207,24 @@ export default function DashboardLayout({ children }) {
                 )}
                 title={isCollapsed ? item.name : ""}
               >
-                <item.icon className={cn("h-5 w-5", pathname === item.href ? "text-primary" : "text-gray-400", !isCollapsed && "mr-3")} />
-                {!isCollapsed && item.name}
+                <item.icon className={cn("h-5 w-5 shrink-0", pathname === item.href ? "text-primary" : "text-gray-400", !isCollapsed && "mr-3")} />
+                {!isCollapsed && (
+                  <span className="flex-1 flex items-center justify-between">
+                    {item.name}
+                    {item.name === "Subscription" && alertCount > 0 && (
+                      <AlertDot count={alertCount} />
+                    )}
+                    {item.name === "Support" && ticketCount > 0 && (
+                      <AlertDot count={ticketCount} />
+                    )}
+                  </span>
+                )}
+                {isCollapsed && item.name === "Subscription" && alertCount > 0 && (
+                  <AlertDot count={alertCount} />
+                )}
+                {isCollapsed && item.name === "Support" && ticketCount > 0 && (
+                  <AlertDot count={ticketCount} />
+                )}
               </Link>
             ))}
           </nav>
@@ -376,8 +405,12 @@ export default function DashboardLayout({ children }) {
           <div className="mx-auto max-w-6xl mb-3 flex justify-end">
             <SessionTimer />
           </div>
-          <div className="mx-auto max-w-6xl animate-fade-in">
-            {children}
+          <div className="mx-auto max-w-6xl">
+            {/* Alert Banner — hidden on add-milk page to avoid distraction */}
+            <AlertBanner suppress={isAddMilk} />
+            <div className="animate-fade-in">
+              {children}
+            </div>
           </div>
         </main>
       </div>

@@ -52,7 +52,11 @@
 
                   // Avoid reload loops on auth pages and form submissions.
                   if (!isAuthPage && !isAuthEndpoint) {
-                    window.location.href = "/login";
+                    if (pathname.startsWith("/master")) {
+                      window.location.href = "/master/login";
+                    } else {
+                      window.location.href = "/login";
+                    }
                   }
                 }
                 return Promise.reject(error);

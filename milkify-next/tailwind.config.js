@@ -70,7 +70,9 @@ module.exports = {
       keyframes: {
         "fade-in":    { from: { opacity: "0" }, to: { opacity: "1" } },
         "slide-up":   { from: { transform: "translateY(16px)", opacity: "0" }, to: { transform: "translateY(0)", opacity: "1" } },
+        "slide-down": { from: { transform: "translateY(-16px)", opacity: "0" }, to: { transform: "translateY(0)", opacity: "1" } },
         "slide-in-right": { from: { transform: "translateX(100%)" }, to: { transform: "translateX(0)" } },
+        "scale-up":   { from: { transform: "scale(0.92)", opacity: "0" }, to: { transform: "scale(1)", opacity: "1" } },
         "shimmer":    { "0%": { backgroundPosition: "-200% 0" }, "100%": { backgroundPosition: "200% 0" } },
         "pulse-soft": { "0%,100%": { opacity: "1" }, "50%": { opacity: ".6" } },
         "bounce-in":  { "0%": { transform: "scale(0.8)", opacity: "0" }, "80%": { transform: "scale(1.04)" }, "100%": { transform: "scale(1)", opacity: "1" } },
@@ -78,7 +80,9 @@ module.exports = {
       animation: {
         "fade-in":        "fade-in 0.3s ease-out",
         "slide-up":       "slide-up 0.4s ease-out",
+        "slide-down":     "slide-down 0.4s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
+        "scale-up":       "scale-up 0.25s ease-out",
         "shimmer":        "shimmer 2s linear infinite",
         "pulse-soft":     "pulse-soft 2s ease-in-out infinite",
         "bounce-in":      "bounce-in 0.4s ease-out",
