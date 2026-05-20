@@ -1,57 +1,60 @@
-name: Deploy Next.js to EC2
+name: Deploy Full Stack to EC2
 
-    on:
-      push:
-        branches:
-          - main # Double-check if your branch is 'main' or 'master'
+on:
+  push:
+    branches:
+      - main # Double-check if your branch is 'main' or 'master'
 
-    jobs:
-      build-and-deploy:
-        runs-on: ubuntu-latest
+jobs:
+  deploy-full-stack:
+    runs-on: ubuntu-latest
 
-        steps:
-          - name: Checkout Code
-            uses: actions/checkout@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-          - name: Setup Node.js
-            uses: actions/setup-node@v4
-            with:
-              node-version: '18'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.20.8'
 
-          - name: Build and Compress inside milkify-next
-            run: |
-              cd milkify-next
-              npm install
-              npm run build
-              tar -czf deploy.tar.gz .next public package.json package-lock.json
+      - name: Build Frontend
+        run: |
+          cd milkify-next
+          npm install
+          npm run build
+          cd ..
 
-          - name: Send files to EC2
-            uses: appleboy/scp-action@master
-            with:
-              host: ${{ secrets.EC2_HOST }}
-              username: ${{ secrets.EC2_USERNAME }}
-              key: ${{ secrets.EC2_SSH_KEY }}
-              source: "milkify-next/deploy.tar.gz"
-              target: "/home/ubuntu/My-Dairy"
+      - name: Compress Full Stack
+        # GitHub starts with a fresh copy of your code, so there are no heavy node_modules in the Backend folder yet to slow down the zip!
+        run: |
+          tar -czf deploy.tar.gz milkify-next/.next milkify-next/public milkify-next/package.json milkify-next/package-lock.json Backend/
 
-          - name: Unzip and Restart PM2
-            uses: appleboy/ssh-action@master
-            with:
-              host: ${{ secrets.EC2_HOST }}
-              username: ${{ secrets.EC2_USERNAME }}
-              key: ${{ secrets.EC2_SSH_KEY }}
-              script: |
-                cd /home/ubuntu/My-Dairy/milkify-next
-                tar -xzf deploy.tar.gz
-                npm install --omit=dev
-                pm2 restart my-dairy-frontend
-    ```
-  
+      - name: Send files to EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "deploy.tar.gz"
+          target: "/home/ubuntu/My-Dairy"
 
-  
-    Now that the script knows exactly where your frontend folder is, save the file and run your standard Git commands in your terminal:
-    ```bash
-    git add .
-    git commit -m "Update CI/CD for monorepo structure"
-    git push
-    ```
+      - name: Unzip and Restart Both Services
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/My-Dairy
+            tar -xzf deploy.tar.gz
+            
+            # 1. Update Frontend
+            cd milkify-next
+            npm install --omit=dev
+            pm2 restart my-dairy-frontend
+            
+            # 2. Update Backend
+            cd ../Backend
+            npm install
+            pm2 restart my-dairy
