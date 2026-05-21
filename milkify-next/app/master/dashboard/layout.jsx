@@ -4,9 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Tag, DollarSign, LogOut, Loader2, ArrowLeftRight,
+  LayoutDashboard, Tag, IndianRupee, LogOut, Loader2, ArrowLeftRight,
   Settings, Menu, X, PanelLeftClose, PanelLeftOpen, Shield,
-  Megaphone, TicketIcon,
+  Megaphone, TicketIcon, Eye, Bell,
 } from "lucide-react";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -17,12 +17,14 @@ import { toast } from "@/lib/toast";
 import { AlertDot } from "@/components/ui/AlertBanner";
 
 const navItems = [
-  { name: "Overview",          href: "/master/dashboard",                 icon: LayoutDashboard },
-  { name: "Pricing Plans",     href: "/master/dashboard/pricing",         icon: Tag },
-  { name: "Promo Codes",       href: "/master/dashboard/promos",          icon: DollarSign },
-  { name: "Advertisements",    href: "/master/dashboard/advertisements",  icon: Megaphone },
-  { name: "Support Desk",      href: "/master/dashboard/tickets",         icon: TicketIcon },
-  { name: "Settings",          href: "/master/dashboard/settings",        icon: Settings },
+  { name: "Overview",           href: "/master/dashboard",                  icon: LayoutDashboard },
+  { name: "Visitor Analytics",  href: "/master/dashboard/visitor-stats",    icon: Eye },
+  { name: "Notifications",     href: "/master/dashboard/notifications",    icon: Bell },
+  { name: "Pricing Plans",     href: "/master/dashboard/pricing",          icon: Tag },
+  { name: "Promo Codes",       href: "/master/dashboard/promos",           icon: IndianRupee },
+  { name: "Advertisements",    href: "/master/dashboard/advertisements",   icon: Megaphone },
+  { name: "Support Desk",      href: "/master/dashboard/tickets",          icon: TicketIcon },
+  { name: "Settings",          href: "/master/dashboard/settings",         icon: Settings },
 ];
 
 export default function MasterDashboardLayout({ children }) {

@@ -18,6 +18,7 @@ function getISOWeekKey(dateStr) {
 }
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
+// ─── Dashboard Stats ──────────────────────────────────────────────────────────
 exports.getDashboardStats = async (req, res) => {
   try {
     const adminIdStr = req.admin?._id || req.params?.adminId;
@@ -43,6 +44,103 @@ exports.getDashboardStats = async (req, res) => {
       { $group: { _id: null, totalAmountOwed: { $sum: "$calculatedAmount" } } }
     ]);
 
+    // ── Collection Trends (Cow, Buffalo, Goat, Sheep) ──
+    let startMatchDate = null;
+    const range = req.query.range || "monthly";
+
+    if (range === "weekly") {
+      startMatchDate = new Date();
+      startMatchDate.setDate(startMatchDate.getDate() - 7);
+      startMatchDate.setHours(0, 0, 0, 0);
+    } else if (range === "monthly") {
+      startMatchDate = new Date();
+      startMatchDate.setDate(startMatchDate.getDate() - 30);
+      startMatchDate.setHours(0, 0, 0, 0);
+    } else if (range === "custom" && req.query.startDate && req.query.endDate) {
+      startMatchDate = new Date(req.query.startDate);
+      startMatchDate.setHours(0, 0, 0, 0);
+    } else if (range === "max") {
+      startMatchDate = null; // No limit: fetch all time data
+    } else {
+      // Default to last 30 days
+      startMatchDate = new Date();
+      startMatchDate.setDate(startMatchDate.getDate() - 30);
+      startMatchDate.setHours(0, 0, 0, 0);
+    }
+
+    const trendMatch = { adminId, isActive: { $ne: false } };
+    if (startMatchDate) {
+      trendMatch.createdAt = { $gte: startMatchDate };
+    }
+    if (range === "custom" && req.query.endDate) {
+      const endMatchDate = new Date(req.query.endDate);
+      endMatchDate.setHours(23, 59, 59, 999);
+      if (trendMatch.createdAt) {
+        trendMatch.createdAt.$lte = endMatchDate;
+      } else {
+        trendMatch.createdAt = { $lte: endMatchDate };
+      }
+    }
+
+    const trendStats = await MilkModel.aggregate([
+      { $match: trendMatch },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            category: "$category"
+          },
+          totalLiters: { $sum: "$litter" },
+          totalAmount: { $sum: "$calculatedAmount" }
+        }
+      },
+      { $sort: { "_id.date": 1 } }
+    ]);
+
+    const trendMap = {};
+    trendStats.forEach(item => {
+      const date = item._id.date;
+      const cat = item._id.category || "cow";
+
+      if (!trendMap[date]) {
+        trendMap[date] = {
+          date,
+          totalLiters: 0,
+          totalAmount: 0,
+          cowLiters: 0,
+          cowAmount: 0,
+          buffaloLiters: 0,
+          buffaloAmount: 0,
+          goatLiters: 0,
+          goatAmount: 0,
+          sheepLiters: 0,
+          sheepAmount: 0,
+        };
+      }
+
+      const liters = parseFloat(item.totalLiters.toFixed(2));
+      const amount = parseFloat(item.totalAmount.toFixed(2));
+
+      trendMap[date].totalLiters = parseFloat((trendMap[date].totalLiters + liters).toFixed(2));
+      trendMap[date].totalAmount = parseFloat((trendMap[date].totalAmount + amount).toFixed(2));
+
+      if (cat === "cow") {
+        trendMap[date].cowLiters = liters;
+        trendMap[date].cowAmount = amount;
+      } else if (cat === "buffalo") {
+        trendMap[date].buffaloLiters = liters;
+        trendMap[date].buffaloAmount = amount;
+      } else if (cat === "goat") {
+        trendMap[date].goatLiters = liters;
+        trendMap[date].goatAmount = amount;
+      } else if (cat === "sheep") {
+        trendMap[date].sheepLiters = liters;
+        trendMap[date].sheepAmount = amount;
+      }
+    });
+
+    const trendData = Object.values(trendMap).sort((a, b) => a.date.localeCompare(b.date));
+
     res.status(200).json({
       success: true,
       data: {
@@ -52,6 +150,7 @@ exports.getDashboardStats = async (req, res) => {
         totalAmountOwed:  parseFloat((cycleStats?.totalAmountOwed  || 0).toFixed(2)),
         cycleStart,
         cycleEnd,
+        trendData
       }
     });
   } catch (error) {

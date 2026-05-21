@@ -10,6 +10,7 @@ const { AdminModel }        = require("../Admin/admin.model");
 const { SubscriptionModel } = require("./subscription.model");
 const { PromoCodeModel, PlanConfigModel } = require("./promoCode.model");
 const { transporter }       = require("../connection/mailConnection");
+const { VisitorStatsModel } = require("./visitorStats.model");
 
 
 // ────────────────────────────────────────────────────────────
@@ -716,6 +717,126 @@ const getMasterDashboardStats = async (req, res) => {
 };
 
 // ────────────────────────────────────────────────────────────
+// VISITOR STATS – Get aggregated visitor data
+// ────────────────────────────────────────────────────────────
+const getVisitorStats = async (req, res) => {
+  try {
+    const { fromDate, toDate, groupBy = "day", sortBy = "date" } = req.query;
+
+    const start = fromDate ? new Date(fromDate) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
+    const end = toDate ? new Date(toDate) : new Date();
+
+    const groupStage = {
+      day: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
+      week: {
+        $dateToString: {
+          format: "%Y-W%V",
+          date: "$timestamp",
+        },
+      },
+      month: { $dateToString: { format: "%Y-%m", date: "$timestamp" } },
+    };
+
+    const pipeline = [
+      { $match: { timestamp: { $gte: start, $lte: end } } },
+      {
+        $group: {
+          _id: groupStage[groupBy] || groupStage.day,
+          count: { $sum: 1 },
+        },
+      },
+    ];
+
+    if (sortBy === "count") {
+      pipeline.push({ $sort: { count: -1 } });
+    } else {
+      pipeline.push({ $sort: { _id: 1 } });
+    }
+
+    const stats = await VisitorStatsModel.aggregate(pipeline);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        groupBy,
+        fromDate: start.toISOString().split("T")[0],
+        toDate: end.toISOString().split("T")[0],
+        stats,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ────────────────────────────────────────────────────────────
+// VISITOR STATS – Get summary (all-time + comparisons + breakdowns)
+// ────────────────────────────────────────────────────────────
+const getVisitorSummary = async (req, res) => {
+  try {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const last90Days = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+    // ── Core counts ───────────────────────────────────
+    const [allTime, last7Count, last30Count, last90Count, todayCount] = await Promise.all([
+      VisitorStatsModel.countDocuments(),
+      VisitorStatsModel.countDocuments({ timestamp: { $gte: last7Days } }),
+      VisitorStatsModel.countDocuments({ timestamp: { $gte: last30Days } }),
+      VisitorStatsModel.countDocuments({ timestamp: { $gte: last90Days } }),
+      VisitorStatsModel.countDocuments({ timestamp: { $gte: startOfToday } }),
+    ]);
+
+    const uniqueIPs = await VisitorStatsModel.distinct("ipAddress");
+    const uniqueCountries = await VisitorStatsModel.distinct("country");
+
+    // ── Unique visitors today (distinct IPs) ──────────
+    const uniqueTodayIPs = await VisitorStatsModel.distinct("ipAddress", {
+      timestamp: { $gte: startOfToday },
+    });
+
+    // ── Device breakdown (all-time) ───────────────────
+    const deviceBreakdown = await VisitorStatsModel.aggregate([
+      { $group: { _id: "$deviceType", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    // ── Top 10 countries ──────────────────────────────
+    const topCountries = await VisitorStatsModel.aggregate([
+      { $group: { _id: "$country", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        allTime,
+        todayCount,
+        uniqueToday: uniqueTodayIPs.length,
+        last7Days: last7Count,
+        last30Days: last30Count,
+        last90Days: last90Count,
+        uniqueIPs: uniqueIPs.length,
+        uniqueCountries: uniqueCountries.length,
+        deviceBreakdown: deviceBreakdown.map((d) => ({
+          device: d._id || "unknown",
+          count: d.count,
+        })),
+        topCountries: topCountries.map((c) => ({
+          country: c._id || "Unknown",
+          count: c.count,
+        })),
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ────────────────────────────────────────────────────────────
 // INTERNAL: Create trial subscription for new admin
 // ────────────────────────────────────────────────────────────
 const _createTrialSubscription = async (adminId) => {
@@ -760,4 +881,6 @@ module.exports = {
   forgotPasswordMaster,
   deleteAdmin,
   bulkDeleteAdmins,
+  getVisitorStats,
+  getVisitorSummary,
 };
