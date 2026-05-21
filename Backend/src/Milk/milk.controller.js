@@ -1,9 +1,10 @@
 const { MilkModel }        = require("./milk.model");
 const { farmerModel }      = require("../Farmer/farmer.model");
 const { rateSettingModel } = require("./RateSetting/rateSetting.model");
+const { rateChartConfigModel } = require("./RateSetting/rateChartConfig.model");
 const { sendMail }         = require("../middleware/sendMail");
 const { sendMilkEntryNotification } = require("../services/smsService");
-const { calculateMilkAmount, getBillingCycleDate } = require("../utils/milkCalculator");
+const { calculateMilkAmount, getBillingCycleDate, calculateSnfFromDegree, calculateMilkRate } = require("../utils/milkCalculator");
 const { emitMilkAdded }   = require("../services/socketService");
 const mongoose = require("mongoose");
 
@@ -41,35 +42,64 @@ exports.addMilkData = async (req, res) => {
     // ── 10-day billing cycle key ───────────────────────────────────────────
     const billingCycleDate = getBillingCycleDate();
 
-    // ── Fetch rate settings ────────────────────────────────────────────────
-    const rateSetting = await rateSettingModel.findOne({
-      adminId:      req.admin.id,
-      milkCategory: category,
-      status:       "Active",
-    });
+    // ── Dynamic SNF Calculation from Degree ──────────────────────────────
+    let actualSnf = parseFloat(snf) || 0;
+    const actualDegree = parseFloat(degree) || 0;
+    const actualFat = parseFloat(fat) || 0;
+    const actualLitter = parseFloat(litter) || 0;
 
-    if (!rateSetting) {
-      return res.status(400).json({
-        message: `Rate settings for "${category}" not found. Please configure rates in Settings first.`,
-      });
+    if (actualDegree > 0 && actualSnf === 0) {
+      actualSnf = calculateSnfFromDegree(actualFat, actualDegree);
     }
 
-    // ── Calculate amount using utility (precision-safe) ────────────────────
-    const { rate, calculatedAmount, fatRate } = calculateMilkAmount({
-      fat,
-      snf,
-      degree,
-      litter,
-      rateSetting,
+    // ── Fetch rate configurator config ──────────────────────────────────
+    const rateConfig = await rateChartConfigModel.findOne({
+      adminId: req.admin.id,
+      animalType: category,
+      status: "Active",
     });
+
+    let rate = 0;
+    let calculatedAmount = 0;
+    let fatRate = 0;
+
+    if (rateConfig) {
+      rate = calculateMilkRate(actualFat, actualSnf, rateConfig);
+      calculatedAmount = parseFloat((rate * actualLitter).toFixed(2));
+      fatRate = rateConfig.fatPointValue;
+    } else {
+      // Graceful fallback to legacy rate model
+      const rateSetting = await rateSettingModel.findOne({
+        adminId:      req.admin.id,
+        milkCategory: category,
+        status:       "Active",
+      });
+
+      if (!rateSetting) {
+        return res.status(400).json({
+          message: `Rate settings for "${category}" not found. Please configure rates in Settings first.`,
+        });
+      }
+
+      const calculated = calculateMilkAmount({
+        fat: actualFat,
+        snf: actualSnf,
+        degree: actualDegree,
+        litter: actualLitter,
+        rateSetting,
+      });
+      rate = calculated.rate;
+      calculatedAmount = calculated.calculatedAmount;
+      fatRate = calculated.fatRate;
+    }
 
     // ── Create & save milk entry ───────────────────────────────────────────
     const milkEntry = new MilkModel({
       adminId: req.admin.id,
       farmerId,
       ...req.body,
-      snf:     parseFloat(snf)    || 0,
-      degree:  parseFloat(degree) || 0,
+      snf:     actualSnf,
+      degree:  actualDegree,
       shift,
       date,
       billingCycleDate,
@@ -187,21 +217,60 @@ exports.updateMilkCollection = async (req, res) => {
   try {
     const { category, fat, snf = 0, degree = 0, litter } = req.body;
 
-    const rateSetting = await rateSettingModel.findOne({
-      adminId:      req.admin.id,
-      milkCategory: category,
-      status:       "Active",
-    });
+    let actualSnf = parseFloat(snf) || 0;
+    const actualDegree = parseFloat(degree) || 0;
+    const actualFat = parseFloat(fat) || 0;
+    const actualLitter = parseFloat(litter) || 0;
 
-    if (!rateSetting) {
-      return res.status(400).json({ message: `Rate settings for "${category}" not found` });
+    if (actualDegree > 0 && actualSnf === 0) {
+      actualSnf = calculateSnfFromDegree(actualFat, actualDegree);
     }
 
-    const { rate, calculatedAmount, fatRate } = calculateMilkAmount({
-      fat, snf, degree, litter, rateSetting,
+    const rateConfig = await rateChartConfigModel.findOne({
+      adminId: req.admin.id,
+      animalType: category,
+      status: "Active",
     });
 
-    const updatedData   = { ...req.body, fatRate, rate, calculatedAmount };
+    let rate = 0;
+    let calculatedAmount = 0;
+    let fatRate = 0;
+
+    if (rateConfig) {
+      rate = calculateMilkRate(actualFat, actualSnf, rateConfig);
+      calculatedAmount = parseFloat((rate * actualLitter).toFixed(2));
+      fatRate = rateConfig.fatPointValue;
+    } else {
+      const rateSetting = await rateSettingModel.findOne({
+        adminId:      req.admin.id,
+        milkCategory: category,
+        status:       "Active",
+      });
+
+      if (!rateSetting) {
+        return res.status(400).json({ message: `Rate settings for "${category}" not found` });
+      }
+
+      const calculated = calculateMilkAmount({
+        fat: actualFat,
+        snf: actualSnf,
+        degree: actualDegree,
+        litter: actualLitter,
+        rateSetting,
+      });
+      rate = calculated.rate;
+      calculatedAmount = calculated.calculatedAmount;
+      fatRate = calculated.fatRate;
+    }
+
+    const updatedData   = {
+      ...req.body,
+      snf: actualSnf,
+      degree: actualDegree,
+      fatRate,
+      rate,
+      calculatedAmount
+    };
     const milkCollection = await MilkModel.findByIdAndUpdate(req.params.id, updatedData, { new: true });
 
     if (!milkCollection) return res.status(404).json({ message: "Milk record not found" });
