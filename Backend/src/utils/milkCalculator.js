@@ -106,4 +106,56 @@ function getBillingCycleEnd(cycleStart) {
   return `${year}-${String(month).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
 }
 
-module.exports = { calculateMilkAmount, getBillingCycleDate, getBillingCycleEnd };
+/**
+ * Richmond's Formula (Degree to SNF):
+ * SNF = (Degree / 4) + (0.21 * FAT) + 0.36
+ */
+function calculateSnfFromDegree(fat, degree) {
+  const f = parseFloat(fat) || 0;
+  const d = parseFloat(degree) || 0;
+  if (d <= 0) return 0;
+  return parseFloat(((d / 4) + (0.21 * f) + 0.36).toFixed(2));
+}
+
+/**
+ * Point Increment Rate Formula:
+ * Rate Per Liter = Base_Rate + ((FAT - Base_FAT) * 10 * Fat_Point_Value) + ((SNF - Base_SNF) * 10 * SNF_Point_Value)
+ */
+function calculateMilkRate(actualFat, actualSnf, config) {
+  const fat = parseFloat(actualFat) || 0;
+  const snf = parseFloat(actualSnf) || 0;
+  const baseRate = parseFloat(config.baseRate) || 0;
+  const baseFat = parseFloat(config.baseFat) || 0;
+  const baseSnf = parseFloat(config.baseSnf) || 0;
+  const fatPointValue = parseFloat(config.fatPointValue) || 0;
+  const snfPointValue = parseFloat(config.snfPointValue) || 0;
+
+  const fatDiff = Math.round((fat - baseFat) * 10);
+  const snfDiff = Math.round((snf - baseSnf) * 10);
+
+  const rate = baseRate + (fatDiff * fatPointValue) + (snfDiff * snfPointValue);
+  return Math.max(0, parseFloat(rate.toFixed(4)));
+}
+
+/**
+ * Rate Per Kg FAT/SNF Formula:
+ * Rate Per Liter = (FAT * ratePerKgFat / 100) + (SNF * ratePerKgSnf / 100)
+ */
+function calculateMilkRatePerKg(fat, snf, ratePerKgFat, ratePerKgSnf) {
+  const f = parseFloat(fat) || 0;
+  const s = parseFloat(snf) || 0;
+  const rFat = parseFloat(ratePerKgFat) || 0;
+  const rSnf = parseFloat(ratePerKgSnf) || 0;
+
+  const rate = (f * rFat / 100) + (s * rSnf / 100);
+  return Math.max(0, parseFloat(rate.toFixed(4)));
+}
+
+module.exports = {
+  calculateMilkAmount,
+  getBillingCycleDate,
+  getBillingCycleEnd,
+  calculateSnfFromDegree,
+  calculateMilkRate,
+  calculateMilkRatePerKg
+};

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Droplet, Calculator, Settings, Menu, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, Eye, EyeOff, TicketIcon } from "lucide-react";
+import { LayoutDashboard, Users, Droplet, Calculator, Settings, Menu, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, Eye, EyeOff, TicketIcon, Grid } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import Brand from "@/components/ui/Brand";
@@ -19,6 +19,7 @@ const navItems = [
   { name: "Farmers", href: "/dashboard/farmers", icon: Users },
   { name: "Add Milk", href: "/dashboard/add-milk", icon: Droplet },
   { name: "Billing", href: "/dashboard/billing", icon: FileText },
+  { name: "Pricing Engine", href: "/dashboard/rates", icon: Grid },
   { name: "Analytics", href: "/dashboard/analytics", icon: Calculator },
   { name: "Subscription", href: "/dashboard/subscription", icon: ShieldCheck },
   { name: "Support", href: "/dashboard/support", icon: TicketIcon },

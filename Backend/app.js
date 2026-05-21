@@ -13,6 +13,7 @@ const { MilkRouter }           = require("./src/Milk/milkRoutes");
 const { billingRouter }        = require("./src/Milk/billingRoutes");
 const { transporter }          = require("./src/connection/mailConnection");
 const rateRouter               = require("./src/Milk/RateSetting/rateSettingRoutes");
+const ratesRouter              = require("./src/Milk/RateSetting/rateChartConfigRoutes");
 const { paymentRouter }        = require("./src/Payment/paymentRoutes");
 const { masterRouter }         = require("./src/MasterAdmin/masterAdmin.routes");
 const ticketRouter             = require("./src/Ticket/ticket.routes");
@@ -184,6 +185,7 @@ app.use("/api/farmer",    authMiddleware, subscriptionGuard, farmerRouter);
 app.use("/api/milk",      authMiddleware, subscriptionGuard, MilkRouter);
 app.use("/api/billing",   authMiddleware, subscriptionGuard, billingRouter);
 app.use("/api/rate",      authMiddleware, subscriptionGuard, rateRouter);
+app.use("/api/rates",     authMiddleware, subscriptionGuard, ratesRouter);
 app.use("/api/payment",   authMiddleware, subscriptionGuard, paymentRouter);
 app.use("/api/analytics", authMiddleware, subscriptionGuard, analyticsRouter);
 
