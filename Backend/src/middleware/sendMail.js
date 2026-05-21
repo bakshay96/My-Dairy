@@ -1,4 +1,5 @@
 const { transporter } = require("../connection/mailConnection");
+const { NotificationSettingsModel } = require("../MasterAdmin/notificationSettings.model");
 require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
@@ -171,8 +172,28 @@ const sendMail = (req, res, next) => {
   });
 };
 
-const sendGenericMail = async ({ to, subject, html, text }) => {
+const sendGenericMail = async ({ to, subject, html, text, adminId = null }) => {
   if (!to || !to.includes("@")) return;
+
+  // Check if notifications are paused for this admin
+  if (adminId) {
+    try {
+      const settings = await NotificationSettingsModel.findOne({ adminId });
+      if (settings) {
+        const now = new Date();
+        const isPaused = settings.emailNotifications.pausedUntil && settings.emailNotifications.pausedUntil > now;
+        const isDisabled = !settings.emailNotifications.enabled;
+
+        if (isPaused || isDisabled) {
+          console.log(`[Mail] Notifications paused/disabled for admin ${adminId}, skipping email to ${to}`);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("[Mail] Error checking notification settings:", error.message);
+    }
+  }
+
   const mailOptions = {
     from: `"Milkify Support" <${process.env.SMTP_EMAIL}>`,
     to,

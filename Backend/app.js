@@ -142,6 +142,12 @@ app.use(morgan(morganFormat));
 app.use(sanitizeInput);
 
 // ============================================================
+// VISITOR TRACKING
+// ============================================================
+const visitorTracking = require("./src/middleware/visitorTracking.middleware");
+app.use(visitorTracking);
+
+// ============================================================
 // RATE LIMITING
 // ============================================================
 app.use("/api/", generalLimiter);

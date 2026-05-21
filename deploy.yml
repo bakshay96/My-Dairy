@@ -3,7 +3,7 @@ name: Deploy Full Stack to EC2
 on:
   push:
     branches:
-      - main # Double-check if your branch is 'main' or 'master'
+      - main
 
 jobs:
   deploy-full-stack:
@@ -24,13 +24,11 @@ jobs:
           echo "${{ secrets.ENV_FILE }}" > .env
           npm install
           npm run build
-          cd ..
-    ```
 
       - name: Compress Full Stack
-        # GitHub starts with a fresh copy of your code, so there are no heavy node_modules in the Backend folder yet to slow down the zip!
         run: |
           tar -czf deploy.tar.gz milkify-next/.next milkify-next/public milkify-next/package.json milkify-next/package-lock.json milkify-next/next.config.* Backend/
+
       - name: Send files to EC2
         uses: appleboy/scp-action@master
         with:
@@ -49,13 +47,17 @@ jobs:
           script: |
             cd /home/ubuntu/My-Dairy
             tar -xzf deploy.tar.gz
-            
+
             # 1. Update Frontend
             cd milkify-next
             npm install --omit=dev
-            pm2 restart my-dairy-frontend
-            
+            pm2 restart my-dairy-frontend || pm2 start npm --name "my-dairy-frontend" -- start
+
             # 2. Update Backend
             cd ../Backend
             npm install
-            pm2 restart my-dairy
+            pm2 restart my-dairy || pm2 start npm --name "my-dairy" -- start
+
+            # Cleanup
+            cd /home/ubuntu/My-Dairy
+            rm -f deploy.tar.gz

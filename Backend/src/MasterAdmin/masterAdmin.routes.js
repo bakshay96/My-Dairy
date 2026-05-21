@@ -24,6 +24,8 @@ const {
   forgotPasswordMaster,
   deleteAdmin,
   bulkDeleteAdmins,
+  getVisitorStats,
+  getVisitorSummary,
 } = require("./masterAdmin.controller");
 
 const {
@@ -34,6 +36,13 @@ const {
   getMyAdvertisements,
   dismissAdvertisement,
 } = require("./advertisement.controller");
+
+const {
+  getAllNotificationSettings,
+  updateNotificationStatus,
+  updateNotificationTypes,
+  resumeNotifications,
+} = require("./notificationSettings.controller");
 
 const masterAuthMiddleware = require("../middleware/masterAuthMiddleware");
 const authMiddleware       = require("../middleware/authMiddleware");
@@ -87,5 +96,15 @@ masterRouter.delete("/advertisements/:id",    masterAuthMiddleware, deleteAdvert
 // Admin: fetch their active ads + dismiss
 masterRouter.get("/advertisements/my",        authMiddleware, getMyAdvertisements);
 masterRouter.patch("/advertisements/:id/dismiss", authMiddleware, dismissAdvertisement);
+
+// ── Visitor Stats (Master admin only) ──────────────────
+masterRouter.get("/visitor-stats",           masterAuthMiddleware, getVisitorStats);
+masterRouter.get("/visitor-stats/summary",   masterAuthMiddleware, getVisitorSummary);
+
+// ── Notification Settings (Master admin only) ──────────────────
+masterRouter.get("/notification-settings",                        masterAuthMiddleware, getAllNotificationSettings);
+masterRouter.patch("/notification-settings/:adminId",             masterAuthMiddleware, updateNotificationStatus);
+masterRouter.patch("/notification-settings/:adminId/types",       masterAuthMiddleware, updateNotificationTypes);
+masterRouter.patch("/notification-settings/:adminId/resume",      masterAuthMiddleware, resumeNotifications);
 
 module.exports = { masterRouter };
