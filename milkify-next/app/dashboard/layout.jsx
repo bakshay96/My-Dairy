@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Droplet, Calculator, Settings, Menu, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, Eye, EyeOff, TicketIcon, Grid } from "lucide-react";
+import { LayoutDashboard, Users, Droplet, Calculator, Settings, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, ChevronRight, Eye, EyeOff, TicketIcon, Grid } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import Brand from "@/components/ui/Brand";
@@ -168,6 +168,41 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-transparent">
+      {/* Dynamic Keyframes for Mobile Menu Handle Animations */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes customChevronWave {
+          0%, 100% {
+            transform: translateX(0);
+            opacity: 0.5;
+          }
+          50% {
+            transform: translateX(4px);
+            opacity: 1;
+          }
+        }
+        .animate-chevron-wave-1 {
+          animation: customChevronWave 1.4s ease-in-out infinite;
+        }
+        .animate-chevron-wave-2 {
+          animation: customChevronWave 1.4s ease-in-out infinite;
+          animation-delay: 0.2s;
+        }
+        @keyframes radialGlow {
+          0% {
+            box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.4);
+          }
+          70% {
+            box-shadow: 0 0 0 8px rgba(14, 165, 233, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+          }
+        }
+        .animate-radial-glow {
+          animation: radialGlow 2s infinite;
+        }
+      ` }} />
+
       {/* Sidebar (Desktop) */}
       <aside className={cn("hidden border-r border-white/50 bg-white/85 dark:bg-slate-900/90 dark:border-slate-800/80 backdrop-blur-md flex-col md:flex transition-all duration-300", isCollapsed ? "w-14" : "w-56")}>
         <div className={cn("relative flex h-16 items-center border-b border-white/70 dark:border-slate-800/80", isCollapsed ? "justify-center px-2" : "justify-between px-4")}>
@@ -323,83 +358,150 @@ export default function DashboardLayout({ children }) {
       </aside>
 
       {/* Mobile Navbar & Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile Header */}
+      <div className="flex flex-1 flex-col overflow-hidden">        {/* Mobile Header */}
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-white/70 bg-white/85 dark:bg-slate-900/90 dark:border-slate-800 backdrop-blur-md px-4 md:hidden">
           <Link href="/dashboard" className="transition-transform hover:scale-95 active:scale-90">
             <Brand />
           </Link>
           <div className="flex items-center gap-3">
+            {/* Theme Toggle directly on Mobile Header */}
+            <ThemeToggle />
+            
+            {/* User Profile Configuration Button (replacing old hamburger slot) */}
             <button
               onClick={() => setIsAccountModalOpen(true)}
-              className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+              className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black shadow-sm hover:bg-primary/20 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
               title="Account Configuration"
             >
-              {user?.name?.[0]?.toUpperCase() || "A"}
-            </button>
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="rounded-md p-2 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {user?.name?.[0]?.toUpperCase() || <User className="h-4.5 w-4.5" />}
             </button>
           </div>
         </header>
 
-        {/* Mobile Menu Dropdown */}
+        {/* Animated Left-Edge Pull Tab (Mobile only) */}
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className={cn(
+            "fixed top-[45%] -translate-y-1/2 z-[60] flex flex-col items-center justify-center w-8 h-20 rounded-r-2xl transition-all duration-300 ease-in-out md:hidden shadow-[4px_0_20px_rgba(0,0,0,0.15)] border-y border-r border-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50",
+            isMobileMenuOpen 
+              ? "left-[288px] bg-slate-900/90 dark:bg-slate-800/90 text-white" 
+              : "left-0 bg-primary text-white animate-radial-glow"
+          )}
+          aria-label="Toggle Navigation Drawer"
+        >
+          {/* Subtle vertical accent line inside the tab handle */}
+          <div className="absolute left-1 w-0.5 h-10 rounded-full bg-white/20" />
+
+          {/* Sequential Double Chevron Arrows */}
+          <div className="flex flex-col items-center gap-1">
+            <ChevronRight 
+              className={cn(
+                "h-4 w-4 transition-all duration-300", 
+                isMobileMenuOpen 
+                  ? "rotate-180 text-white/70" 
+                  : "animate-chevron-wave-1 text-white"
+              )} 
+            />
+            <ChevronRight 
+              className={cn(
+                "h-4 w-4 transition-all duration-300 -mt-1", 
+                isMobileMenuOpen 
+                  ? "rotate-180 text-white/40" 
+                  : "animate-chevron-wave-2 text-white/80"
+              )} 
+            />
+          </div>
+        </button>
+
+        {/* Mobile Side Drawer Backdrop */}
         {isMobileMenuOpen && (
-          <div className="absolute inset-0 z-50 mt-16 bg-white dark:bg-slate-900 md:hidden">
-            <nav className="space-y-1 p-4">
-              {navItems.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center rounded-lg px-3 py-3 text-base font-medium",
-                    pathname === item.href
-                      ? "bg-primary/10 text-primary"
-                      : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800"
-                  )}
-                >
-                  <item.icon className={cn("mr-3 h-6 w-6", pathname === item.href ? "text-primary" : "text-gray-400")} />
+          <div 
+            className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Mobile Side Drawer Content */}
+        <div 
+          className={cn(
+            "fixed top-0 left-0 bottom-0 z-50 w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl flex flex-col transition-transform duration-300 ease-in-out md:hidden border-r border-slate-200/50 dark:border-slate-800/80",
+            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          {/* Drawer Header */}
+          <div className="flex h-16 items-center justify-between px-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
+            <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="transition-transform hover:scale-95 active:scale-90">
+              <Brand />
+            </Link>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="relative flex items-center justify-center p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all duration-200"
+              aria-label="Close Navigation Drawer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Scrollable Navigation Area */}
+          <div className="flex-1 overflow-y-auto py-4 px-4 space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center rounded-xl px-3 py-3 text-base font-medium transition-all duration-200 hover:translate-x-1.5 active:scale-95",
+                  pathname === item.href
+                    ? "bg-primary/10 text-primary shadow-xs font-bold"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-slate-100/80 dark:hover:bg-slate-800"
+                )}
+              >
+                <item.icon className={cn("mr-3 h-5.5 w-5.5 shrink-0", pathname === item.href ? "text-primary" : "text-gray-400")} />
+                <span className="flex-1 flex items-center justify-between">
                   {item.name}
-                </Link>
-              ))}
-              {hasMasterToken && (
+                  {item.name === "Subscription" && alertCount > 0 && (
+                    <AlertDot count={alertCount} />
+                  )}
+                  {item.name === "Support" && ticketCount > 0 && (
+                    <AlertDot count={ticketCount} />
+                  )}
+                </span>
+              </Link>
+            ))}            {hasMasterToken && (
+              <div className="pt-2">
                 <Link
                   href="/master/dashboard"
-                  className="flex items-center rounded-lg px-3 py-3 text-base font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center rounded-xl px-3 py-3 text-base font-bold text-white bg-purple-600 hover:bg-purple-700 transition-all shadow-md shadow-purple-500/20"
                 >
-                  <Shield className="mr-3 h-6 w-6" />
+                  <Shield className="mr-3 h-5.5 w-5.5" />
                   Master Panel
                 </Link>
-              )}
-              <div className="pt-4 mt-4 border-t border-gray-100 dark:border-slate-800 flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    setIsAccountModalOpen(true);
-                  }}
-                  className="flex items-center rounded-lg px-3 py-3 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800"
-                >
-                  <UserCircle className="mr-3 h-6 w-6 text-primary" />
-                  Account Configuration
-                </button>
-                <div className="flex items-center justify-between px-3 py-2">
-                  <ThemeToggle />
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center rounded-lg py-2 text-base font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <LogOut className="mr-3 h-6 w-6" />
-                    Logout
-                  </button>
-                </div>
               </div>
-            </nav>
+            )}
           </div>
-        )}
+
+          {/* Drawer Footer Actions */}
+          <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/50">
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setIsAccountModalOpen(true);
+              }}
+              className="flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mb-2 border border-slate-200 dark:border-slate-800"
+            >
+              <UserCircle className="mr-3 h-5 w-5 text-primary" />
+              Account Configuration
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors border border-red-200/20 dark:border-red-950/20"
+            >
+              <LogOut className="mr-3 h-5 w-5" />
+              Logout
+            </button>
+          </div>
+        </div>
 
         {/* Main Content scrollable area */}
         <main className="flex-1 overflow-y-auto bg-transparent p-4 md:p-6 lg:p-8">

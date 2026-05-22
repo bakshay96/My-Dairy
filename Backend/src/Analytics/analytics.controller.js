@@ -245,38 +245,171 @@ exports.getAiInsights = async (req, res) => {
 
     const prompt = `You are a dairy analytics AI. Daily milk data (recent ${Math.min(historicalData.length, 14)} days):\n${rows}\n\nTask: Predict next 7 days combined yield (litres) and average FAT%. Give 1 actionable sentence.\nRespond ONLY with valid JSON (no markdown):\n{"predictedYieldNext7Days":0.0,"predictedAvgFat":0.0,"insight":"text"}`;
 
-    // ── Call AI (OpenAI → Gemini fallback) ─────────────────────────────────
+    // ── Call AI (Multiple Models with Cascading Fallback) ───────────────────
     let aiText = "";
+    let aiModelUsed = "";
     try {
+      const attempts = [];
       if (openaiKey) {
+        attempts.push({
+          name: "OpenAI GPT-4o-Mini",
+          fn: async () => {
+            const openai = new OpenAI({ apiKey: openaiKey });
+            const resp = await openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.3,
+              max_tokens: 120,
+            });
+            return resp.choices[0].message.content.trim();
+          }
+        });
+        attempts.push({
+          name: "OpenAI GPT-4o",
+          fn: async () => {
+            const openai = new OpenAI({ apiKey: openaiKey });
+            const resp = await openai.chat.completions.create({
+              model: "gpt-4o",
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.3,
+              max_tokens: 120,
+            });
+            return resp.choices[0].message.content.trim();
+          }
+        });
+      }
+
+      if (geminiKey) {
+        attempts.push({
+          name: "Gemini 2.0 Flash Lite",
+          fn: async () => {
+            const genAI = new GoogleGenerativeAI(geminiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+            const result = await model.generateContent(prompt);
+            return result.response.text().trim();
+          }
+        });
+        attempts.push({
+          name: "Gemini 1.5 Flash",
+          fn: async () => {
+            const genAI = new GoogleGenerativeAI(geminiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const result = await model.generateContent(prompt);
+            return result.response.text().trim();
+          }
+        });
+      }
+
+      let success = false;
+      for (const attempt of attempts) {
         try {
-          const openai = new OpenAI({ apiKey: openaiKey });
-          const resp = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.3,
-            max_tokens: 120,
-          });
-          aiText = resp.choices[0].message.content.trim();
-        } catch (openaiErr) {
-          console.warn("[AI] OpenAI failed, trying Gemini:", openaiErr.message);
-          if (!geminiKey) throw openaiErr;
-          const genAI = new GoogleGenerativeAI(geminiKey);
-          const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
-          const result = await model.generateContent(prompt);
-          aiText = result.response.text().trim();
+          console.log(`[AI] Attempting AI generation using model: ${attempt.name}...`);
+          aiText = await attempt.fn();
+          aiModelUsed = attempt.name;
+          success = true;
+          console.log(`[AI] Generation succeeded using model: ${attempt.name}`);
+          break;
+        } catch (err) {
+          console.warn(`[AI] Model ${attempt.name} failed or quota exceeded:`, err.message);
         }
-      } else {
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
-        const result = await model.generateContent(prompt);
-        aiText = result.response.text().trim();
+      }
+
+      if (!success) {
+        throw new Error("All AI models and fallbacks failed to respond.");
       }
     } catch (apiError) {
-      console.error("[AI] API Error:", apiError.message);
-      return res.status(503).json({
-        success: false,
-        message: "AI prediction service is temporarily unavailable. Please try again later.",
+      console.warn("[AI] Standard API pathways failed or quota exceeded, running fallback mathematical analytics forecaster:", apiError.message);
+
+      // Compute trends from historicalData
+      const dataLen = historicalData.length;
+      let totalLitersSum = 0;
+      let totalFatSum = 0;
+      historicalData.forEach(d => {
+        totalLitersSum += d.totalLiters || 0;
+        totalFatSum += d.avgFat || 0;
+      });
+
+      const globalAvgDailyYield = totalLitersSum / dataLen;
+      const globalAvgDailyFat = totalFatSum / dataLen;
+
+      // Split into two halves to compute growth/decline trend
+      const half = Math.floor(dataLen / 2);
+      const firstHalf = historicalData.slice(0, half);
+      const secondHalf = historicalData.slice(half);
+
+      let firstHalfYield = 0;
+      firstHalf.forEach(d => firstHalfYield += d.totalLiters || 0);
+      const firstAvg = firstHalfYield / (firstHalf.length || 1);
+
+      let secondHalfYield = 0;
+      secondHalf.forEach(d => secondHalfYield += d.totalLiters || 0);
+      const secondAvg = secondHalfYield / (secondHalf.length || 1);
+
+      // Trend calculation
+      let yieldTrend = 0;
+      if (firstAvg > 0) {
+        yieldTrend = (secondAvg - firstAvg) / firstAvg;
+      }
+      // Clamp trend to reasonable bounds [-0.15, 0.15]
+      yieldTrend = Math.max(-0.15, Math.min(0.15, yieldTrend));
+
+      // Calculate recent average yield from last 7 days (or all if < 7) to base next week's forecast on recent velocity
+      const recentDays = historicalData.slice(-7);
+      let recentYieldSum = 0;
+      let recentFatSum = 0;
+      recentDays.forEach(d => {
+        recentYieldSum += d.totalLiters || 0;
+        recentFatSum += d.avgFat || 0;
+      });
+      const recentAvgYield = recentYieldSum / (recentDays.length || 1);
+      const recentAvgFat = recentFatSum / (recentDays.length || 1);
+
+      // Predicted values
+      const predictedYield = parseFloat((recentAvgYield * 7 * (1 + yieldTrend)).toFixed(2));
+      const predictedFat = parseFloat(Math.max(1.5, Math.min(15, recentAvgFat)).toFixed(2));
+
+      // Actionable insight text based on calculated trends
+      let insight = "";
+      if (yieldTrend > 0.02) {
+        insight = `Milk yield is projected to increase by ${(yieldTrend * 100).toFixed(1)}% next week to ${predictedYield.toFixed(1)}L, driven by positive collection momentum.`;
+      } else if (yieldTrend < -0.02) {
+        insight = `Collection trends indicate a contraction of ${Math.abs(yieldTrend * 100).toFixed(1)}% in yields (${predictedYield.toFixed(1)}L projected). Recommend feed optimization and collection audits.`;
+      } else {
+        insight = `Stable collection volume of ${predictedYield.toFixed(1)}L projected for next week. Quality averages remain healthy with ${predictedFat.toFixed(2)}% average FAT content.`;
+      }
+
+      // Add a helpful note if FAT is below dairy cooperative benchmark
+      if (predictedFat < 4.0) {
+        insight += ` Note: Average FAT levels are slightly low; advise farmers to optimize feed rations with dry fodder and mineral mixtures.`;
+      }
+
+      // Store in MongoDB persistent cache
+      try {
+        await AiInsightCacheModel.findOneAndUpdate(
+          { cacheKey },
+          {
+            cacheKey, adminId,
+            farmerId: farmerId ? new mongoose.Types.ObjectId(farmerId) : null,
+            weekKey, dataHash,
+            insight,
+            predictedYieldNext7Days: predictedYield,
+            predictedAvgFat:         predictedFat,
+          },
+          { upsert: true, new: true }
+        );
+      } catch (cacheErr) {
+        console.error("[AI Cache] Failed to cache fallback results:", cacheErr.message);
+      }
+
+      return res.status(200).json({
+        success: true,
+        cached: false,
+        fallback: true,
+        data: {
+          insight,
+          predictedYieldNext7Days: predictedYield,
+          predictedAvgFat:         predictedFat,
+        }
       });
     }
 

@@ -10,6 +10,8 @@ const {
   changeAdminPassword,
   sendEmailOtp,
   verifyEmailOtp,
+  getMyNotificationSettings,
+  updateMyNotificationSettings,
 } = require("./admin.controller");
 const { messageResponse } = require("../middleware/messageResponse.middleware.js");
 const authMiddleware = require("../middleware/authMiddleware.js");
@@ -28,6 +30,8 @@ AdminRouter.post("/message", messageResponse, message);
 AdminRouter.get("/me", authMiddleware, getCurrentUser);
 AdminRouter.put("/profile", authMiddleware, updateAdminProfile);
 AdminRouter.put("/change-password", authMiddleware, changeAdminPassword);
+AdminRouter.get("/notification-settings", authMiddleware, getMyNotificationSettings);
+AdminRouter.put("/notification-settings", authMiddleware, updateMyNotificationSettings);
 AdminRouter.get("/logout", authMiddleware, logoutUser);
 
 module.exports = { AdminRouter };

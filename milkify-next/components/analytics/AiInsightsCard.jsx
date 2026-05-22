@@ -22,10 +22,15 @@ export default function AiInsightsCard({ farmerId, startDate, endDate }) {
           ? `farmerId=${farmerId}&startDate=${startDate}&endDate=${endDate}`
           : `startDate=${startDate}&endDate=${endDate}`;
         const res = await api.get(`/analytics/ai-insights?${qs}`);
-        // API returns { success, cached, data: { insight, predictedYieldNext7Days, predictedAvgFat } }
-        if (res.data?.success && res.data?.data) {
-          setData(res.data.data);
-          setCached(!!res.data.cached);
+        // The global api interceptor unwraps standard envelopes, making res.data point to the inner data block.
+        // We handle both unwrapped and wrapped responses robustly here.
+        const rawRes = res.data;
+        if (rawRes && rawRes.insight !== undefined) {
+          setData(rawRes);
+          setCached(!!rawRes.cached);
+        } else if (rawRes && rawRes.success && rawRes.data) {
+          setData(rawRes.data);
+          setCached(!!rawRes.cached);
         } else {
           setError("Unexpected response from server.");
         }

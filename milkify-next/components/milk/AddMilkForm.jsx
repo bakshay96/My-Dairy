@@ -62,21 +62,53 @@ export default function AddMilkForm() {
   const watchFat = form.watch("fat");
   const watchLitter = form.watch("litter");
   const watchShift = form.watch("shift");
+  const watchDegree = form.watch("degree");
+  const watchSnf = form.watch("snf");
+
+  const calculatedSnf = useMemo(() => {
+    const f = parseFloat(watchFat) || 0;
+    const s = parseFloat(watchSnf) || 0;
+    const d = parseFloat(watchDegree) || 0;
+    if (s > 0) return s;
+    if (d > 0) {
+      return parseFloat(((d / 4) + (0.21 * f) + 0.36).toFixed(2));
+    }
+    return 0;
+  }, [watchFat, watchSnf, watchDegree]);
+
+  const calculatedRate = useMemo(() => {
+    const config = activeRates[watchCategory];
+    if (!config) return 0;
+    const fat = parseFloat(watchFat) || 0;
+    const snf = calculatedSnf;
+    const baseRate = parseFloat(config.baseRate) || 0;
+    const baseFat = parseFloat(config.baseFat) || 0;
+    const baseSnf = parseFloat(config.baseSnf) || 0;
+    const fatPointValue = parseFloat(config.fatPointValue) || 0;
+    const snfPointValue = parseFloat(config.snfPointValue) || 0;
+
+    const fatDiff = Math.round((fat - baseFat) * 10);
+    const snfDiff = Math.round((snf - baseSnf) * 10);
+
+    const rate = baseRate + (fatDiff * fatPointValue) + (snfDiff * snfPointValue);
+    return Math.max(0, parseFloat(rate.toFixed(4)));
+  }, [watchCategory, watchFat, calculatedSnf, activeRates]);
 
   const previewAmount = useMemo(() => {
-    const rate = activeRates[watchCategory];
-    if (!rate || !watchFat || !watchLitter) return null;
-    return parseFloat((parseFloat(watchFat) * rate.ratePerFat * parseFloat(watchLitter)).toFixed(2));
-  }, [watchCategory, watchFat, watchLitter, activeRates]);
+    if (!watchFat || !watchLitter || !activeRates[watchCategory]) return null;
+    const rate = calculatedRate;
+    const litter = parseFloat(watchLitter) || 0;
+    return parseFloat((rate * litter).toFixed(2));
+  }, [watchFat, watchLitter, calculatedRate, watchCategory, activeRates]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [fRes, rRes] = await Promise.all([api.get("/farmer"), api.get("/rate/active")]);
+        const [fRes, rRes] = await Promise.all([api.get("/farmer"), api.get("/rates")]);
         setAllFarmers(fRes.data?.farmers || fRes.data || []);
-        const rates = rRes.data?.rates || [];
+        const rates = rRes.data?.data || rRes.data || [];
         const map = {};
-        rates.forEach((r) => { map[r.milkCategory] = r; });
+        rates.forEach((r) => { map[r.animalType] = r; });
         setActiveRates(map);
       } catch (e) {
         console.error("Data load error:", e);
@@ -122,7 +154,12 @@ export default function AddMilkForm() {
     setSuccessMsg("");
     setSubmitError("");
     try {
-      const res = await api.post(`/milk/${values.farmerId}`, values);
+      const finalSnf = parseFloat(values.snf) || calculatedSnf;
+      const payload = {
+        ...values,
+        snf: finalSnf,
+      };
+      const res = await api.post(`/milk/${values.farmerId}`, payload);
       const amount = res.data?.milk?.calculatedAmount || previewAmount || 0;
       
       const successText = `✓ ${values.litter}L added to ${selectedFarmer.name}'s account. Total: ${formatRupees(amount)}`;
@@ -169,13 +206,13 @@ export default function AddMilkForm() {
               </h2>
             </div>
             {currentRate && (
-              <div className="flex flex-col items-end animate-in fade-in slide-in-from-right-1">
+              <div className="flex flex-col items-end animate-in fade-in slide-in-from-right-1 text-right">
                 <div className="flex items-center gap-1 text-primary">
                   <TrendingUp className="h-3 w-3" />
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tighter">{watchCategory} Rate</span>
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">{watchCategory} Rate Chart</span>
                 </div>
                 <p className="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 leading-none mt-0.5">
-                  {formatRupees(currentRate.ratePerFat)}<span className="text-[8px] opacity-70">/fat</span>
+                  Base: {formatRupees(currentRate.baseRate)} <span className="text-[9px] opacity-70 font-normal">(F:{currentRate.baseFat}% / S:{currentRate.baseSnf}%)</span>
                 </p>
               </div>
             )}
@@ -277,8 +314,8 @@ export default function AddMilkForm() {
                   <TrendingUp className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400 pointer-events-none" />
                 </div>
                 {currentRate && (
-                  <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 leading-none mt-1 ml-1">
-                    {formatRupees(currentRate.ratePerFat)}/fat {currentRate.useSnf && `+ ${formatRupees(currentRate.ratePerSnf)}/snf`}
+                  <p className="text-[9px] font-bold text-slate-500 dark:text-slate-405 leading-none mt-1.5 ml-1">
+                    Base: {formatRupees(currentRate.baseRate)} (F:{currentRate.baseFat}% / S:{currentRate.baseSnf}%) • Diff: +{formatRupees(currentRate.fatPointValue)}/Fat, +{formatRupees(currentRate.snfPointValue)}/SNF (per 0.1%)
                   </p>
                 )}
               </div>
@@ -389,16 +426,17 @@ export default function AddMilkForm() {
 
             {/* Summary Preview */}
             {previewAmount !== null && currentRate && (
-              <div className="p-3 sm:p-4 bg-primary/5 dark:bg-primary/10 border-2 border-primary/20 rounded-2xl">
+              <div className="p-3 sm:p-4 bg-primary/5 dark:bg-primary/10 border-2 border-primary/20 rounded-2xl animate-in zoom-in-95">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-start gap-2 sm:gap-2.5">
                     <div className="mt-0.5 p-1 sm:p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
-                      <Calculator className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <Calculator className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</div>
-                      <div className="text-[9px] sm:text-[10px] font-bold text-primary mt-0.5 truncate">
-                        {watchFat}% FAT @ {formatRupees(currentRate.ratePerFat)}
+                      <div className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Pricing Calculation</div>
+                      <div className="text-[10px] font-bold text-slate-700 dark:text-slate-205 mt-1 space-y-0.5">
+                        <div>FAT: {watchFat || 0}% <span className="text-[9px] font-normal text-slate-400">(Base: {currentRate.baseFat}%)</span></div>
+                        <div>SNF: {calculatedSnf}% <span className="text-[9px] font-normal text-slate-400">(Base: {currentRate.baseSnf}%)</span> {watchDegree > 0 && parseFloat(watchSnf || 0) === 0 && <span className="text-[8px] text-primary/80">(From CLR {watchDegree})</span>}</div>
                       </div>
                     </div>
                   </div>
@@ -407,8 +445,11 @@ export default function AddMilkForm() {
                     <div className="text-lg sm:text-2xl font-black text-primary leading-none">
                       {formatRupees(previewAmount)}
                     </div>
-                    <div className="text-[8px] sm:text-[10px] font-bold text-slate-500 mt-1 sm:mt-1.5">
-                      Rate/Ltr: {formatRupees(parseFloat(watchFat) * currentRate.ratePerFat)}
+                    <div className="text-[10px] font-black text-slate-700 dark:text-slate-200 mt-1">
+                      Rate/Ltr: {formatRupees(calculatedRate)}
+                    </div>
+                    <div className="text-[8px] font-bold text-slate-400 mt-0.5">
+                      Qty: {watchLitter} L
                     </div>
                   </div>
                 </div>
