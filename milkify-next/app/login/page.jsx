@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import AuthArt from "@/components/auth/AuthArt";
+import OtpInput from "@/components/ui/OtpInput";
 import { toast } from "@/lib/toast";
 
 const loginSchema = z.object({
@@ -217,22 +218,28 @@ function AuthContent() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 flex flex-col">
-      <nav className="p-4 md:p-6 flex justify-between items-center max-w-7xl mx-auto w-full">
-        <Brand />
-        <ThemeToggle />
-      </nav>
-
-      <main className="flex-1 flex items-center justify-center p-4 md:p-6 -mt-12">
-        <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-12 items-center">
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-6 sm:py-12 overflow-y-auto">
+      <main className="w-full flex items-center justify-center p-4 md:p-6">
+        <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           
           <div className="hidden lg:block">
             <AuthArt />
           </div>
 
           <div className="flex justify-center lg:justify-start">
-            <Card className="w-full max-w-md border-none shadow-2xl bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
-              <div className="p-1 flex bg-slate-100 dark:bg-slate-800 m-6 rounded-2xl">
+            <Card className="w-full max-w-md border-none shadow-2xl bg-white dark:bg-slate-900 rounded-3xl relative overflow-visible">
+              {/* Theme Toggle inside Card */}
+              <div className="absolute top-5 right-5 z-30">
+                <ThemeToggle />
+              </div>
+
+              {/* Mobile Brand Header */}
+              <div className="block lg:hidden text-center pt-8 pb-2">
+                <Brand className="scale-110" />
+                <p className="text-xs text-slate-400 mt-2 font-medium">Smart Dairy Management Platform</p>
+              </div>
+
+              <div className="p-1 flex bg-slate-100 dark:bg-slate-800 m-6 mb-2 lg:mb-6 rounded-2xl mr-14">
                 <button
                   onClick={() => setActiveTab("login")}
                   className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${
@@ -425,29 +432,25 @@ function AuthContent() {
                         </div>
 
                         {otpSent && !emailVerified && (
-                          <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-150 dark:border-slate-800/80 rounded-2xl space-y-2.5 animate-scale-up">
-                            <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Enter 6-Digit OTP</label>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                maxLength={6}
-                                placeholder="123456"
-                                value={otpCode}
-                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                                className="w-full h-10 tracking-[0.5em] text-center font-black border dark:border-slate-800 dark:bg-slate-950 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-base"
-                              />
-                              <button
-                                type="button"
-                                disabled={verifyingOtp}
-                                onClick={verifyEmailVerificationOtp}
-                                className="h-10 px-4 text-xs font-extrabold bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-1"
-                              >
-                                {verifyingOtp ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                                Verify
-                              </button>
+                          <div className="p-5 bg-slate-50 dark:bg-slate-800/30 border border-slate-150 dark:border-slate-800/80 rounded-2xl space-y-3.5 animate-scale-up">
+                            <div className="flex justify-between items-center">
+                              <label className="text-xs font-black uppercase tracking-wider text-slate-500 block">Enter 6-Digit Code</label>
+                              <span className="text-[11px] text-primary font-bold animate-pulse">OTP Sent</span>
                             </div>
-                            <p className="text-[10px] text-slate-400 leading-normal">
-                              We sent a secure validation code to your email. Please enter it above.
+                            
+                            <OtpInput value={otpCode} onChange={setOtpCode} />
+                            
+                            <Button
+                              type="button"
+                              disabled={verifyingOtp || otpCode.length !== 6}
+                              onClick={verifyEmailVerificationOtp}
+                              className="w-full h-11 text-xs font-extrabold bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-green-600/10"
+                            >
+                              {verifyingOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                              Verify Activation Code
+                            </Button>
+                            <p className="text-[10px] text-slate-400 text-center leading-normal">
+                              We sent a secure validation code to your email. Please check your inbox or spam folder.
                             </p>
                           </div>
                         )}
