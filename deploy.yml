@@ -1,4 +1,4 @@
-name: Deploy Full Stack to EC2
+name: Deploy Backend to EC2
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  deploy-full-stack:
+  deploy-backend:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,16 +18,9 @@ jobs:
         with:
           node-version: '18.20.8'
 
-      - name: Build Frontend
+      - name: Compress Backend
         run: |
-          cd milkify-next
-          echo "${{ secrets.ENV_FILE }}" > .env
-          npm install
-          npm run build
-
-      - name: Compress Full Stack
-        run: |
-          tar -czf deploy.tar.gz milkify-next/.next milkify-next/public milkify-next/package.json milkify-next/package-lock.json milkify-next/next.config.* Backend/
+          tar -czf deploy.tar.gz Backend/
 
       - name: Send files to EC2
         uses: appleboy/scp-action@master
@@ -38,7 +31,7 @@ jobs:
           source: "deploy.tar.gz"
           target: "/home/ubuntu/My-Dairy"
 
-      - name: Unzip and Restart Both Services
+      - name: Unzip and Restart Backend Service
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -48,13 +41,8 @@ jobs:
             cd /home/ubuntu/My-Dairy
             tar -xzf deploy.tar.gz
 
-            # 1. Update Frontend
-            cd milkify-next
-            npm install --omit=dev
-            pm2 restart my-dairy-frontend || pm2 start npm --name "my-dairy-frontend" -- start
-
-            # 2. Update Backend
-            cd ../Backend
+            # Update and Restart Backend
+            cd Backend
             npm install
             pm2 restart my-dairy || pm2 start npm --name "my-dairy" -- start
 
