@@ -136,6 +136,18 @@ export default function SupportPage() {
   const [replyFiles, setReplyFiles] = useState([]);
   const [replying, setReplying]     = useState(false);
   const replyRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    if (view === "detail" && active) {
+      const timer = setTimeout(scrollToBottom, 80);
+      return () => clearTimeout(timer);
+    }
+  }, [view, active?.replies?.length, active?._id, scrollToBottom]);
 
   const load = useCallback(async () => {
     try {
@@ -356,34 +368,66 @@ export default function SupportPage() {
             </div>
           </div>
 
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4">
-            <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans" dangerouslySetInnerHTML={parseMarkdown(active.description)} />
-            {active.imageUrls?.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {active.imageUrls.map((url, i) => <img key={i} src={url} alt="" className="h-20 rounded-lg object-cover border border-slate-200 dark:border-slate-700" />)}
+          {/* Chat Stream Container */}
+          <div className="max-h-[480px] overflow-y-auto pr-2 flex flex-col gap-4 py-2 scrollbar-thin scrollbar-thumb-purple-200 scrollbar-track-transparent">
+            
+            {/* First bubble: Original Ticket Description */}
+            <div className="flex flex-col items-end self-end max-w-[85%] group animate-fadeIn">
+              <div className="flex items-center gap-1.5 mb-1 text-[10px] font-medium text-slate-400">
+                <span>👤 You (Original Request)</span>
+                <span>·</span>
+                <span>{new Date(active.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-            )}
-          </div>
-
-          {/* Replies thread */}
-          {active.replies?.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Conversation</p>
-              {active.replies.map((r, i) => (
-                <div key={i} className={cn("rounded-xl p-3", r.from === "master"
-                  ? "bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800"
-                  : "bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 ml-4")}>
-                  <p className="text-[11px] font-bold text-slate-500 mb-1">{r.from === "master" ? `🛡 ${r.fromName}` : "👤 You"} · {new Date(r.createdAt).toLocaleString()}</p>
-                  <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans" dangerouslySetInnerHTML={parseMarkdown(r.message)} />
-                  {r.imageUrls?.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {r.imageUrls.map((url, j) => <img key={j} src={url} alt="" className="h-16 rounded-lg object-cover" />)}
-                    </div>
-                  )}
-                </div>
-              ))}
+              <div className="bg-purple-600 dark:bg-purple-700 text-white rounded-2xl rounded-tr-none px-4 py-3 shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div className="text-sm whitespace-pre-wrap font-sans prose prose-invert max-w-none prose-sm" dangerouslySetInnerHTML={parseMarkdown(active.description)} />
+                {active.imageUrls?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {active.imageUrls.map((url, i) => (
+                      <img key={i} src={url} alt="" className="h-20 rounded-lg object-cover border border-purple-500/30 shadow-inner cursor-zoom-in hover:scale-105 transition-transform" />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+
+            {/* Replies Thread */}
+            {active.replies?.map((r, i) => {
+              const isMaster = r.from === "master";
+              return (
+                <div key={i} className={cn(
+                  "flex flex-col max-w-[85%] group animate-fadeIn",
+                  isMaster ? "self-start items-start" : "self-end items-end"
+                )}>
+                  <div className="flex items-center gap-1.5 mb-1 text-[10px] font-medium text-slate-400">
+                    <span>{isMaster ? `🛡️ ${r.fromName || 'Support Agent'}` : "👤 You"}</span>
+                    <span>·</span>
+                    <span>{new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  
+                  <div className={cn(
+                    "px-4 py-3 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 border",
+                    isMaster
+                      ? "bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/20 border-purple-100 dark:border-purple-900/40 text-purple-950 dark:text-purple-100 rounded-tl-none"
+                      : "bg-purple-600 dark:bg-purple-700 text-white border-transparent rounded-tr-none"
+                  )}>
+                    <div className="text-sm whitespace-pre-wrap font-sans" dangerouslySetInnerHTML={parseMarkdown(r.message)} />
+                    {r.imageUrls?.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {r.imageUrls.map((url, j) => (
+                          <img key={j} src={url} alt="" className={cn(
+                            "h-20 rounded-lg object-cover border cursor-zoom-in hover:scale-105 transition-transform",
+                            isMaster ? "border-purple-200 dark:border-purple-800" : "border-purple-500/30"
+                          )} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            
+            <div ref={messagesEndRef} />
+          </div>
 
           {/* Reply box */}
           {active.status !== "closed" && (

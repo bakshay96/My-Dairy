@@ -485,6 +485,59 @@ const verifyEmailOtp = async (req, res) => {
   }
 };
 
+const { NotificationSettingsModel } = require("../MasterAdmin/notificationSettings.model");
+
+// ─── Get Notification Settings ────────────────────────────────────────────────
+const getMyNotificationSettings = async (req, res) => {
+  try {
+    const adminId = req.admin.id;
+    let settings = await NotificationSettingsModel.findOne({ adminId });
+    if (!settings) {
+      settings = new NotificationSettingsModel({ adminId });
+      await settings.save();
+    }
+    return res.sendSuccess({ settings }, "Notification settings retrieved");
+  } catch (error) {
+    return res.sendError(error.message, 500);
+  }
+};
+
+// ─── Update Notification Settings ─────────────────────────────────────────────
+const updateMyNotificationSettings = async (req, res) => {
+  try {
+    const adminId = req.admin.id;
+    const { emailNotifications, notificationTypes } = req.body;
+
+    let settings = await NotificationSettingsModel.findOne({ adminId });
+    if (!settings) {
+      settings = new NotificationSettingsModel({ adminId });
+    }
+
+    if (emailNotifications) {
+      if (emailNotifications.enabled !== undefined) {
+        settings.emailNotifications.enabled = emailNotifications.enabled;
+      }
+      if (emailNotifications.pausedUntil !== undefined) {
+        settings.emailNotifications.pausedUntil = emailNotifications.pausedUntil;
+      }
+    }
+
+    if (notificationTypes) {
+      const allowedTypes = ["paymentAlert", "farmerUpdate", "subscriptionAlert", "ticketReply", "systemAlert"];
+      allowedTypes.forEach((type) => {
+        if (notificationTypes[type] !== undefined) {
+          settings.notificationTypes[type] = notificationTypes[type];
+        }
+      });
+    }
+
+    await settings.save();
+    return res.sendSuccess({ settings }, "Notification settings updated successfully");
+  } catch (error) {
+    return res.sendError(error.message, 500);
+  }
+};
+
 module.exports = {
   adminRegistration,
   adminLogin,
@@ -497,4 +550,6 @@ module.exports = {
   changeAdminPassword,
   sendEmailOtp,
   verifyEmailOtp,
+  getMyNotificationSettings,
+  updateMyNotificationSettings,
 };

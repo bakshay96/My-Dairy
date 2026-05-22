@@ -139,7 +139,7 @@ export default function RatesGeneratorPage() {
   const handleInputChange = (field, val) => {
     setFormValues(prev => ({
       ...prev,
-      [field]: val === "" ? "" : parseFloat(val) || 0
+      [field]: val
     }));
   };
 
@@ -148,19 +148,35 @@ export default function RatesGeneratorPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      // Clean Mongoose metadata fields out of formValues before saving
+      const cleanValues = { ...formValues };
+      delete cleanValues._id;
+      delete cleanValues.adminId;
+      delete cleanValues.status;
+      delete cleanValues.createdAt;
+      delete cleanValues.updatedAt;
+      delete cleanValues.__v;
+
       const payload = {
-        ...formValues,
+        ...cleanValues,
         animalType: selectedCategory,
       };
 
-      // Client validation
-      if (payload.minFat >= payload.maxFat) {
+      // Client validation using explicit parsing to prevent lexicographical string comparisons
+      const minFat = parseFloat(payload.minFat) || 0;
+      const maxFat = parseFloat(payload.maxFat) || 0;
+      const minSnf = parseFloat(payload.minSnf) || 0;
+      const maxSnf = parseFloat(payload.maxSnf) || 0;
+      const minDegree = parseFloat(payload.minDegree) || 0;
+      const maxDegree = parseFloat(payload.maxDegree) || 0;
+
+      if (minFat >= maxFat) {
         throw new Error("Min FAT must be strictly less than Max FAT.");
       }
-      if (previewMode === "snf" && payload.minSnf >= payload.maxSnf) {
+      if (previewMode === "snf" && minSnf >= maxSnf) {
         throw new Error("Min SNF must be strictly less than Max SNF.");
       }
-      if (previewMode === "degree" && payload.minDegree >= payload.maxDegree) {
+      if (previewMode === "degree" && minDegree >= maxDegree) {
         throw new Error("Min Degree must be strictly less than Max Degree.");
       }
 
@@ -201,8 +217,8 @@ export default function RatesGeneratorPage() {
 
   // Generate matrix row and column headers safely using scaled integer loops (to prevent floating drift)
   const matrixHeaders = useMemo(() => {
-    const minF = Math.round((formValues.minFat || 0) * 10);
-    const maxF = Math.round((formValues.maxFat || 0) * 10);
+    const minF = Math.round((parseFloat(formValues.minFat) || 0) * 10);
+    const maxF = Math.round((parseFloat(formValues.maxFat) || 0) * 10);
     const stepF = Math.round(fatStep * 10);
 
     const fatList = [];
@@ -212,16 +228,16 @@ export default function RatesGeneratorPage() {
 
     const colList = [];
     if (previewMode === "snf") {
-      const minS = Math.round((formValues.minSnf || 0) * 10);
-      const maxS = Math.round((formValues.maxSnf || 0) * 10);
+      const minS = Math.round((parseFloat(formValues.minSnf) || 0) * 10);
+      const maxS = Math.round((parseFloat(formValues.maxSnf) || 0) * 10);
       const stepS = Math.round(columnStep * 10);
       for (let s = minS; s <= maxS; s += stepS) {
         colList.push(s / 10);
       }
     } else {
       // Degree columns (usually integer CLR increments, but scaled loop is safer)
-      const minD = Math.round((formValues.minDegree || 0) * 10);
-      const maxD = Math.round((formValues.maxDegree || 0) * 10);
+      const minD = Math.round((parseFloat(formValues.minDegree) || 0) * 10);
+      const maxD = Math.round((parseFloat(formValues.maxDegree) || 0) * 10);
       const stepD = Math.round(columnStep * 10);
       for (let d = minD; d <= maxD; d += stepD) {
         colList.push(d / 10);
@@ -255,7 +271,7 @@ export default function RatesGeneratorPage() {
       </div>
 
       {/* Overview of Active Configs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => {
           const activeCfg = configs.find(c => c.animalType === key);
           const isSelected = selectedCategory === key;
@@ -264,56 +280,56 @@ export default function RatesGeneratorPage() {
             <button
               key={key}
               onClick={() => handleCategoryChange(key)}
-              className={`flex items-start gap-4 p-5 rounded-2xl border text-left transition-all duration-300 relative overflow-hidden group ${
+              className={`flex items-start gap-2 sm:gap-4 p-3 sm:p-5 rounded-2xl border text-left transition-all duration-300 relative overflow-hidden group ${
                 isSelected
                   ? "bg-primary border-primary text-white shadow-xl shadow-primary/20 scale-102"
                   : "bg-white/80 dark:bg-slate-900/80 border-slate-200/60 dark:border-slate-800/80 hover:bg-slate-50/50 hover:shadow-md"
               }`}
             >
               {/* Card Glow Effect */}
-              <div className={`absolute -right-8 -top-8 w-24 h-24 rounded-full filter blur-xl opacity-20 transition-all group-hover:scale-110 ${
+              <div className={`absolute -right-8 -top-8 w-20 h-20 sm:w-24 sm:h-24 rounded-full filter blur-xl opacity-20 transition-all group-hover:scale-110 ${
                 isSelected ? "bg-white" : "bg-primary"
               }`} />
               
-              <span className="text-3xl filter drop-shadow-sm group-hover:animate-bounce mt-1">{cfg.emoji}</span>
+              <span className="text-2xl sm:text-3xl filter drop-shadow-sm group-hover:animate-bounce mt-1">{cfg.emoji}</span>
               <div className="flex-1 min-w-0">
-                <p className={`text-xs font-black uppercase tracking-wider ${
+                <p className={`text-[10px] sm:text-xs font-black uppercase tracking-wider ${
                   isSelected ? "text-white/80" : "text-slate-400 dark:text-slate-500"
                 }`}>
                   {cfg.label}
                 </p>
                 {activeCfg ? (
                   <div className="mt-1">
-                    <p className={`text-lg font-black tracking-tight ${
+                    <p className={`text-base sm:text-lg font-black tracking-tight ${
                       isSelected ? "text-white" : "text-slate-950 dark:text-white"
                     }`}>
                       ₹{activeCfg.baseRate.toFixed(2)}/L
                     </p>
-                    <p className={`text-2xs font-semibold mt-0.5 truncate ${
+                    <p className={`text-[9px] sm:text-[11px] font-semibold mt-0.5 truncate ${
                       isSelected ? "text-white/85" : "text-slate-500 dark:text-slate-400"
                     }`}>
                       FAT {activeCfg.baseFat}% • SNF {activeCfg.baseSnf}%
                     </p>
-                    <span className={`inline-flex items-center gap-1 text-3xs font-extrabold px-2 py-0.5 rounded-full mt-2.5 ${
+                    <span className={`inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 py-0.5 rounded-full mt-2 ${
                       isSelected 
                         ? "bg-white/20 text-white" 
                         : "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/55"
                     }`}>
-                      <CheckCircle className="w-2.5 h-2.5" />
-                      Active Config
+                      <CheckCircle className="w-2.5 h-2.5 shrink-0" />
+                      Active
                     </span>
                   </div>
                 ) : (
                   <div className="mt-1">
-                    <p className={`text-sm font-extrabold italic ${
+                    <p className={`text-xs sm:text-sm font-extrabold italic ${
                       isSelected ? "text-white/70" : "text-slate-400"
                     }`}>
                       Not Configured
                     </p>
-                    <p className={`text-3xs mt-1 ${
+                    <p className={`text-[9px] sm:text-[10px] mt-1 truncate ${
                       isSelected ? "text-white/60" : "text-slate-400"
                     }`}>
-                      Using legacy rates setting
+                      Using legacy rates
                     </p>
                   </div>
                 )}
@@ -597,13 +613,13 @@ export default function RatesGeneratorPage() {
             </div>
 
             {/* Matrix Step Sizes Controller */}
-            <div className="grid grid-cols-2 gap-4 py-3 bg-slate-50/50 dark:bg-slate-950/20 border-b border-slate-100 dark:border-slate-800/80 px-2 rounded-lg mt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-slate-400">FAT Row Step:</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-3 bg-slate-50/50 dark:bg-slate-950/20 border-b border-slate-100 dark:border-slate-800/80 px-3.5 rounded-lg mt-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 shrink-0">FAT Row Step:</span>
                 <select
                   value={fatStep}
                   onChange={(e) => setFatStep(parseFloat(e.target.value))}
-                  className="h-7 border border-slate-200 dark:border-slate-800 dark:bg-slate-900 text-xs font-black rounded px-1 text-slate-700 dark:text-slate-300"
+                  className="h-8 border border-slate-200 dark:border-slate-800 dark:bg-slate-900 text-xs font-black rounded px-2 text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-primary focus:outline-none"
                 >
                   <option value="0.1">0.1 % (Dense)</option>
                   <option value="0.2">0.2 % (Normal)</option>
@@ -611,14 +627,14 @@ export default function RatesGeneratorPage() {
                   <option value="1.0">1.0 % (Summary)</option>
                 </select>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase text-slate-400">
-                  {previewMode === "snf" ? "SNF" : "Degree"} Column Step:
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 shrink-0">
+                  {previewMode === "snf" ? "SNF" : "Degree"} Col Step:
                 </span>
                 <select
                   value={columnStep}
                   onChange={(e) => setColumnStep(parseFloat(e.target.value))}
-                  className="h-7 border border-slate-200 dark:border-slate-800 dark:bg-slate-900 text-xs font-black rounded px-1 text-slate-700 dark:text-slate-300"
+                  className="h-8 border border-slate-200 dark:border-slate-800 dark:bg-slate-900 text-xs font-black rounded px-2 text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-primary focus:outline-none"
                 >
                   {previewMode === "snf" ? (
                     <>
@@ -678,10 +694,10 @@ export default function RatesGeneratorPage() {
                         const cellPrice = calculateMilkRate(fatVal, finalSnf);
 
                         // Highlight cells at the base rate
-                        const isBaseCell = Math.abs(fatVal - formValues.baseFat) < 0.05 && 
+                        const isBaseCell = Math.abs(fatVal - parseFloat(formValues.baseFat || 0)) < 0.05 && 
                                            (previewMode === "snf" 
-                                             ? Math.abs(colVal - formValues.baseSnf) < 0.05
-                                             : Math.abs(finalSnf - formValues.baseSnf) < 0.2); // larger tolerance for degree rounding
+                                             ? Math.abs(colVal - parseFloat(formValues.baseSnf || 0)) < 0.05
+                                             : Math.abs(finalSnf - parseFloat(formValues.baseSnf || 0)) < 0.2); // larger tolerance for degree rounding
                         
                         return (
                           <td
@@ -721,7 +737,7 @@ export default function RatesGeneratorPage() {
                 )}
                 <li>
                   <span className="inline-block w-2.5 h-2.5 rounded bg-primary/20 mr-1.5 align-middle border border-primary/20" />
-                  Highlights represent cells close to your configured Base FAT &amp; Base SNF coordinates (Base Rate: ₹{formValues.baseRate.toFixed(2)}).
+                  Highlights represent cells close to your configured Base FAT &amp; Base SNF coordinates (Base Rate: ₹{parseFloat(formValues.baseRate || 0).toFixed(2)}).
                 </li>
               </ul>
             </div>

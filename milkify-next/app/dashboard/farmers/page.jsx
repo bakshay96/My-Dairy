@@ -458,7 +458,9 @@ export default function FarmersPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gradient-to-r from-slate-50 to-slate-100/70 dark:from-slate-900 dark:to-slate-900 border-b text-xs text-gray-500 uppercase tracking-wide">
                   <tr>
@@ -471,7 +473,7 @@ export default function FarmersPage() {
                     <th className="px-4 py-3 text-center font-medium">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                   {filtered.map((f, i) => (
                     <tr key={f._id} className="hover:bg-slate-50/90 dark:hover:bg-slate-800/70 transition-colors">
                       <td className="px-4 py-3.5 text-gray-400">{i + 1}</td>
@@ -494,8 +496,8 @@ export default function FarmersPage() {
                           disabled={statusUpdatingId === f._id}
                           className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
                             f.status === "active"
-                              ? "bg-green-100 text-green-700 border-green-200"
-                              : "bg-amber-100 text-amber-700 border-amber-200"
+                              ? "bg-green-100 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800/40"
+                              : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40"
                           }`}
                         >
                           {statusUpdatingId === f._id ? "..." : f.status === "active" ? "Active" : "Paused"}
@@ -531,6 +533,78 @@ export default function FarmersPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Cards Grid View */}
+            <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+              {filtered.map((f) => (
+                <div key={f._id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm select-none">
+                        {f.name ? f.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "F"}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug">{f.name}</h3>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
+                          <Phone className="h-3.5 w-3.5 text-slate-400" />
+                          <a href={`tel:${f.mobile}`} className="hover:underline font-medium text-slate-700 dark:text-slate-355">{f.mobile}</a>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleToggleStatus(f)}
+                      disabled={statusUpdatingId === f._id}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border uppercase tracking-wider ${
+                        f.status === "active"
+                          ? "bg-green-100 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800/40"
+                          : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40"
+                      }`}
+                    >
+                      {statusUpdatingId === f._id ? "..." : f.status === "active" ? "Active" : "Paused"}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-500 mt-0.5 border-t border-slate-50 dark:border-slate-800/50 pt-3">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase tracking-wider">Address</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">{f.address || "—"}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block uppercase tracking-wider">Joined</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">{formatIndianDate(f.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-50 dark:border-slate-800/50">
+                    <button
+                      onClick={() => sendWhatsApp(f.mobile)}
+                      className="flex-1 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/20 text-emerald-600 dark:text-emerald-500 transition-colors border border-slate-100 dark:border-slate-800 flex items-center justify-center gap-1.5 text-xs font-semibold"
+                      title="Message on WhatsApp"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      <span>WhatsApp</span>
+                    </button>
+                    <button
+                      onClick={() => setDrawer({ farmer: f, mode: "view" })}
+                      className="flex-1 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/20 text-blue-600 dark:text-blue-400 transition-colors border border-slate-100 dark:border-slate-800 flex items-center justify-center gap-1.5 text-xs font-semibold"
+                      title="View Details"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>View</span>
+                    </button>
+                    <button
+                      onClick={() => setDrawer({ farmer: f, mode: "edit" })}
+                      className="flex-1 py-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/20 text-amber-600 dark:text-amber-400 transition-colors border border-slate-100 dark:border-slate-800 flex items-center justify-center gap-1.5 text-xs font-semibold"
+                      title="Edit Farmer"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      <span>Edit</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
