@@ -118,8 +118,15 @@ function calculateSnfFromDegree(fat, degree) {
 }
 
 /**
- * Point Increment Rate Formula:
- * Rate Per Liter = Base_Rate + ((FAT - Base_FAT) * 10 * Fat_Point_Value) + ((SNF - Base_SNF) * 10 * SNF_Point_Value)
+ * Point Increment Rate Formula (Slab-Aware):
+ *
+ * If fatSlabs / snfSlabs are provided and non-empty, the increment per 0.1% step
+ * is looked up from the matching slab for that value.  This allows cooperatives to
+ * define variable increments such as ₹0.10 per 0.1% for FAT 2-4 and ₹0.20 for FAT 4-6.
+ *
+ * Flat fallback (when slabs are empty):
+ * Rate Per Liter = Base_Rate + ((FAT - Base_FAT) * 10 * Fat_Point_Value)
+ *                            + ((SNF - Base_SNF) * 10 * SNF_Point_Value)
  */
 function calculateMilkRate(actualFat, actualSnf, config) {
   const fat = parseFloat(actualFat) || 0;
@@ -130,11 +137,79 @@ function calculateMilkRate(actualFat, actualSnf, config) {
   const fatPointValue = parseFloat(config.fatPointValue) || 0;
   const snfPointValue = parseFloat(config.snfPointValue) || 0;
 
-  const fatDiff = Math.round((fat - baseFat) * 10);
-  const snfDiff = Math.round((snf - baseSnf) * 10);
+  const fatSlabs = Array.isArray(config.fatSlabs) && config.fatSlabs.length > 0 ? config.fatSlabs : null;
+  const snfSlabs = Array.isArray(config.snfSlabs) && config.snfSlabs.length > 0 ? config.snfSlabs : null;
 
-  const rate = baseRate + (fatDiff * fatPointValue) + (snfDiff * snfPointValue);
+  // ── FAT Adjustment ────────────────────────────────────────────────────
+  let fatAdjustment = 0;
+  if (fatSlabs) {
+    fatAdjustment = _calculateSlabAdjustment(baseFat, fat, fatSlabs, 'fat');
+  } else {
+    const fatDiff = Math.round((fat - baseFat) * 10);
+    fatAdjustment = fatDiff * fatPointValue;
+  }
+
+  // ── SNF Adjustment ────────────────────────────────────────────────────
+  let snfAdjustment = 0;
+  if (snfSlabs) {
+    snfAdjustment = _calculateSlabAdjustment(baseSnf, snf, snfSlabs, 'snf');
+  } else {
+    const snfDiff = Math.round((snf - baseSnf) * 10);
+    snfAdjustment = snfDiff * snfPointValue;
+  }
+
+  const rate = baseRate + fatAdjustment + snfAdjustment;
   return Math.max(0, parseFloat(rate.toFixed(4)));
+}
+
+/**
+ * Internal helper: Walk from `baseVal` to `actualVal` in 0.1 steps,
+ * looking up the correct slab increment for each step.
+ *
+ * @param {number} baseVal   - Base FAT/SNF (e.g. 3.5)
+ * @param {number} actualVal - Actual FAT/SNF (e.g. 5.8)
+ * @param {Array}  slabs     - Sorted slab array [{fromFat/fromSnf, toFat/toSnf, incrementPerPoint}]
+ * @param {string} type      - 'fat' or 'snf' (for field naming)
+ * @returns {number} Total ₹ adjustment (positive = premium, negative = deduction)
+ */
+function _calculateSlabAdjustment(baseVal, actualVal, slabs, type) {
+  const SCALE = 10; // work in integer tenths to avoid IEEE 754 drift
+  const baseScaled = Math.round(baseVal * SCALE);
+  const actualScaled = Math.round(actualVal * SCALE);
+
+  if (baseScaled === actualScaled) return 0;
+
+  const direction = actualScaled > baseScaled ? 1 : -1;
+  let totalPaise = 0; // accumulate in scaled ₹ (×10000)
+  const PAISE_SCALE = 10000;
+
+  const fromKey = type === 'fat' ? 'fromFat' : 'fromSnf';
+  const toKey   = type === 'fat' ? 'toFat'   : 'toSnf';
+
+  for (let step = baseScaled; step !== actualScaled; step += direction) {
+    // Current value in real units (at the start of this 0.1 step)
+    const currentVal = step / SCALE;
+    // The point we are stepping to
+    const nextVal = (step + direction) / SCALE;
+    // For positive direction, check which slab contains currentVal
+    // For negative direction, check which slab contains nextVal
+    const checkVal = direction > 0 ? currentVal : nextVal;
+
+    // Find matching slab: checkVal must be >= slab.from AND < slab.to
+    const matchedSlab = slabs.find(s => {
+      const from = parseFloat(s[fromKey]);
+      const to   = parseFloat(s[toKey]);
+      return checkVal >= from && checkVal < to;
+    });
+
+    if (matchedSlab) {
+      const increment = parseFloat(matchedSlab.incrementPerPoint) || 0;
+      totalPaise += Math.round(increment * PAISE_SCALE) * direction;
+    }
+    // If no slab matches (out of all slab ranges), ₹0 increment for this step
+  }
+
+  return totalPaise / PAISE_SCALE;
 }
 
 /**
