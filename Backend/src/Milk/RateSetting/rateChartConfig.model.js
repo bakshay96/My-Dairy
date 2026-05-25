@@ -43,6 +43,27 @@ const RateChartConfigSchema = new mongoose.Schema({
     default: 0.1,
     min: [0, 'SNF point value must be positive'],
   },
+
+  // ── Slab-Based Variable Increment Arrays ─────────────────────────────
+  // When non-empty, these override the flat fatPointValue / snfPointValue
+  // with range-specific increments for fine-grained Indian dairy pricing.
+  fatSlabs: {
+    type: [{
+      fromFat:           { type: Number, required: true },
+      toFat:             { type: Number, required: true },
+      incrementPerPoint: { type: Number, required: true, min: 0 }, // ₹ per 0.1% FAT point
+    }],
+    default: [],
+  },
+  snfSlabs: {
+    type: [{
+      fromSnf:           { type: Number, required: true },
+      toSnf:             { type: Number, required: true },
+      incrementPerPoint: { type: Number, required: true, min: 0 }, // ₹ per 0.1% SNF point
+    }],
+    default: [],
+  },
+
   ratePerKgFat: {
     type: Number,
     default: 0,

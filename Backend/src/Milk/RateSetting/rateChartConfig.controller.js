@@ -18,6 +18,8 @@ exports.saveRateChartConfig = async (req, res) => {
       maxSnf = 12.0,
       minDegree = 20,
       maxDegree = 40,
+      fatSlabs = [],
+      snfSlabs = [],
     } = req.body;
 
     if (!animalType) {
@@ -29,6 +31,18 @@ exports.saveRateChartConfig = async (req, res) => {
         success: false,
         message: "animalType must be one of: cow, buffalo, sheep, goat.",
       });
+    }
+
+    // ── Validate FAT slabs ─────────────────────────────────────────────
+    const validatedFatSlabs = _validateAndSortSlabs(fatSlabs, "FAT", "fromFat", "toFat");
+    if (validatedFatSlabs.error) {
+      return res.status(400).json({ success: false, message: validatedFatSlabs.error });
+    }
+
+    // ── Validate SNF slabs ─────────────────────────────────────────────
+    const validatedSnfSlabs = _validateAndSortSlabs(snfSlabs, "SNF", "fromSnf", "toSnf");
+    if (validatedSnfSlabs.error) {
+      return res.status(400).json({ success: false, message: validatedSnfSlabs.error });
     }
 
     const adminId = req.admin._id;
@@ -56,6 +70,8 @@ exports.saveRateChartConfig = async (req, res) => {
       maxSnf: parseFloat(maxSnf) || 12.0,
       minDegree: parseFloat(minDegree) || 20,
       maxDegree: parseFloat(maxDegree) || 40,
+      fatSlabs: validatedFatSlabs.data,
+      snfSlabs: validatedSnfSlabs.data,
       status: "Active",
     });
 
@@ -73,6 +89,54 @@ exports.saveRateChartConfig = async (req, res) => {
     });
   }
 };
+
+/**
+ * Validate and sort slab array.
+ * - Each slab must have from < to, incrementPerPoint >= 0.
+ * - Slabs must be sorted ascending by from value.
+ * - Slabs must not overlap (each slab's from must be >= previous slab's to).
+ * @returns {{ data: Array } | { error: string }}
+ */
+function _validateAndSortSlabs(slabs, label, fromKey, toKey) {
+  if (!Array.isArray(slabs) || slabs.length === 0) {
+    return { data: [] };
+  }
+
+  // Parse and sanitize
+  const parsed = slabs.map((s, i) => {
+    const from = parseFloat(s[fromKey]);
+    const to   = parseFloat(s[toKey]);
+    const inc  = parseFloat(s.incrementPerPoint);
+    if (isNaN(from) || isNaN(to) || isNaN(inc)) {
+      return { error: `${label} Slab #${i + 1}: All fields must be valid numbers.` };
+    }
+    if (from >= to) {
+      return { error: `${label} Slab #${i + 1}: 'From' (${from}) must be less than 'To' (${to}).` };
+    }
+    if (inc < 0) {
+      return { error: `${label} Slab #${i + 1}: Increment per point must be ≥ 0.` };
+    }
+    return { [fromKey]: from, [toKey]: to, incrementPerPoint: inc };
+  });
+
+  // Check for validation errors in individual slabs
+  const errSlab = parsed.find(s => s.error);
+  if (errSlab) return { error: errSlab.error };
+
+  // Sort ascending by from value
+  parsed.sort((a, b) => a[fromKey] - b[fromKey]);
+
+  // Check non-overlapping: each slab's from must be >= previous slab's to
+  for (let i = 1; i < parsed.length; i++) {
+    if (parsed[i][fromKey] < parsed[i - 1][toKey]) {
+      return {
+        error: `${label} Slabs overlap: Slab #${i} ends at ${parsed[i - 1][toKey]} but Slab #${i + 1} starts at ${parsed[i][fromKey]}.`,
+      };
+    }
+  }
+
+  return { data: parsed };
+}
 
 // ─── GET /api/rates ───────────────────────────────────────────────────────────
 exports.getActiveRateChartConfigs = async (req, res) => {
