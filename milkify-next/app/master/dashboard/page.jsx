@@ -54,6 +54,7 @@ export default function MasterDashboardOverview() {
     password: "",
     name: "",
     shopName: "",
+    memberId: "",
     notifyUser: true,
   });
   const [savingCreds, setSavingCreds] = useState(false);
@@ -82,6 +83,7 @@ export default function MasterDashboardOverview() {
     email: "",
     username: "",
     password: "",
+    memberId: "",
   });
   const [savingEditMaster, setSavingEditMaster] = useState(false);
   const [showMasterPassword, setShowMasterPassword] = useState(false);
@@ -227,6 +229,7 @@ export default function MasterDashboardOverview() {
       password: "",
       name: admin.name || "",
       shopName: admin.shopName || "",
+      memberId: admin.memberId || "",
       notifyUser: !!admin.email,
     });
     setShowModalPassword(false);
@@ -257,6 +260,7 @@ export default function MasterDashboardOverview() {
       email: m.email || "",
       username: m.username || "",
       password: "",
+      memberId: m.memberId || "",
     });
     setShowMasterPassword(false);
   };
@@ -304,6 +308,7 @@ export default function MasterDashboardOverview() {
         password: credForm.password.trim() || undefined,
         name: credForm.name?.trim() || undefined,
         shopName: credForm.shopName?.trim() || undefined,
+        memberId: credForm.memberId?.trim() || undefined,
         notifyUser: credForm.notifyUser,
       };
 
@@ -364,6 +369,7 @@ export default function MasterDashboardOverview() {
         mobile: editMasterForm.mobile.trim(),
         email: editMasterForm.email.trim(),
         username: editMasterForm.username.trim(),
+        memberId: editMasterForm.memberId?.trim() || undefined,
       };
       if (editMasterForm.password && editMasterForm.password.trim().length > 0) {
         payload.password = editMasterForm.password.trim();
@@ -703,8 +709,15 @@ export default function MasterDashboardOverview() {
 
                           {/* Admin Info */}
                           <td className="px-4 py-3.5">
-                            <p className="font-bold text-slate-900 dark:text-white text-sm">{admin.name}</p>
-                            <p className="text-slate-500 text-[11px]">{admin.email || "No email"}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {admin.memberId && (
+                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                  {admin.memberId}
+                                </span>
+                              )}
+                              <span className="font-bold text-slate-900 dark:text-white text-sm">{admin.name}</span>
+                            </div>
+                            <p className="text-slate-500 text-[11px] mt-0.5">{admin.email || "No email"}</p>
                             <p className="text-[10px] text-slate-400 uppercase mt-0.5">Joined: {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString("en-GB") : "N/A"}</p>
                           </td>
 
@@ -1165,7 +1178,14 @@ export default function MasterDashboardOverview() {
                   {filteredMasters.map((m) => (
                     <tr key={m._id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <td className="px-5 py-3.5">
-                        <p className="font-bold text-slate-900 dark:text-white text-sm">{m.firstName} {m.lastName}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {m.memberId && (
+                            <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                              {m.memberId}
+                            </span>
+                          )}
+                          <span className="font-bold text-slate-900 dark:text-white text-sm">{m.firstName} {m.lastName}</span>
+                        </div>
                         <p className="text-[10px] text-slate-400 mt-0.5">Joined: {m.createdAt ? new Date(m.createdAt).toLocaleDateString("en-GB") : "N/A"}</p>
                       </td>
 
@@ -1542,11 +1562,26 @@ export default function MasterDashboardOverview() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Member ID */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1.5">
+                    <UserCheck className="h-3 w-3 text-purple-600" /> Member ID
+                  </label>
+                  <input
+                    type="text"
+                    value={credForm.memberId}
+                    onChange={(e) => setCredForm({ ...credForm, memberId: e.target.value.toUpperCase() })}
+                    placeholder="e.g. MI-DA-001"
+                    className="w-full h-10 border dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl px-3 font-mono text-sm uppercase focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  />
+                  <p className="text-[10px] text-slate-400">Unique Dairy Admin ID</p>
+                </div>
+
                 {/* Login Mobile Number */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1.5">
-                    <Phone className="h-3 w-3 text-purple-600" /> Login Mobile (10 Digits) *
+                    <Phone className="h-3 w-3 text-purple-600" /> Login Mobile *
                   </label>
                   <input
                     type="text"
@@ -1557,7 +1592,7 @@ export default function MasterDashboardOverview() {
                     placeholder="e.g. 9876543210"
                     className="w-full h-10 border dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl px-3 font-mono text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none"
                   />
-                  <p className="text-[10px] text-slate-400">Primary user identifier for dashboard login</p>
+                  <p className="text-[10px] text-slate-400">Primary login identifier</p>
                 </div>
 
                 {/* Email Address */}
@@ -1572,7 +1607,7 @@ export default function MasterDashboardOverview() {
                     placeholder="dairy@example.com"
                     className="w-full h-10 border dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl px-3 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none"
                   />
-                  <p className="text-[10px] text-slate-400">For OTP recovery and credential notifications</p>
+                  <p className="text-[10px] text-slate-400">Notifications &amp; alerts</p>
                 </div>
               </div>
 
@@ -1893,14 +1928,25 @@ export default function MasterDashboardOverview() {
                 </div>
               </div>
 
-              <div>
-                <label className="font-bold uppercase text-slate-500">Username (Login ID)</label>
-                <input
-                  required
-                  value={editMasterForm.username}
-                  onChange={(e) => setEditMasterForm({ ...editMasterForm, username: e.target.value })}
-                  className="w-full h-9 border dark:border-slate-800 bg-white dark:bg-slate-900 rounded-lg px-2.5 mt-1 font-mono"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold uppercase text-slate-500">Member ID</label>
+                  <input
+                    value={editMasterForm.memberId}
+                    onChange={(e) => setEditMasterForm({ ...editMasterForm, memberId: e.target.value.toUpperCase() })}
+                    placeholder="e.g. MI-MST-001"
+                    className="w-full h-9 border dark:border-slate-800 bg-white dark:bg-slate-900 rounded-lg px-2.5 mt-1 font-mono uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold uppercase text-slate-500">Username (Login ID)</label>
+                  <input
+                    required
+                    value={editMasterForm.username}
+                    onChange={(e) => setEditMasterForm({ ...editMasterForm, username: e.target.value })}
+                    className="w-full h-9 border dark:border-slate-800 bg-white dark:bg-slate-900 rounded-lg px-2.5 mt-1 font-mono"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">

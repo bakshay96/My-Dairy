@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const { AdminModel } = require("./admin.model");
 const { transporter } = require("../connection/mailConnection");
 const { farmerModel } = require("../Farmer/farmer.model");
+const { generateDairyAdminMemberId, generateAdminSelfFarmerMemberId } = require("../utils/memberIdGenerator");
 
 require("dotenv").config();
 
@@ -33,8 +34,10 @@ const adminRegistration = async (req, res) => {
           return res.status(500).json({ error: error.message });
         }
 
+        const memberId = await generateDairyAdminMemberId();
         const newAdmin = new AdminModel({
           ...req.body,
+          memberId,
           password: hash,
           key: password,
         });
@@ -43,6 +46,7 @@ const adminRegistration = async (req, res) => {
 
         // AUTO-CREATE FARMER ACCOUNT FOR ADMIN
         try {
+          const selfFarmerMemberId = generateAdminSelfFarmerMemberId(admin.memberId);
           const selfFarmer = new farmerModel({
             adminId: admin._id,
             name: admin.name,
@@ -50,7 +54,7 @@ const adminRegistration = async (req, res) => {
             village: admin.village || "Self",
             gender: admin.gender || "Male",
             email: admin.email || "milkify@gmail.com",
-            memberId: "MI-000", // Special ID for owner
+            memberId: selfFarmerMemberId, // e.g. MI-DAS-001
             role: "Farmer",
             status: "active"
           });
@@ -103,11 +107,13 @@ const registerAdmin = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    admin = new AdminModel({ ...req.body, key: password, password: hashedPassword });
+    const memberId = await generateDairyAdminMemberId();
+    admin = new AdminModel({ ...req.body, memberId, key: password, password: hashedPassword });
     await admin.save();
 
     // AUTO-CREATE FARMER ACCOUNT FOR ADMIN
     try {
+      const selfFarmerMemberId = generateAdminSelfFarmerMemberId(admin.memberId);
       const selfFarmer = new farmerModel({
         adminId: admin._id,
         name: admin.name,
@@ -115,7 +121,7 @@ const registerAdmin = async (req, res) => {
         village: admin.village || "Self",
         gender: admin.gender || "Male",
         email: admin.email || "milkify@gmail.com",
-        memberId: "MI-000",
+        memberId: selfFarmerMemberId,
         role: "Farmer",
         status: "active"
       });

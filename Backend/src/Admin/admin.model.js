@@ -55,6 +55,12 @@ const adminSchema = new mongoose.Schema(
       enum: ["Farmer", "Admin"],
       default: "Admin",
     },
+    memberId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
     key: { type: String },
     modifiedBy: { type: String, default: null },
     modifiedAt: { type: Date, default: null },

@@ -1,40 +1,36 @@
 require("dotenv").config();
-const dns = require("dns");
-try {
-  dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
-} catch (_) {}
-const http    = require("http");
+const http = require("http");
 const express = require("express");
-const cors    = require("cors");
-const helmet  = require("helmet");
-const morgan  = require("morgan");
+const cors = require("cors");
+const helmet = require("helmet");
+const morgan = require("morgan");
 const { Server } = require("socket.io");
 
-const { connection }           = require("./src/connection/db");
-const { farmerRouter }         = require("./src/Farmer/farmerRoutes");
-const { AdminRouter }          = require("./src/Admin/adminRoutes");
-const { MilkRouter }           = require("./src/Milk/milkRoutes");
-const { billingRouter }        = require("./src/Milk/billingRoutes");
-const { transporter }          = require("./src/connection/mailConnection");
-const rateRouter               = require("./src/Milk/RateSetting/rateSettingRoutes");
-const ratesRouter              = require("./src/Milk/RateSetting/rateChartConfigRoutes");
-const { paymentRouter }        = require("./src/Payment/paymentRoutes");
-const { masterRouter }         = require("./src/MasterAdmin/masterAdmin.routes");
-const ticketRouter             = require("./src/Ticket/ticket.routes");
-const authMiddleware           = require("./src/middleware/authMiddleware");
-const subscriptionGuard        = require("./src/middleware/subscriptionGuard");
-const { analyticsRouter }      = require("./src/Analytics/analyticsRoutes");
-const { responseInterceptor }  = require("./src/middleware/responseHandler.middleware");
+const { connection } = require("./src/connection/db");
+const { farmerRouter } = require("./src/Farmer/farmerRoutes");
+const { AdminRouter } = require("./src/Admin/adminRoutes");
+const { MilkRouter } = require("./src/Milk/milkRoutes");
+const { billingRouter } = require("./src/Milk/billingRoutes");
+const { transporter } = require("./src/connection/mailConnection");
+const rateRouter = require("./src/Milk/RateSetting/rateSettingRoutes");
+const ratesRouter = require("./src/Milk/RateSetting/rateChartConfigRoutes");
+const { paymentRouter } = require("./src/Payment/paymentRoutes");
+const { masterRouter } = require("./src/MasterAdmin/masterAdmin.routes");
+const ticketRouter = require("./src/Ticket/ticket.routes");
+const authMiddleware = require("./src/middleware/authMiddleware");
+const subscriptionGuard = require("./src/middleware/subscriptionGuard");
+const { analyticsRouter } = require("./src/Analytics/analyticsRoutes");
+const { responseInterceptor } = require("./src/middleware/responseHandler.middleware");
 const { generalLimiter, authLimiter } = require("./src/middleware/rateLimiter.middleware");
-const sanitizeInput            = require("./src/middleware/sanitize.middleware");
-const { initSocketService }    = require("./src/services/socketService");
+const sanitizeInput = require("./src/middleware/sanitize.middleware");
+const { initSocketService } = require("./src/services/socketService");
 const { preloadDevanagariFonts } = require("./src/utils/fontManager");
 
-const PORT      = process.env.PORT      || 3030;
-const NODE_ENV  = process.env.NODE_ENV  || "development";
-const CORS_ORIGIN = process.env.origin  || "http://localhost:3000"; // Next.js default port
+const PORT = process.env.PORT || 3030;
+const NODE_ENV = process.env.NODE_ENV || "development";
+const CORS_ORIGIN = process.env.origin || "http://localhost:3000"; // Next.js default port
 
-const app    = express();
+const app = express();
 const server = http.createServer(app);  // ← Wrap in raw http.Server for Socket.io
 
 // ============================================================
@@ -99,7 +95,7 @@ app.use(
           "https://checkout.razorpay.com",
           "'unsafe-inline'",
         ],
-        frameSrc:   ["'self'", "https://api.razorpay.com"],
+        frameSrc: ["'self'", "https://api.razorpay.com"],
         connectSrc: ["'self'", "https://api.razorpay.com"],
       },
     },
@@ -113,8 +109,8 @@ const allowedOrigins =
   NODE_ENV === "development"
     ? true
     : Array.isArray(CORS_ORIGIN)
-    ? CORS_ORIGIN
-    : [CORS_ORIGIN];
+      ? CORS_ORIGIN
+      : [CORS_ORIGIN];
 
 const corsOptions = {
   origin: allowedOrigins,
@@ -180,17 +176,17 @@ app.get("/health", (req, res) =>
 // ============================================================
 // API ROUTES
 // ============================================================
-app.use("/api/admin",   AdminRouter);
-app.use("/api/master",  masterRouter);             // ← Master admin APIs
+app.use("/api/admin", AdminRouter);
+app.use("/api/master", masterRouter);             // ← Master admin APIs
 app.use("/api/tickets", ticketRouter);             // ← Ticket/Support system
 
 // Core dairy routes — guarded by subscription after authMiddleware
-app.use("/api/farmer",    authMiddleware, subscriptionGuard, farmerRouter);
-app.use("/api/milk",      authMiddleware, subscriptionGuard, MilkRouter);
-app.use("/api/billing",   authMiddleware, subscriptionGuard, billingRouter);
-app.use("/api/rate",      authMiddleware, subscriptionGuard, rateRouter);
-app.use("/api/rates",     authMiddleware, subscriptionGuard, ratesRouter);
-app.use("/api/payment",   authMiddleware, subscriptionGuard, paymentRouter);
+app.use("/api/farmer", authMiddleware, subscriptionGuard, farmerRouter);
+app.use("/api/milk", authMiddleware, subscriptionGuard, MilkRouter);
+app.use("/api/billing", authMiddleware, subscriptionGuard, billingRouter);
+app.use("/api/rate", authMiddleware, subscriptionGuard, rateRouter);
+app.use("/api/rates", authMiddleware, subscriptionGuard, ratesRouter);
+app.use("/api/payment", authMiddleware, subscriptionGuard, paymentRouter);
 app.use("/api/analytics", authMiddleware, subscriptionGuard, analyticsRouter);
 
 // ============================================================
@@ -229,11 +225,11 @@ server.listen(PORT, async () => {
     console.log(`✓ Environment: ${NODE_ENV}`);
 
     // Pre-download Devanagari fonts so Hindi/Marathi PDFs are instant
-    preloadDevanagariFonts().catch(() => {});
+    preloadDevanagariFonts().catch(() => { });
 
     transporter.verify((error) => {
       if (error) console.log("⚠ Email service error:", error.message);
-      else        console.log("✓ Email service is ready");
+      else console.log("✓ Email service is ready");
     });
   } catch (error) {
     console.error("✗ Server startup error:", error);

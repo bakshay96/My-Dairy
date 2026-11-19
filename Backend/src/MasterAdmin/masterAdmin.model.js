@@ -11,6 +11,7 @@ const master_adminSchema = new mongoose.Schema(
     password:   { type: String, required: true, minlength: "4" },
     key:        { type: String }, // plaintext backup (for dev reference)
     role:       { type: String, default: "master_admin", enum: ["master_admin"] },
+    memberId:   { type: String, unique: true, sparse: true, index: true },
     isActive:   { type: Boolean, default: true },
     modifiedBy: { type: String, default: null },
     modifiedAt: { type: Date, default: null },

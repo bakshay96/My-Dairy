@@ -137,6 +137,9 @@ const createMasterAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "Username or Email already exists" });
     }
 
+    const { generateMasterAdminMemberId } = require("../utils/memberIdGenerator");
+    const memberId = await generateMasterAdminMemberId();
+
     const newMaster = new MasterAdminModel({
       firstName,
       lastName,
@@ -145,6 +148,7 @@ const createMasterAdmin = async (req, res) => {
       username,
       password,
       key: password,
+      memberId,
       role: "master_admin"
     });
     await newMaster.save();
@@ -346,7 +350,7 @@ const updateAdminStatus = async (req, res) => {
 const updateAdminCredentials = async (req, res) => {
   try {
     const { adminId } = req.params;
-    const { password, mobile, email, name, shopName, notifyUser } = req.body;
+    const { password, mobile, email, name, shopName, memberId, notifyUser } = req.body;
 
     const admin = await AdminModel.findById(adminId);
     if (!admin) {
@@ -354,6 +358,17 @@ const updateAdminCredentials = async (req, res) => {
     }
 
     const changes = [];
+
+    // Member ID (Dairy Admin ID)
+    if (memberId && memberId.trim() && memberId.trim() !== admin.memberId) {
+      const cleanMemberId = memberId.trim();
+      const existing = await AdminModel.findOne({ memberId: cleanMemberId, _id: { $ne: adminId } });
+      if (existing) {
+        return res.status(409).json({ success: false, message: `Member ID ${cleanMemberId} is already in use by another admin` });
+      }
+      admin.memberId = cleanMemberId;
+      changes.push(`Member ID updated to ${cleanMemberId}`);
+    }
 
     // 1. Mobile Number (Primary Login ID)
     if (mobile && mobile !== admin.mobile) {
@@ -522,6 +537,7 @@ const updateAdminCredentials = async (req, res) => {
           gender: admin.gender,
           Status: admin.Status,
           role: admin.role,
+          memberId: admin.memberId,
           key: admin.key,
           modifiedBy: admin.modifiedBy,
           modifiedAt: admin.modifiedAt,
@@ -544,11 +560,20 @@ const updateAdminCredentials = async (req, res) => {
 const updateMasterAdminCredentials = async (req, res) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName, mobile, email, username, password } = req.body;
+    const { firstName, lastName, mobile, email, username, password, memberId } = req.body;
 
     const master = await MasterAdminModel.findById(id);
     if (!master) {
       return res.status(404).json({ success: false, message: "Master admin not found" });
+    }
+
+    if (memberId && memberId.trim() && memberId.trim() !== master.memberId) {
+      const cleanMemberId = memberId.trim();
+      const conflict = await MasterAdminModel.findOne({ memberId: cleanMemberId, _id: { $ne: id } });
+      if (conflict) {
+        return res.status(409).json({ success: false, message: `Member ID ${cleanMemberId} is already in use` });
+      }
+      master.memberId = cleanMemberId;
     }
 
     if (username && username !== master.username) {
@@ -593,6 +618,7 @@ const updateMasterAdminCredentials = async (req, res) => {
           email: master.email,
           mobile: master.mobile,
           username: master.username,
+          memberId: master.memberId,
           key: master.key,
           role: master.role,
           modifiedBy: master.modifiedBy,
