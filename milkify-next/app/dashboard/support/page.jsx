@@ -6,7 +6,7 @@ import { useAuthStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import {
-  TicketIcon, Plus, X, Send, Loader2, Image, ChevronDown,
+  TicketIcon, Plus, X, Send, Loader2, Image as ImageIcon, ChevronDown,
   ChevronRight, Clock, CheckCircle2, Zap,
   Upload, Bold, Italic, Code, Hash,
 } from "lucide-react";
@@ -147,7 +147,7 @@ export default function SupportPage() {
       const timer = setTimeout(scrollToBottom, 80);
       return () => clearTimeout(timer);
     }
-  }, [view, active?.replies?.length, active?._id, scrollToBottom]);
+  }, [view, active, scrollToBottom]);
 
   const load = useCallback(async () => {
     try {
@@ -383,7 +383,8 @@ export default function SupportPage() {
                 {active.imageUrls?.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {active.imageUrls.map((url, i) => (
-                      <img key={i} src={url} alt="" className="h-20 rounded-lg object-cover border border-purple-500/30 shadow-inner cursor-zoom-in hover:scale-105 transition-transform" />
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img key={i} src={url} alt={`Attachment ${i + 1}`} className="h-20 rounded-lg object-cover border border-purple-500/30 shadow-inner cursor-zoom-in hover:scale-105 transition-transform" />
                     ))}
                   </div>
                 )}
@@ -414,7 +415,8 @@ export default function SupportPage() {
                     {r.imageUrls?.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
                         {r.imageUrls.map((url, j) => (
-                          <img key={j} src={url} alt="" className={cn(
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img key={j} src={url} alt={`Reply Attachment ${j + 1}`} className={cn(
                             "h-20 rounded-lg object-cover border cursor-zoom-in hover:scale-105 transition-transform",
                             isMaster ? "border-purple-200 dark:border-purple-800" : "border-purple-500/30"
                           )} />
@@ -445,7 +447,7 @@ export default function SupportPage() {
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none font-mono" />
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer">
-                  <Image className="h-4 w-4" />
+                  <ImageIcon className="h-4 w-4" />
                   <span>{replyFiles.length > 0 ? `${replyFiles.length} file(s)` : "Attach images"}</span>
                   <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => setReplyFiles(Array.from(e.target.files).slice(0, 3))} />
                 </label>

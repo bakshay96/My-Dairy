@@ -1,10 +1,11 @@
 const express=require("express");
 
 const authMiddleware = require("../middleware/authMiddleware");
-const { createFarmer, getAllFarmer, getSingleFarmer, updateFarmer, deleteFarmer } = require("./farmer.controller");
+const { createFarmer, getAllFarmer, getSingleFarmer, updateFarmer, deleteFarmer, farmerLogin } = require("./farmer.controller");
 
 const farmerRouter=express.Router();
 
+farmerRouter.post("/login", farmerLogin);
 farmerRouter.post("/register", authMiddleware, createFarmer);  // legacy
 farmerRouter.post("/",        authMiddleware, createFarmer);   // new
 farmerRouter.get("/",         authMiddleware, getAllFarmer);

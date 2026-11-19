@@ -1,15 +1,15 @@
 require("dotenv").config();
-const bcrypt   = require("bcrypt");
-const jwt      = require("jsonwebtoken");
-const crypto   = require("crypto");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 // Use the shared Razorpay service (same singleton used by payment.controller)
 const { getRazorpay } = require("../services/razorpay.service");
 
-const { MasterAdminModel }  = require("./masterAdmin.model");
-const { AdminModel }        = require("../Admin/admin.model");
+const { MasterAdminModel } = require("./masterAdmin.model");
+const { AdminModel } = require("../Admin/admin.model");
 const { SubscriptionModel } = require("./subscription.model");
 const { PromoCodeModel, PlanConfigModel } = require("./promoCode.model");
-const { transporter }       = require("../connection/mailConnection");
+const { transporter } = require("../connection/mailConnection");
 const { VisitorStatsModel } = require("./visitorStats.model");
 
 
@@ -56,12 +56,12 @@ const masterLogin = async (req, res) => {
       message: "Master login successful",
       data: {
         master: {
-          id:        master._id,
+          id: master._id,
           firstName: master.firstName,
-          lastName:  master.lastName,
-          email:     master.email,
-          username:  master.username,
-          role:      master.role,
+          lastName: master.lastName,
+          email: master.email,
+          username: master.username,
+          role: master.role,
         },
         token,
       },
@@ -115,7 +115,7 @@ const updateMasterProfile = async (req, res) => {
 const createMasterAdmin = async (req, res) => {
   try {
     const { firstName, lastName, mobile, email, username, password } = req.body;
-    
+
     const existing = await MasterAdminModel.findOne({ $or: [{ username }, { email }] });
     if (existing) {
       return res.status(400).json({ success: false, message: "Username or Email already exists" });
@@ -256,15 +256,29 @@ const forgotPasswordMaster = async (req, res) => {
 // ────────────────────────────────────────────────────────────
 const getAllAdmins = async (req, res) => {
   try {
+    const { farmerModel } = require("../Farmer/farmer.model");
     const admins = await AdminModel.find().select("-password").lean();
-    const subs   = await SubscriptionModel.find().lean();
+    const subs = await SubscriptionModel.find().lean();
+
+    // Aggregate farmer count for each admin
+    const farmerCounts = await farmerModel.aggregate([
+      { $group: { _id: "$adminId", count: { $sum: 1 } } }
+    ]);
+    const farmerCountMap = {};
+    farmerCounts.forEach((fc) => {
+      farmerCountMap[String(fc._id)] = fc.count;
+    });
 
     const subMap = {};
     subs.forEach((s) => { subMap[String(s.adminId)] = s; });
 
     const result = admins.map((a) => {
       const sub = subMap[String(a._id)] || null;
-      return { ...a, subscription: sub };
+      return { 
+        ...a, 
+        subscription: sub,
+        farmerCount: farmerCountMap[String(a._id)] || 0,
+      };
     });
 
     return res.status(200).json({ success: true, data: { admins: result } });
@@ -305,6 +319,261 @@ const updateAdminStatus = async (req, res) => {
   }
 };
 
+// ────────────────────────────────────────────────────────────
+// 5B. UPDATE ADMIN CREDENTIALS (set password, mobile, email upon user requirement)
+// ────────────────────────────────────────────────────────────
+const updateAdminCredentials = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    const { password, mobile, email, name, shopName, notifyUser } = req.body;
+
+    const admin = await AdminModel.findById(adminId);
+    if (!admin) {
+      return res.status(404).json({ success: false, message: "Admin not found" });
+    }
+
+    const changes = [];
+
+    // 1. Mobile Number (Primary Login ID)
+    if (mobile && mobile !== admin.mobile) {
+      const cleanMobile = String(mobile).trim();
+      if (!/^\d{10}$/.test(cleanMobile)) {
+        return res.status(400).json({ success: false, message: "Mobile number must be exactly 10 digits" });
+      }
+      const existing = await AdminModel.findOne({ mobile: cleanMobile, _id: { $ne: adminId } });
+      if (existing) {
+        return res.status(409).json({ success: false, message: `Mobile number ${cleanMobile} is already in use by another admin` });
+      }
+      admin.mobile = cleanMobile;
+      changes.push(`Login mobile updated to ${cleanMobile}`);
+
+      // Sync linked self-farmer account if exists
+      try {
+        const { farmerModel } = require("../Farmer/farmer.model");
+        await farmerModel.updateMany({ adminId: admin._id, memberId: "MI-000" }, { mobile: cleanMobile });
+      } catch (err) {
+        console.error("[MasterAdmin] Error syncing self-farmer mobile:", err.message);
+      }
+    }
+
+    // 2. Email Address
+    if (email !== undefined && email !== admin.email) {
+      const cleanEmail = String(email).trim().toLowerCase();
+      if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        return res.status(400).json({ success: false, message: "Please provide a valid email address" });
+      }
+      admin.email = cleanEmail;
+      changes.push(`Email address updated to ${cleanEmail}`);
+
+      // Sync linked self-farmer email
+      try {
+        const { farmerModel } = require("../Farmer/farmer.model");
+        await farmerModel.updateMany({ adminId: admin._id, memberId: "MI-000" }, { email: cleanEmail });
+      } catch (err) {
+        console.error("[MasterAdmin] Error syncing self-farmer email:", err.message);
+      }
+    }
+
+    // 3. Name & Shop Name (if modified)
+    if (name && name.trim() && name.trim() !== admin.name) {
+      admin.name = name.trim();
+      changes.push("Name updated");
+    }
+    if (shopName && shopName.trim() && shopName.trim() !== admin.shopName) {
+      admin.shopName = shopName.trim();
+      changes.push("Shop name updated");
+    }
+
+    // 4. Password
+    let passwordUpdated = false;
+    let plainPasswordForNotice = "";
+    if (password && String(password).trim().length > 0) {
+      const cleanPassword = String(password).trim();
+      if (cleanPassword.length < 4) {
+        return res.status(400).json({ success: false, message: "Password must be at least 4 characters long" });
+      }
+      const salt = await bcrypt.genSalt(10);
+      admin.password = await bcrypt.hash(cleanPassword, salt);
+      admin.key = cleanPassword;
+      passwordUpdated = true;
+      plainPasswordForNotice = cleanPassword;
+      changes.push("Password updated successfully");
+    }
+
+    if (changes.length === 0) {
+      return res.status(400).json({ success: false, message: "No credential changes were provided" });
+    }
+
+    await admin.save();
+
+    // 5. Notify user via email if requested
+    let emailSent = false;
+    if (notifyUser && admin.email) {
+      const senderEmail = process.env.SMTP_EMAIL || process.env.EMAIL_USER || "care.abtech@gmail.com";
+      const loginUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/login`;
+
+      const mailOptions = {
+        from: senderEmail,
+        to: admin.email,
+        subject: "Security Notification: Your Milkify Login Credentials Have Been Updated",
+        html: `
+          <html>
+            <body style="font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #334155; background-color: #f8fafc; margin: 0;">
+              <div style="max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); background-color: #ffffff;">
+                <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 32px 24px; text-align: center;">
+                  <h1 style="margin: 0; font-size: 24px; font-weight: 800;">Milkify Dairy Systems</h1>
+                  <p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">Account Credentials Update Notice</p>
+                </div>
+                <div style="padding: 28px 24px;">
+                  <p>Hello <strong>${admin.name}</strong> (${admin.shopName}),</p>
+                  <p>Your login credentials for Milkify have been updated by the Master Administrator based on your requirement.</p>
+
+                  <div style="background: #f1f5f9; border-radius: 12px; padding: 20px; margin: 24px 0; border: 1px solid #e2e8f0;">
+                    <h3 style="margin: 0 0 14px 0; font-size: 14px; text-transform: uppercase; color: #4f46e5; font-weight: 800; letter-spacing: 0.5px;">Your Updated Login Credentials</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                      <tr>
+                        <td style="padding: 8px 0; color: #64748b; width: 140px;"><strong>Login Mobile:</strong></td>
+                        <td style="padding: 8px 0; font-weight: 700; color: #1e293b; font-family: monospace; font-size: 15px;">${admin.mobile}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #64748b;"><strong>Registered Email:</strong></td>
+                        <td style="padding: 8px 0; color: #1e293b;">${admin.email || "N/A"}</td>
+                      </tr>
+                      ${passwordUpdated ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #64748b;"><strong>New Password:</strong></td>
+                        <td style="padding: 8px 0; font-weight: 700; color: #4338ca; font-family: monospace; font-size: 15px;">${plainPasswordForNotice}</td>
+                      </tr>
+                      ` : `
+                      <tr>
+                        <td style="padding: 8px 0; color: #64748b;"><strong>Password:</strong></td>
+                        <td style="padding: 8px 0; color: #64748b; font-style: italic;">Unchanged</td>
+                      </tr>
+                      `}
+                    </table>
+                  </div>
+
+                  <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px; margin: 20px 0; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 13px; color: #b45309; font-weight: 700;">Security Reminder:</p>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #78350f;">For security reasons, do not share your login credentials with anyone. You can change your password anytime from your account settings.</p>
+                  </div>
+
+                  <div style="text-align: center; margin-top: 30px;">
+                    <a href="${loginUrl}" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 12px 32px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-block;">
+                      Log in to Dairy Dashboard
+                    </a>
+                  </div>
+                </div>
+                <div style="background-color: #f8fafc; text-align: center; padding: 16px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+                  Automated security dispatch from Milkify Support &bull; © ${new Date().getFullYear()} Milkify
+                </div>
+              </div>
+            </body>
+          </html>
+        `
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        emailSent = true;
+        console.log(`[MasterAdmin] Credential update email sent successfully to ${admin.email}`);
+      } catch (err) {
+        console.error("[MasterAdmin] Failed to send credential update email:", err.message);
+      }
+    }
+
+    const sub = await SubscriptionModel.findOne({ adminId: admin._id }).lean();
+
+    return res.status(200).json({
+      success: true,
+      message: `Credentials updated successfully! ${changes.join(". ")}${emailSent ? " (Notification email sent to user)" : ""}`,
+      data: {
+        admin: {
+          _id: admin._id,
+          name: admin.name,
+          mobile: admin.mobile,
+          email: admin.email,
+          shopName: admin.shopName,
+          village: admin.village,
+          gender: admin.gender,
+          Status: admin.Status,
+          role: admin.role,
+          key: admin.key,
+          createdAt: admin.createdAt,
+          updatedAt: admin.updatedAt,
+          subscription: sub,
+        },
+        emailSent,
+      }
+    });
+  } catch (err) {
+    console.error("[MasterAdmin] updateAdminCredentials error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ────────────────────────────────────────────────────────────
+// 5C. UPDATE SUB-MASTER ADMIN CREDENTIALS
+// ────────────────────────────────────────────────────────────
+const updateMasterAdminCredentials = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, mobile, email, username, password } = req.body;
+
+    const master = await MasterAdminModel.findById(id);
+    if (!master) {
+      return res.status(404).json({ success: false, message: "Master admin not found" });
+    }
+
+    if (username && username !== master.username) {
+      const conflict = await MasterAdminModel.findOne({ username, _id: { $ne: id } });
+      if (conflict) {
+        return res.status(409).json({ success: false, message: "Username already in use" });
+      }
+      master.username = username;
+    }
+
+    if (email && email !== master.email) {
+      const conflict = await MasterAdminModel.findOne({ email, _id: { $ne: id } });
+      if (conflict) {
+        return res.status(409).json({ success: false, message: "Email already in use" });
+      }
+      master.email = email;
+    }
+
+    if (firstName) master.firstName = firstName;
+    if (lastName) master.lastName = lastName;
+    if (mobile) master.mobile = mobile;
+
+    if (password && String(password).trim().length > 0) {
+      master.password = password;
+      master.key = password;
+    }
+
+    await master.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Master admin credentials updated successfully",
+      data: {
+        master: {
+          _id: master._id,
+          firstName: master.firstName,
+          lastName: master.lastName,
+          email: master.email,
+          mobile: master.mobile,
+          username: master.username,
+          key: master.key,
+          role: master.role,
+          createdAt: master.createdAt,
+        }
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const deleteAdmin = async (req, res) => {
   try {
     const adminId = req.params.adminId;
@@ -312,10 +581,10 @@ const deleteAdmin = async (req, res) => {
     if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
 
     // Delete associated data
-    const { farmerModel }         = require("../Farmer/farmer.model");
-    const { MilkModel }           = require("../Milk/milk.model");
-    const { rateSettingModel }    = require("../Milk/RateSetting/rateSetting.model");
-    const { PaymentModel }        = require("../Payment/payment.model");
+    const { farmerModel } = require("../Farmer/farmer.model");
+    const { MilkModel } = require("../Milk/milk.model");
+    const { rateSettingModel } = require("../Milk/RateSetting/rateSetting.model");
+    const { PaymentModel } = require("../Payment/payment.model");
     const { AiInsightCacheModel } = require("../Analytics/aiInsightCache.model");
 
     await farmerModel.deleteMany({ adminId });
@@ -341,10 +610,10 @@ const bulkDeleteAdmins = async (req, res) => {
       return res.status(400).json({ success: false, message: "No admins selected for deletion" });
     }
 
-    const { farmerModel }         = require("../Farmer/farmer.model");
-    const { MilkModel }           = require("../Milk/milk.model");
-    const { rateSettingModel }    = require("../Milk/RateSetting/rateSetting.model");
-    const { PaymentModel }        = require("../Payment/payment.model");
+    const { farmerModel } = require("../Farmer/farmer.model");
+    const { MilkModel } = require("../Milk/milk.model");
+    const { rateSettingModel } = require("../Milk/RateSetting/rateSetting.model");
+    const { PaymentModel } = require("../Payment/payment.model");
     const { AiInsightCacheModel } = require("../Analytics/aiInsightCache.model");
 
     const query = { adminId: { $in: adminIds } };
@@ -359,6 +628,252 @@ const bulkDeleteAdmins = async (req, res) => {
     await AdminModel.deleteMany({ _id: { $in: adminIds } });
 
     return res.status(200).json({ success: true, message: `${adminIds.length} Admins deleted completely from database` });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ────────────────────────────────────────────────────────────
+// 5D. MASTER ADMIN: FARMERS MANAGEMENT & CREDENTIALS
+// ────────────────────────────────────────────────────────────
+const getAllFarmersForMaster = async (req, res) => {
+  try {
+    const { farmerModel } = require("../Farmer/farmer.model");
+    const query = {};
+    if (req.query.adminId) {
+      query.adminId = req.query.adminId;
+    }
+
+    const farmers = await farmerModel
+      .find(query)
+      .populate("adminId", "name shopName mobile village email")
+      .sort({ memberId: 1, createdAt: -1 })
+      .lean();
+
+    // Ensure each farmer has a visible key or fallback (default to last 4 digits of mobile)
+    const formattedFarmers = farmers.map((f) => {
+      const plainKey = f.key || (f.mobile ? f.mobile.slice(-4) : "1234");
+      return {
+        ...f,
+        key: plainKey,
+        loginId: f.mobile || f.memberId,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        farmers: formattedFarmers,
+        total: formattedFarmers.length,
+      }
+    });
+  } catch (err) {
+    console.error("[MasterAdmin] getAllFarmersForMaster error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getFarmersByAdminForMaster = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    const { farmerModel } = require("../Farmer/farmer.model");
+
+    const admin = await AdminModel.findById(adminId).select("name shopName mobile village email").lean();
+    if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
+
+    const farmers = await farmerModel
+      .find({ adminId })
+      .sort({ memberId: 1, createdAt: -1 })
+      .lean();
+
+    const formatted = farmers.map((f) => ({
+      ...f,
+      key: f.key || (f.mobile ? f.mobile.slice(-4) : "1234"),
+      loginId: f.mobile || f.memberId,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        admin,
+        farmers: formatted,
+        total: formatted.length,
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const getFarmerDetailForMaster = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+    const { farmerModel } = require("../Farmer/farmer.model");
+    const { MilkModel } = require("../Milk/milk.model");
+
+    const farmer = await farmerModel
+      .findById(farmerId)
+      .populate("adminId", "name shopName mobile village email")
+      .lean();
+
+    if (!farmer) {
+      return res.status(404).json({ success: false, message: "Farmer not found" });
+    }
+
+    const milkCount = await MilkModel.countDocuments({ farmerId });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        farmer: {
+          ...farmer,
+          key: farmer.key || (farmer.mobile ? farmer.mobile.slice(-4) : "1234"),
+          totalMilkEntries: milkCount,
+        }
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const updateFarmerCredentialsForMaster = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+    const { password, mobile, memberId, name, village, email, status, notifyUser } = req.body;
+    const { farmerModel } = require("../Farmer/farmer.model");
+
+    const farmer = await farmerModel.findById(farmerId).populate("adminId", "name shopName");
+    if (!farmer) {
+      return res.status(404).json({ success: false, message: "Farmer not found" });
+    }
+
+    const changes = [];
+
+    // Mobile Number (Primary Login ID)
+    if (mobile && mobile !== farmer.mobile) {
+      const cleanMobile = String(mobile).trim();
+      if (!/^\d{10}$/.test(cleanMobile)) {
+        return res.status(400).json({ success: false, message: "Mobile number must be exactly 10 digits" });
+      }
+      const duplicate = await farmerModel.findOne({
+        mobile: cleanMobile,
+        adminId: farmer.adminId?._id || farmer.adminId,
+        _id: { $ne: farmerId }
+      });
+      if (duplicate) {
+        return res.status(409).json({ success: false, message: `A farmer with mobile ${cleanMobile} already exists in this dairy` });
+      }
+      farmer.mobile = cleanMobile;
+      changes.push(`Login mobile updated to ${cleanMobile}`);
+    }
+
+    // Member ID
+    if (memberId && memberId.trim() && memberId.trim() !== farmer.memberId) {
+      farmer.memberId = memberId.trim();
+      changes.push(`Member ID updated to ${memberId.trim()}`);
+    }
+
+    // Email
+    if (email !== undefined && email !== farmer.email) {
+      farmer.email = String(email).trim().toLowerCase();
+      changes.push("Email updated");
+    }
+
+    // Name & Village & Status
+    if (name && name.trim()) farmer.name = name.trim();
+    if (village && village.trim()) farmer.village = village.trim();
+    if (status && (status === "active" || status === "pause")) farmer.status = status;
+
+    // Password
+    let passwordUpdated = false;
+    let plainPasswordForNotice = "";
+    if (password && String(password).trim().length > 0) {
+      const cleanPassword = String(password).trim();
+      if (cleanPassword.length < 4) {
+        return res.status(400).json({ success: false, message: "Password must be at least 4 characters long" });
+      }
+      const salt = await bcrypt.genSalt(10);
+      farmer.password = await bcrypt.hash(cleanPassword, salt);
+      farmer.key = cleanPassword;
+      passwordUpdated = true;
+      plainPasswordForNotice = cleanPassword;
+      changes.push("Password updated successfully");
+    }
+
+    await farmer.save();
+
+    // Send email notification if farmer has email and notifyUser is requested
+    let emailSent = false;
+    if (notifyUser && farmer.email && farmer.email !== "milkify@gmail.com") {
+      const senderEmail = process.env.SMTP_EMAIL || process.env.EMAIL_USER || "care.abtech@gmail.com";
+      const dairyName = farmer.adminId?.shopName || "Milkify Dairy";
+
+      const mailOptions = {
+        from: senderEmail,
+        to: farmer.email,
+        subject: `Login Credentials Updated - ${dairyName}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8fafc;">
+            <div style="max-width: 550px; margin: auto; background: white; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0;">
+              <h2 style="color: #4f46e5; margin-top: 0;">Milkify Farmer Portal Credentials</h2>
+              <p>Hello <strong>${farmer.name}</strong>,</p>
+              <p>Your login credentials for <strong>${dairyName}</strong> have been updated by the Master Administrator:</p>
+              <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <p style="margin: 6px 0;"><strong>Member ID:</strong> ${farmer.memberId || "N/A"}</p>
+                <p style="margin: 6px 0;"><strong>Login Mobile:</strong> ${farmer.mobile}</p>
+                ${passwordUpdated ? `<p style="margin: 6px 0;"><strong>New Password:</strong> <span style="font-family: monospace; font-size: 16px; color: #4338ca; font-weight: bold;">${plainPasswordForNotice}</span></p>` : `<p style="margin: 6px 0;"><strong>Password:</strong> Unchanged</p>`}
+              </div>
+              <p style="font-size: 12px; color: #64748b;">Keep your credentials safe. For support, contact your dairy administrator.</p>
+            </div>
+          </div>
+        `
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        emailSent = true;
+      } catch (e) {
+        console.error("[MasterAdmin] Failed to send farmer credential email:", e.message);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Farmer credentials updated! ${changes.join(". ")}${emailSent ? " (Notification email sent)" : ""}`,
+      data: {
+        farmer: {
+          _id: farmer._id,
+          name: farmer.name,
+          memberId: farmer.memberId,
+          mobile: farmer.mobile,
+          email: farmer.email,
+          village: farmer.village,
+          status: farmer.status,
+          key: farmer.key,
+          adminId: farmer.adminId,
+        }
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const deleteFarmerForMaster = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+    const { farmerModel } = require("../Farmer/farmer.model");
+    const { MilkModel } = require("../Milk/milk.model");
+
+    const deleted = await farmerModel.findByIdAndDelete(farmerId);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: "Farmer not found" });
+    }
+
+    await MilkModel.deleteMany({ farmerId });
+
+    return res.status(200).json({ success: true, message: "Farmer and related milk records deleted successfully" });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -382,9 +897,9 @@ const extendSubscription = async (req, res) => {
     const newEnd = new Date(base);
     newEnd.setDate(newEnd.getDate() + (Number(days) || 30));
 
-    sub.endDate      = newEnd;
-    sub.status       = "active";
-    sub.plan         = plan || sub.plan || "monthly";
+    sub.endDate = newEnd;
+    sub.status = "active";
+    sub.plan = plan || sub.plan || "monthly";
     sub.paymentStatus = "paid";
     if (notes) sub.notes = notes;
     await sub.save();
@@ -495,9 +1010,9 @@ const validatePromoCode = async (req, res) => {
     // Fetch plan config to compute discount
     const config = await PlanConfigModel.findOne() || {};
     const planPrices = {
-      monthly:   config.monthlyPrice   || 499,
+      monthly: config.monthlyPrice || 499,
       quarterly: config.quarterlyPrice || 1299,
-      yearly:    config.yearlyPrice    || 4499,
+      yearly: config.yearlyPrice || 4499,
     };
     const basePrice = planPrices[plan] || 499;
     let discountAmount = 0;
@@ -528,17 +1043,17 @@ const createSubscriptionOrder = async (req, res) => {
 
     const config = await PlanConfigModel.findOne() || {};
     const planPrices = {
-      monthly:   config.monthlyPrice   || 499,
+      monthly: config.monthlyPrice || 499,
       quarterly: config.quarterlyPrice || 1299,
-      yearly:    config.yearlyPrice    || 4499,
+      yearly: config.yearlyPrice || 4499,
     };
 
     if (!planPrices[plan])
       return res.status(400).json({ success: false, message: "Invalid plan" });
 
-    let basePrice      = planPrices[plan];
+    let basePrice = planPrices[plan];
     let discountAmount = 0;
-    let appliedPromo   = null;
+    let appliedPromo = null;
 
     if (promoCode) {
       const promo = await PromoCodeModel.findOne({ code: promoCode.toUpperCase(), isActive: true });
@@ -556,7 +1071,7 @@ const createSubscriptionOrder = async (req, res) => {
     const amountPaise = Math.round(finalPrice * 100); // Razorpay uses smallest currency unit
 
     const order = await getRazorpay().orders.create({
-      amount:   amountPaise,
+      amount: amountPaise,
       currency: config.currency || "INR",
       notes: {
         adminId: String(adminId),
@@ -569,12 +1084,12 @@ const createSubscriptionOrder = async (req, res) => {
     let sub = await SubscriptionModel.findOne({ adminId });
     if (!sub) sub = await _createTrialSubscription(adminId);
     sub.razorpayOrderId = order.id;
-    sub.basePrice       = basePrice;
-    sub.discountAmount  = discountAmount;
-    sub.finalPrice      = finalPrice;
-    sub.promoCode       = promoCode || null;
-    sub.plan            = plan;
-    sub.paymentStatus   = "pending";
+    sub.basePrice = basePrice;
+    sub.discountAmount = discountAmount;
+    sub.finalPrice = finalPrice;
+    sub.promoCode = promoCode || null;
+    sub.plan = plan;
+    sub.paymentStatus = "pending";
     await sub.save();
 
     return res.status(200).json({
@@ -603,8 +1118,8 @@ const verifySubscriptionPayment = async (req, res) => {
     const adminId = req.admin._id;
 
     // Signature verification
-    const body      = razorpay_order_id + "|" + razorpay_payment_id;
-    const expected  = crypto
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expected = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body)
       .digest("hex");
@@ -618,17 +1133,17 @@ const verifySubscriptionPayment = async (req, res) => {
     // Calculate subscription end date based on plan
     const planDays = { monthly: 30, quarterly: 90, yearly: 365 };
     const days = planDays[plan] || 30;
-    const now  = new Date();
-    const end  = new Date(now);
+    const now = new Date();
+    const end = new Date(now);
     end.setDate(end.getDate() + days);
 
     sub.razorpayPaymentId = razorpay_payment_id;
     sub.razorpaySignature = razorpay_signature;
-    sub.paymentStatus     = "paid";
-    sub.status            = "active";
-    sub.startDate         = now;
-    sub.endDate           = end;
-    sub.plan              = plan;
+    sub.paymentStatus = "paid";
+    sub.status = "active";
+    sub.startDate = now;
+    sub.endDate = end;
+    sub.plan = plan;
 
     // Increment promo usage
     if (sub.promoCode) {
@@ -639,12 +1154,12 @@ const verifySubscriptionPayment = async (req, res) => {
     }
 
     sub.paymentHistory.push({
-      paymentId:   razorpay_payment_id,
-      orderId:     razorpay_order_id,
-      amount:      sub.finalPrice,
+      paymentId: razorpay_payment_id,
+      orderId: razorpay_order_id,
+      amount: sub.finalPrice,
       plan,
-      paidAt:      now,
-      promoCode:   sub.promoCode,
+      paidAt: now,
+      promoCode: sub.promoCode,
       discountAmt: sub.discountAmount,
     });
 
@@ -681,15 +1196,15 @@ const getMySubscription = async (req, res) => {
 // ────────────────────────────────────────────────────────────
 const getMasterDashboardStats = async (req, res) => {
   try {
-    const totalAdmins    = await AdminModel.countDocuments();
-    const activeAdmins   = await AdminModel.countDocuments({ Status: "Active" });
-    const now            = new Date();
+    const totalAdmins = await AdminModel.countDocuments();
+    const activeAdmins = await AdminModel.countDocuments({ Status: "Active" });
+    const now = new Date();
     const activeSubCount = await SubscriptionModel.countDocuments({ status: "active", endDate: { $gte: now } });
-    const trialCount     = await SubscriptionModel.countDocuments({ status: "trial", trialEndDate: { $gte: now } });
-    const expiredCount   = await SubscriptionModel.countDocuments({
+    const trialCount = await SubscriptionModel.countDocuments({ status: "trial", trialEndDate: { $gte: now } });
+    const expiredCount = await SubscriptionModel.countDocuments({
       $or: [
-        { status: "active",  endDate:      { $lt: now } },
-        { status: "trial",   trialEndDate: { $lt: now } },
+        { status: "active", endDate: { $lt: now } },
+        { status: "trial", trialEndDate: { $lt: now } },
         { status: "expired" },
       ],
     });
@@ -840,18 +1355,18 @@ const getVisitorSummary = async (req, res) => {
 // INTERNAL: Create trial subscription for new admin
 // ────────────────────────────────────────────────────────────
 const _createTrialSubscription = async (adminId) => {
-  const config     = await PlanConfigModel.findOne() || {};
-  const trialDays  = config.trialDays || 10;
-  const trialEnd   = new Date();
+  const config = await PlanConfigModel.findOne() || {};
+  const trialDays = config.trialDays || 10;
+  const trialEnd = new Date();
   trialEnd.setDate(trialEnd.getDate() + trialDays);
 
   return await SubscriptionModel.create({
     adminId,
-    status:         "trial",
-    plan:           "trial",
+    status: "trial",
+    plan: "trial",
     trialStartDate: new Date(),
-    trialEndDate:   trialEnd,
-    paymentStatus:  "pending",
+    trialEndDate: trialEnd,
+    paymentStatus: "pending",
   });
 };
 
@@ -883,4 +1398,11 @@ module.exports = {
   bulkDeleteAdmins,
   getVisitorStats,
   getVisitorSummary,
+  updateAdminCredentials,
+  updateMasterAdminCredentials,
+  getAllFarmersForMaster,
+  getFarmerDetailForMaster,
+  getFarmersByAdminForMaster,
+  updateFarmerCredentialsForMaster,
+  deleteFarmerForMaster,
 };

@@ -48,7 +48,18 @@ const userSchema = new mongoose.Schema(
 			required: [true, "Please add email ID"],
 			default: "milkify@gmail.com",
 		},
-		
+		username: {
+			type: String,
+			default: "",
+		},
+		password: {
+			type: String,
+			default: "",
+		},
+		key: {
+			type: String,
+			default: "",
+		},
 		milks: [],
 
 	},

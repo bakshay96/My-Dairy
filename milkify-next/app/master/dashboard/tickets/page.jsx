@@ -6,7 +6,7 @@ import { useAuthStore } from "@/lib/store";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import {
-  TicketIcon, X, Send, Loader2, Image, ChevronDown,
+  TicketIcon, X, Send, Loader2, Image as ImageIcon, ChevronDown,
   ChevronRight, Clock, CheckCircle2, Zap,
   Bold, Italic, Code, Search,
 } from "lucide-react";
@@ -263,7 +263,12 @@ export default function MasterTicketsPage() {
             <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans" dangerouslySetInnerHTML={parseMarkdown(active.description)} />
             {active.imageUrls?.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
-                {active.imageUrls.map((url, i) => <a key={i} href={url} target="_blank" rel="noreferrer"><img src={url} alt="" className="h-24 rounded-lg object-cover border border-slate-200 dark:border-slate-700 hover:opacity-80 transition-opacity" /></a>)}
+                {active.imageUrls.map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Attachment ${i + 1}`} className="h-24 rounded-lg object-cover border border-slate-200 dark:border-slate-700 hover:opacity-80 transition-opacity" />
+                  </a>
+                ))}
               </div>
             )}
           </div>
@@ -283,7 +288,12 @@ export default function MasterTicketsPage() {
                   <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans" dangerouslySetInnerHTML={parseMarkdown(r.message)} />
                   {r.imageUrls?.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {r.imageUrls.map((url, j) => <a key={j} href={url} target="_blank" rel="noreferrer"><img src={url} alt="" className="h-20 rounded-lg object-cover" /></a>)}
+                      {r.imageUrls.map((url, j) => (
+                        <a key={j} href={url} target="_blank" rel="noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt={`Reply Attachment ${j + 1}`} className="h-20 rounded-lg object-cover" />
+                        </a>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -308,7 +318,7 @@ export default function MasterTicketsPage() {
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-4">
                     <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer">
-                    <Image className="h-4 w-4" />
+                    <ImageIcon className="h-4 w-4" />
                     <span>{replyFiles.length > 0 ? `${replyFiles.length} file(s)` : "Attach images"}</span>
                     <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => setReplyFiles(Array.from(e.target.files).slice(0, 3))} />
                     </label>
