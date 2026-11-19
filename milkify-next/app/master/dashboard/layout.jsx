@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Tag, IndianRupee, LogOut, Loader2, ArrowLeftRight,
   Settings, Menu, X, PanelLeftClose, PanelLeftOpen, Shield,
-  Megaphone, TicketIcon, Eye, Bell,
+  Megaphone, TicketIcon, Eye, Bell, Users,
 } from "lucide-react";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -18,6 +18,7 @@ import { AlertDot } from "@/components/ui/AlertBanner";
 
 const navItems = [
   { name: "Overview",           href: "/master/dashboard",                  icon: LayoutDashboard },
+  { name: "Farmers Directory",  href: "/master/dashboard/farmers",          icon: Users },
   { name: "Visitor Analytics",  href: "/master/dashboard/visitor-stats",    icon: Eye },
   { name: "Notifications",     href: "/master/dashboard/notifications",    icon: Bell },
   { name: "Pricing Plans",     href: "/master/dashboard/pricing",          icon: Tag },

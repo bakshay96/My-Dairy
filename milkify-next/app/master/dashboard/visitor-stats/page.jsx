@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -127,14 +127,27 @@ export default function VisitorStatsPage() {
     }
   }, [groupBy, sortBy, fromDate, toDate]);
 
-  // ── Initial load ───────────────────────────────────────────────────────
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fetchSummaryRef = useRef(fetchSummary);
+  const fetchStatsRef = useRef(fetchStats);
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
-    Promise.all([fetchSummary(), fetchStats()]).finally(() => setLoading(false));
+    fetchSummaryRef.current = fetchSummary;
+    fetchStatsRef.current = fetchStats;
+  }, [fetchSummary, fetchStats]);
+
+  // ── Initial load ───────────────────────────────────────────────────────
+  useEffect(() => {
+    Promise.all([fetchSummaryRef.current(), fetchStatsRef.current()]).finally(() => setLoading(false));
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!loading) fetchStats(); }, [groupBy, sortBy]);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    fetchStatsRef.current();
+  }, [groupBy, sortBy]);
 
   const handleApplyFilters = () => fetchStats();
   const handleReset = () => {

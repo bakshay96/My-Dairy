@@ -26,6 +26,13 @@ const {
   bulkDeleteAdmins,
   getVisitorStats,
   getVisitorSummary,
+  updateAdminCredentials,
+  updateMasterAdminCredentials,
+  getAllFarmersForMaster,
+  getFarmerDetailForMaster,
+  getFarmersByAdminForMaster,
+  updateFarmerCredentialsForMaster,
+  deleteFarmerForMaster,
 } = require("./masterAdmin.controller");
 
 const {
@@ -45,7 +52,7 @@ const {
 } = require("./notificationSettings.controller");
 
 const masterAuthMiddleware = require("../middleware/masterAuthMiddleware");
-const authMiddleware       = require("../middleware/authMiddleware");
+const authMiddleware = require("../middleware/authMiddleware");
 
 const masterRouter = express.Router();
 
@@ -57,54 +64,65 @@ masterRouter.post("/forgot-password", forgotPasswordMaster);
 masterRouter.post("/subscription/validate-promo", authMiddleware, validatePromoCode);
 
 // ─── Subscription: create Razorpay order (admin user) ────────
-masterRouter.post("/subscription/create-order",  authMiddleware, createSubscriptionOrder);
+masterRouter.post("/subscription/create-order", authMiddleware, createSubscriptionOrder);
 masterRouter.post("/subscription/verify-payment", authMiddleware, verifySubscriptionPayment);
-masterRouter.get("/subscription/my",              authMiddleware, getMySubscription);
+masterRouter.get("/subscription/my", authMiddleware, getMySubscription);
 
 // ─── Profile & Credentials (Master Auth) ────────────────
-masterRouter.get("/me",                    masterAuthMiddleware, masterMe);
-masterRouter.put("/profile",               masterAuthMiddleware, updateMasterProfile);
-masterRouter.post("/credentials",          masterAuthMiddleware, createMasterAdmin);
-  masterRouter.get("/credentials/list",      masterAuthMiddleware, getAllMasterAdmins);
-  masterRouter.get("/dashboard/stats",       masterAuthMiddleware, getMasterDashboardStats);
+masterRouter.get("/me", masterAuthMiddleware, masterMe);
+masterRouter.put("/profile", masterAuthMiddleware, updateMasterProfile);
+masterRouter.post("/credentials", masterAuthMiddleware, createMasterAdmin);
+masterRouter.get("/credentials/list", masterAuthMiddleware, getAllMasterAdmins);
+masterRouter.patch("/credentials/:id", masterAuthMiddleware, updateMasterAdminCredentials);
+masterRouter.get("/dashboard/stats", masterAuthMiddleware, getMasterDashboardStats);
 
 // ─── Admins Management (Master Auth) ────────────────────
-masterRouter.get("/admins",                masterAuthMiddleware, getAllAdmins);
-masterRouter.post("/admins/bulk-delete",   masterAuthMiddleware, bulkDeleteAdmins);
-masterRouter.get("/admins/:adminId",       masterAuthMiddleware, getAdminDetail);
+masterRouter.get("/admins", masterAuthMiddleware, getAllAdmins);
+masterRouter.post("/admins/bulk-delete", masterAuthMiddleware, bulkDeleteAdmins);
+masterRouter.get("/admins/:adminId", masterAuthMiddleware, getAdminDetail);
+masterRouter.get("/admins/:adminId/farmers", masterAuthMiddleware, getFarmersByAdminForMaster);
 masterRouter.patch("/admins/:adminId/status", masterAuthMiddleware, updateAdminStatus);
-masterRouter.delete("/admins/:adminId",    masterAuthMiddleware, deleteAdmin);
+masterRouter.patch("/admins/:adminId/credentials", masterAuthMiddleware, updateAdminCredentials);
+masterRouter.put("/admins/:adminId/credentials", masterAuthMiddleware, updateAdminCredentials);
+masterRouter.delete("/admins/:adminId", masterAuthMiddleware, deleteAdmin);
 masterRouter.patch("/admins/:adminId/subscription/extend", masterAuthMiddleware, extendSubscription);
 
+// ─── Farmers Management (Master Auth) ───────────────────
+masterRouter.get("/farmers", masterAuthMiddleware, getAllFarmersForMaster);
+masterRouter.get("/farmers/:farmerId", masterAuthMiddleware, getFarmerDetailForMaster);
+masterRouter.patch("/farmers/:farmerId/credentials", masterAuthMiddleware, updateFarmerCredentialsForMaster);
+masterRouter.put("/farmers/:farmerId/credentials", masterAuthMiddleware, updateFarmerCredentialsForMaster);
+masterRouter.delete("/farmers/:farmerId", masterAuthMiddleware, deleteFarmerForMaster);
+
 // Plan config
-masterRouter.get("/plan-config",           masterAuthMiddleware, getPlanConfig);
-masterRouter.put("/plan-config",           masterAuthMiddleware, updatePlanConfig);
+masterRouter.get("/plan-config", masterAuthMiddleware, getPlanConfig);
+masterRouter.put("/plan-config", masterAuthMiddleware, updatePlanConfig);
 
 // Promo codes
-masterRouter.get("/promo-codes",           masterAuthMiddleware, getAllPromoCodes);
-masterRouter.post("/promo-codes",          masterAuthMiddleware, createPromoCode);
-masterRouter.patch("/promo-codes/:id",     masterAuthMiddleware, updatePromoCode);
-masterRouter.delete("/promo-codes/:id",    masterAuthMiddleware, deletePromoCode);
+masterRouter.get("/promo-codes", masterAuthMiddleware, getAllPromoCodes);
+masterRouter.post("/promo-codes", masterAuthMiddleware, createPromoCode);
+masterRouter.patch("/promo-codes/:id", masterAuthMiddleware, updatePromoCode);
+masterRouter.delete("/promo-codes/:id", masterAuthMiddleware, deletePromoCode);
 
 // ── Advertisements (Master admin manages, admin users view) ──────────────────
 // Master: full CRUD
-masterRouter.get("/advertisements",           masterAuthMiddleware, getAllAdvertisements);
-masterRouter.post("/advertisements",          masterAuthMiddleware, createAdvertisement);
-masterRouter.patch("/advertisements/:id",     masterAuthMiddleware, updateAdvertisement);
-masterRouter.delete("/advertisements/:id",    masterAuthMiddleware, deleteAdvertisement);
+masterRouter.get("/advertisements", masterAuthMiddleware, getAllAdvertisements);
+masterRouter.post("/advertisements", masterAuthMiddleware, createAdvertisement);
+masterRouter.patch("/advertisements/:id", masterAuthMiddleware, updateAdvertisement);
+masterRouter.delete("/advertisements/:id", masterAuthMiddleware, deleteAdvertisement);
 
 // Admin: fetch their active ads + dismiss
-masterRouter.get("/advertisements/my",        authMiddleware, getMyAdvertisements);
+masterRouter.get("/advertisements/my", authMiddleware, getMyAdvertisements);
 masterRouter.patch("/advertisements/:id/dismiss", authMiddleware, dismissAdvertisement);
 
 // ── Visitor Stats (Master admin only) ──────────────────
-masterRouter.get("/visitor-stats",           masterAuthMiddleware, getVisitorStats);
-masterRouter.get("/visitor-stats/summary",   masterAuthMiddleware, getVisitorSummary);
+masterRouter.get("/visitor-stats", masterAuthMiddleware, getVisitorStats);
+masterRouter.get("/visitor-stats/summary", masterAuthMiddleware, getVisitorSummary);
 
 // ── Notification Settings (Master admin only) ──────────────────
-masterRouter.get("/notification-settings",                        masterAuthMiddleware, getAllNotificationSettings);
-masterRouter.patch("/notification-settings/:adminId",             masterAuthMiddleware, updateNotificationStatus);
-masterRouter.patch("/notification-settings/:adminId/types",       masterAuthMiddleware, updateNotificationTypes);
-masterRouter.patch("/notification-settings/:adminId/resume",      masterAuthMiddleware, resumeNotifications);
+masterRouter.get("/notification-settings", masterAuthMiddleware, getAllNotificationSettings);
+masterRouter.patch("/notification-settings/:adminId", masterAuthMiddleware, updateNotificationStatus);
+masterRouter.patch("/notification-settings/:adminId/types", masterAuthMiddleware, updateNotificationTypes);
+masterRouter.patch("/notification-settings/:adminId/resume", masterAuthMiddleware, resumeNotifications);
 
 module.exports = { masterRouter };

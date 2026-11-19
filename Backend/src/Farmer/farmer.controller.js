@@ -25,6 +25,13 @@ exports.createFarmer = async (req, res) => {
     const totalFarmers = await farmerModel.countDocuments({ adminId: req.admin.id });
     farmerData.memberId = `MI-${(totalFarmers + 1).toString().padStart(3, '0')}`;
 
+    // Setup initial credentials (default password = last 4 digits of mobile)
+    const rawPassword = farmerData.password || (farmerData.mobile ? farmerData.mobile.slice(-4) : "1234");
+    const bcrypt = require("bcrypt");
+    const salt = await bcrypt.genSalt(10);
+    farmerData.key = rawPassword;
+    farmerData.password = await bcrypt.hash(rawPassword, salt);
+
     const farmer = new farmerModel(farmerData);
     const newFarmer = await farmer.save();
 
@@ -207,5 +214,75 @@ exports.deleteFarmer = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// ─── Farmer Login ───────────────────────────────────────────────────────────
+exports.farmerLogin = async (req, res) => {
+  try {
+    const { identifier, password } = req.body;
+    if (!identifier || !password) {
+      return res.status(400).json({ success: false, message: "Mobile/Member ID and password are required" });
+    }
+
+    const cleanIdentifier = String(identifier).trim();
+    const farmer = await farmerModel.findOne({
+      $or: [
+        { mobile: cleanIdentifier },
+        { memberId: cleanIdentifier },
+        { username: cleanIdentifier }
+      ]
+    }).populate("adminId", "name shopName village mobile email");
+
+    if (!farmer) {
+      return res.status(401).json({ success: false, message: "Farmer not found with provided identifier" });
+    }
+
+    if (farmer.status === "pause") {
+      return res.status(403).json({ success: false, message: "Your account is paused. Please contact your dairy owner." });
+    }
+
+    let isMatch = false;
+    const bcrypt = require("bcrypt");
+    if (farmer.password && farmer.password.startsWith("$2")) {
+      isMatch = await bcrypt.compare(password, farmer.password);
+    } else if (farmer.password) {
+      isMatch = farmer.password === password;
+    }
+    if (!isMatch && farmer.key) {
+      isMatch = farmer.key === password;
+    }
+
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Incorrect password" });
+    }
+
+    const jwt = require("jsonwebtoken");
+    const token = jwt.sign(
+      { id: farmer._id, role: "Farmer", adminId: farmer.adminId?._id || farmer.adminId },
+      process.env.JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Farmer login successful",
+      data: {
+        token,
+        farmer: {
+          _id: farmer._id,
+          name: farmer.name,
+          memberId: farmer.memberId,
+          mobile: farmer.mobile,
+          email: farmer.email,
+          village: farmer.village,
+          role: farmer.role,
+          status: farmer.status,
+          dairy: farmer.adminId,
+        }
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

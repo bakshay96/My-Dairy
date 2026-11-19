@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -77,7 +76,7 @@ export default function MasterLoginPage() {
 
       <main className="w-full flex items-center justify-center p-4 md:p-6 z-10">
         <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          
+
           {/* Animated branding panel on the left (Desktop only) */}
           <div className="hidden lg:block">
             <AuthArt type="master" />
@@ -85,11 +84,11 @@ export default function MasterLoginPage() {
 
           {/* Form container on the right */}
           <div className="flex flex-col justify-center lg:justify-start">
-            
+
             {/* Top link back to Standard Login */}
             <div className="flex justify-center lg:justify-start mb-4 pl-1">
-              <Link 
-                href="/login" 
+              <Link
+                href="/login"
                 className="flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-500 font-bold px-3 py-1.5 rounded-full bg-purple-100/50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/30 transition-all shadow-sm"
               >
                 <ArrowLeft className="h-3 w-3" /> Back to Standard Login
@@ -98,7 +97,7 @@ export default function MasterLoginPage() {
 
             {/* Glassmorphic Master Access Card */}
             <Card className="w-full max-w-md border border-slate-200/50 dark:border-slate-800/80 shadow-[0_0_50px_-12px_rgba(139,92,246,0.12)] dark:shadow-[0_0_50px_-12px_rgba(139,92,246,0.22)] bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2rem] relative overflow-visible">
-              
+
               {/* Theme Toggle Button inside the Card */}
               <div className="absolute top-5 right-5 z-30">
                 <ThemeToggle />
@@ -116,7 +115,7 @@ export default function MasterLoginPage() {
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100/60 dark:bg-purple-950/40 border border-purple-200/50 dark:border-purple-800/30 text-[10px] font-mono font-bold text-purple-700 dark:text-purple-300 uppercase tracking-widest mb-3">
                     <Terminal className="h-3 w-3 animate-pulse" /> SYSTEM_ORCHESTRATOR
                   </div>
-                  
+
                   <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 dark:from-purple-400 dark:via-fuchsia-400 dark:to-indigo-400 bg-clip-text text-transparent">
                     Master Access Control
                   </h2>
@@ -126,7 +125,7 @@ export default function MasterLoginPage() {
                 </div>
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                  
+
                   {/* Username field */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1 font-mono flex items-center gap-1">
@@ -225,7 +224,7 @@ export default function MasterLoginPage() {
             <p className="text-slate-500 dark:text-slate-400 text-xs font-mono mb-6 leading-relaxed">
               ENTER REGISTERED EMAIL ADDRESS TO GENERATE TEMPORARY ACCESS PRIVILEGES.
             </p>
-            
+
             <form onSubmit={handleForgotPassword} className="space-y-5">
               <div className="space-y-1.5">
                 <div className="relative">

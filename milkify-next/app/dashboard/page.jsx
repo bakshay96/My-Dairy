@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,6 +41,7 @@ export default function DashboardHome() {
   const [endDate, setEndDate] = useState("");
   const [greeting, setGreeting] = useState("Welcome back");
   const [GreetingIcon, setGreetingIcon] = useState(Coffee);
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
     // Dynamic greeting based on hour of day
@@ -60,7 +61,7 @@ export default function DashboardHome() {
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        if (stats) setChartLoading(true);
+        if (!isFirstLoad.current) setChartLoading(true);
         else setLoading(true);
 
         const params = { range: trendRange };
@@ -72,6 +73,7 @@ export default function DashboardHome() {
 
         const res = await api.get("/analytics/dashboard-stats", { params });
         setStats(res.data);
+        isFirstLoad.current = false;
       } catch (error) {
         console.error("Dashboard fetch error:", error);
       } finally {

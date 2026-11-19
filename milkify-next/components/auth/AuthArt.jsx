@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import brandLogo from "@/public/images/milkify-logo.png";
-import { 
-  TrendingUp, Users, ShieldCheck, Activity, 
-  Globe, Database, Sliders, Cpu 
+import {
+  TrendingUp, Users, ShieldCheck, Activity,
+  Globe, Database, Sliders, Cpu
 } from "lucide-react";
 
 const ADMIN_HIGHLIGHTS = [
@@ -69,11 +69,10 @@ export default function AuthArt({ type = "admin" }) {
   }, [highlights.length]);
 
   return (
-    <div className={`hidden lg:flex flex-col w-full h-full min-h-[580px] justify-between items-center rounded-3xl border border-slate-200/40 dark:border-slate-800/40 p-10 overflow-hidden relative shadow-inner transition-all duration-500 ${
-      isMaster 
-        ? "bg-gradient-to-br from-purple-500/5 via-fuchsia-500/5 to-indigo-500/5 dark:from-slate-950 dark:via-slate-900/90 dark:to-slate-950" 
+    <div className={`hidden lg:flex flex-col w-full h-full min-h-[580px] justify-between items-center rounded-3xl border border-slate-200/40 dark:border-slate-800/40 p-10 overflow-hidden relative shadow-inner transition-all duration-500 ${isMaster
+        ? "bg-gradient-to-br from-purple-500/5 via-fuchsia-500/5 to-indigo-500/5 dark:from-slate-950 dark:via-slate-900/90 dark:to-slate-950"
         : "bg-gradient-to-br from-blue-500/5 via-sky-500/5 to-emerald-500/5 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
-    }`}>
+      }`}>
       {/* Background Glowing Ambient Orbs */}
       <motion.div
         animate={{
@@ -86,11 +85,10 @@ export default function AuthArt({ type = "admin" }) {
           repeat: Infinity,
           ease: "easeInOut",
         }}
-        className={`absolute top-10 left-10 w-72 h-72 rounded-full blur-3xl -z-10 transition-colors duration-500 ${
-          isMaster 
-            ? "bg-purple-400/10 dark:bg-purple-600/10" 
+        className={`absolute top-10 left-10 w-72 h-72 rounded-full blur-3xl -z-10 transition-colors duration-500 ${isMaster
+            ? "bg-purple-400/10 dark:bg-purple-600/10"
             : "bg-blue-400/10 dark:bg-blue-600/10"
-        }`}
+          }`}
       />
       <motion.div
         animate={{
@@ -103,19 +101,17 @@ export default function AuthArt({ type = "admin" }) {
           repeat: Infinity,
           ease: "easeInOut",
         }}
-        className={`absolute bottom-10 right-10 w-80 h-80 rounded-full blur-3xl -z-10 transition-colors duration-500 ${
-          isMaster 
-            ? "bg-fuchsia-400/10 dark:bg-fuchsia-600/10" 
+        className={`absolute bottom-10 right-10 w-80 h-80 rounded-full blur-3xl -z-10 transition-colors duration-500 ${isMaster
+            ? "bg-fuchsia-400/10 dark:bg-fuchsia-600/10"
             : "bg-emerald-400/10 dark:bg-emerald-600/10"
-        }`}
+          }`}
       />
-
+      
       {/* Decorative Grid Overlay */}
-      <div className={`absolute inset-0 [background-size:24px_24px] opacity-30 dark:opacity-10 pointer-events-none transition-all ${
-        isMaster 
-          ? "bg-[radial-gradient(#d8b4fe_1px,transparent_1px)]" 
+      <div className={`absolute inset-0 [background-size:24px_24px] opacity-30 dark:opacity-10 pointer-events-none transition-all ${isMaster
+          ? "bg-[radial-gradient(#d8b4fe_1px,transparent_1px)]"
           : "bg-[radial-gradient(#e2e8f0_1px,transparent_1px)]"
-      }`} />
+        }`} />
 
       {/* Top Header - Animated Brand Showcase */}
       <div className="w-full flex flex-col items-center text-center mt-6 z-10">
@@ -126,11 +122,10 @@ export default function AuthArt({ type = "admin" }) {
           className="relative inline-block"
         >
           {/* Logo Pulsing Backlight */}
-          <div className={`absolute inset-0 rounded-3xl opacity-20 blur-xl animate-pulse transition-all duration-500 ${
-            isMaster 
-              ? "bg-gradient-to-tr from-purple-500 to-fuchsia-400" 
+          <div className={`absolute inset-0 rounded-3xl opacity-20 blur-xl animate-pulse transition-all duration-500 ${isMaster
+              ? "bg-gradient-to-tr from-purple-500 to-fuchsia-400"
               : "bg-gradient-to-tr from-blue-500 to-emerald-400"
-          }`} />
+            }`} />
 
           {/* Interactive Floating Card holding Logo */}
           <motion.div
@@ -155,11 +150,10 @@ export default function AuthArt({ type = "admin" }) {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className={`text-4xl font-extrabold tracking-tight mt-5 bg-clip-text text-transparent transition-all duration-500 ${
-            isMaster 
-              ? "bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 dark:from-purple-400 dark:via-fuchsia-400 dark:to-indigo-400" 
+          className={`text-4xl font-extrabold tracking-tight mt-5 bg-clip-text text-transparent transition-all duration-500 ${isMaster
+              ? "bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 dark:from-purple-400 dark:via-fuchsia-400 dark:to-indigo-400"
               : "bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 dark:from-blue-400 dark:via-indigo-400 dark:to-emerald-400"
-          }`}
+            }`}
         >
           {isMaster ? "Milkify Master" : "Milkify"}
         </motion.h1>
@@ -170,7 +164,7 @@ export default function AuthArt({ type = "admin" }) {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mt-2 font-medium tracking-wide"
         >
-          {isMaster 
+          {isMaster
             ? "Enterprise Orchestration & Multi-Tenant Infrastructure Control Center."
             : "The Next-Generation SaaS Platform for Smart Agricultural Milk Collection & Dairy Operations."}
         </motion.p>
@@ -216,11 +210,10 @@ export default function AuthArt({ type = "admin" }) {
             <button
               key={idx}
               onClick={() => setActiveHighlight(idx)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                activeHighlight === idx 
-                  ? `w-6 ${isMaster ? "bg-purple-600 dark:bg-purple-400" : "bg-blue-600 dark:bg-blue-400"}` 
+              className={`h-1.5 rounded-full transition-all duration-300 ${activeHighlight === idx
+                  ? `w-6 ${isMaster ? "bg-purple-600 dark:bg-purple-400" : "bg-blue-600 dark:bg-blue-400"}`
                   : "w-1.5 bg-slate-300 dark:bg-slate-700"
-              }`}
+                }`}
               aria-label={`Show slide ${idx + 1}`}
             />
           ))}
