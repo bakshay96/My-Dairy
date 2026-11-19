@@ -429,6 +429,46 @@ export default function MasterDashboardOverview() {
 
   const totalUserCount = admins.length + farmers.length + masters.length;
 
+  const formatDateTime = (dateVal) => {
+    if (!dateVal) return null;
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const ModifiedSignature = ({ modifiedBy, modifiedAt }) => {
+    if (!modifiedBy && !modifiedAt) {
+      return <span className="text-slate-400 italic text-[11px]">—</span>;
+    }
+    const formattedDate = formatDateTime(modifiedAt);
+    return (
+      <div className="flex flex-col text-[11px] leading-tight">
+        <span className="font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1">
+          <UserCheck className="h-3 w-3 text-purple-500 shrink-0" />
+          <span className="truncate max-w-[130px]" title={modifiedBy || "Master Admin"}>
+            {modifiedBy || "Master Admin"}
+          </span>
+        </span>
+        {formattedDate && (
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+            {formattedDate}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   const handleSort = (key) => {
     let direction = "asc";
     if (sortConfig.key === key && sortConfig.direction === "asc") {
@@ -634,6 +674,7 @@ export default function MasterDashboardOverview() {
                     <th className="px-4 py-3.5 whitespace-nowrap" onClick={() => handleSort("subscription")}>
                       Subscription <SortIcon column="subscription" />
                     </th>
+                    <th className="px-4 py-3.5 whitespace-nowrap">Modified By &amp; Date</th>
                     <th className="px-4 py-3.5 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
@@ -770,6 +811,11 @@ export default function MasterDashboardOverview() {
                             )}
                           </td>
 
+                          {/* Modified By Signature & Date */}
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            <ModifiedSignature modifiedBy={admin.modifiedBy} modifiedAt={admin.modifiedAt} />
+                          </td>
+
                           {/* Actions */}
                           <td className="px-4 py-3.5 text-right">
                             <div className="flex justify-end gap-1">
@@ -834,7 +880,7 @@ export default function MasterDashboardOverview() {
                         {/* Nested Sub-Table: All Farmers Associated With This Admin */}
                         {isExpanded && (
                           <tr className="bg-slate-50/70 dark:bg-slate-900/40">
-                            <td colSpan={8} className="p-3 pl-8">
+                            <td colSpan={9} className="p-3 pl-8">
                               <div className="bg-white dark:bg-slate-950 border border-purple-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
                                 <div className="flex items-center justify-between border-b dark:border-slate-800 pb-2">
                                   <div className="flex items-center gap-2">
@@ -859,6 +905,7 @@ export default function MasterDashboardOverview() {
                                           <th className="py-2 px-3">Login Mobile (User ID)</th>
                                           <th className="py-2 px-3">Password (Key)</th>
                                           <th className="py-2 px-3">Status</th>
+                                          <th className="py-2 px-3 whitespace-nowrap">Modified By &amp; Date</th>
                                           <th className="py-2 px-3 text-right">Actions</th>
                                         </tr>
                                       </thead>
@@ -915,6 +962,9 @@ export default function MasterDashboardOverview() {
                                                 {farmer.status || "active"}
                                               </span>
                                             </td>
+                                            <td className="py-2 px-3 whitespace-nowrap">
+                                              <ModifiedSignature modifiedBy={farmer.modifiedBy} modifiedAt={farmer.modifiedAt} />
+                                            </td>
                                             <td className="py-2 px-3 text-right">
                                               <div className="flex justify-end gap-1">
                                                 <Button
@@ -951,7 +1001,7 @@ export default function MasterDashboardOverview() {
 
                   {filteredAdmins.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-slate-500">No dairy admins found matching filters.</td>
+                      <td colSpan={9} className="px-6 py-8 text-center text-slate-500">No dairy admins found matching filters.</td>
                     </tr>
                   )}
                 </tbody>
@@ -976,6 +1026,7 @@ export default function MasterDashboardOverview() {
                       </div>
                     </th>
                     <th className="px-5 py-3.5">Status</th>
+                    <th className="px-5 py-3.5 whitespace-nowrap">Modified By &amp; Date</th>
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -1059,6 +1110,10 @@ export default function MasterDashboardOverview() {
                         </span>
                       </td>
 
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <ModifiedSignature modifiedBy={f.modifiedBy} modifiedAt={f.modifiedAt} />
+                      </td>
+
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex justify-end gap-1.5">
                           <Button
@@ -1084,7 +1139,7 @@ export default function MasterDashboardOverview() {
 
                   {filteredFarmers.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-slate-500">No farmers found matching filters.</td>
+                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">No farmers found matching filters.</td>
                     </tr>
                   )}
                 </tbody>
@@ -1105,6 +1160,7 @@ export default function MasterDashboardOverview() {
                     <th className="px-5 py-3.5">Username</th>
                     <th className="px-5 py-3.5">Password (Key)</th>
                     <th className="px-5 py-3.5">Role</th>
+                    <th className="px-5 py-3.5 whitespace-nowrap">Modified By &amp; Date</th>
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -1186,6 +1242,10 @@ export default function MasterDashboardOverview() {
                         </span>
                       </td>
 
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <ModifiedSignature modifiedBy={m.modifiedBy} modifiedAt={m.modifiedAt} />
+                      </td>
+
                       <td className="px-5 py-3.5 text-right">
                         <Button
                           size="sm"
@@ -1201,7 +1261,7 @@ export default function MasterDashboardOverview() {
 
                   {filteredMasters.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">No master admins found matching filters.</td>
+                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">No master admins found matching filters.</td>
                     </tr>
                   )}
                 </tbody>

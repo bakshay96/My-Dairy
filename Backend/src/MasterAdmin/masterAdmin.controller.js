@@ -32,6 +32,22 @@ const setMasterCookie = (res, token) => {
 };
 
 // ────────────────────────────────────────────────────────────
+// Helper: get modifying master admin email signature
+// ────────────────────────────────────────────────────────────
+const getModifierSignature = (req) => {
+  if (req.master && req.master.email) {
+    return req.master.email;
+  }
+  if (req.headers && req.headers["x-modifier-email"]) {
+    return String(req.headers["x-modifier-email"]).trim();
+  }
+  if (req.body && req.body.modifierEmail) {
+    return String(req.body.modifierEmail).trim();
+  }
+  return req.master?.username ? `${req.master.username}@master` : "master_admin";
+};
+
+// ────────────────────────────────────────────────────────────
 // 1. MASTER ADMIN – LOGIN
 // ────────────────────────────────────────────────────────────
 const masterLogin = async (req, res) => {
@@ -307,9 +323,14 @@ const getAdminDetail = async (req, res) => {
 const updateAdminStatus = async (req, res) => {
   try {
     const { status } = req.body; // "Active" | "Pause"
+    const modifierEmail = getModifierSignature(req);
     const admin = await AdminModel.findByIdAndUpdate(
       req.params.adminId,
-      { Status: status },
+      { 
+        Status: status,
+        modifiedBy: modifierEmail,
+        modifiedAt: new Date(),
+      },
       { new: true }
     ).select("-password");
     if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
@@ -404,6 +425,9 @@ const updateAdminCredentials = async (req, res) => {
       return res.status(400).json({ success: false, message: "No credential changes were provided" });
     }
 
+    const modifierEmail = getModifierSignature(req);
+    admin.modifiedBy = modifierEmail;
+    admin.modifiedAt = new Date();
     await admin.save();
 
     // 5. Notify user via email if requested
@@ -499,6 +523,8 @@ const updateAdminCredentials = async (req, res) => {
           Status: admin.Status,
           role: admin.role,
           key: admin.key,
+          modifiedBy: admin.modifiedBy,
+          modifiedAt: admin.modifiedAt,
           createdAt: admin.createdAt,
           updatedAt: admin.updatedAt,
           subscription: sub,
@@ -550,6 +576,10 @@ const updateMasterAdminCredentials = async (req, res) => {
       master.key = password;
     }
 
+    const modifierEmail = getModifierSignature(req);
+    master.modifiedBy = modifierEmail;
+    master.modifiedAt = new Date();
+
     await master.save();
 
     return res.status(200).json({
@@ -565,6 +595,8 @@ const updateMasterAdminCredentials = async (req, res) => {
           username: master.username,
           key: master.key,
           role: master.role,
+          modifiedBy: master.modifiedBy,
+          modifiedAt: master.modifiedAt,
           createdAt: master.createdAt,
         }
       }
@@ -801,6 +833,10 @@ const updateFarmerCredentialsForMaster = async (req, res) => {
       changes.push("Password updated successfully");
     }
 
+    const modifierEmail = getModifierSignature(req);
+    farmer.modifiedBy = modifierEmail;
+    farmer.modifiedAt = new Date();
+
     await farmer.save();
 
     // Send email notification if farmer has email and notifyUser is requested
@@ -851,10 +887,30 @@ const updateFarmerCredentialsForMaster = async (req, res) => {
           village: farmer.village,
           status: farmer.status,
           key: farmer.key,
+          modifiedBy: farmer.modifiedBy,
+          modifiedAt: farmer.modifiedAt,
           adminId: farmer.adminId,
         }
       }
     });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const updateFarmerStatusForMaster = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+    const { status } = req.body;
+    const { farmerModel } = require("../Farmer/farmer.model");
+    const modifierEmail = getModifierSignature(req);
+    const farmer = await farmerModel.findByIdAndUpdate(
+      farmerId,
+      { status, modifiedBy: modifierEmail, modifiedAt: new Date() },
+      { new: true }
+    );
+    if (!farmer) return res.status(404).json({ success: false, message: "Farmer not found" });
+    return res.status(200).json({ success: true, message: "Farmer status updated", data: { farmer } });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -903,6 +959,12 @@ const extendSubscription = async (req, res) => {
     sub.paymentStatus = "paid";
     if (notes) sub.notes = notes;
     await sub.save();
+
+    const modifierEmail = getModifierSignature(req);
+    await AdminModel.findByIdAndUpdate(adminId, {
+      modifiedBy: modifierEmail,
+      modifiedAt: new Date(),
+    });
 
     return res.status(200).json({
       success: true,
@@ -1404,5 +1466,6 @@ module.exports = {
   getFarmerDetailForMaster,
   getFarmersByAdminForMaster,
   updateFarmerCredentialsForMaster,
+  updateFarmerStatusForMaster,
   deleteFarmerForMaster,
 };
