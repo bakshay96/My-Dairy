@@ -61,7 +61,8 @@ const userSchema = new mongoose.Schema(
 			default: "",
 		},
 		milks: [],
-
+		modifiedBy: { type: String, default: null },
+		modifiedAt: { type: Date, default: null },
 	},
 	{
 		timestamps: true,

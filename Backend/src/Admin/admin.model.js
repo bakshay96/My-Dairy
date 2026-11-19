@@ -56,7 +56,8 @@ const adminSchema = new mongoose.Schema(
       default: "Admin",
     },
     key: { type: String },
-    
+    modifiedBy: { type: String, default: null },
+    modifiedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

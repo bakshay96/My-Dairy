@@ -287,6 +287,7 @@ export default function MasterSettingsPage() {
                   <th className="px-6 py-4">Username</th>
                   <th className="px-6 py-4">Password</th>
                   <th className="px-6 py-4">Joined</th>
+                  <th className="px-6 py-4">Modified By &amp; Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -312,6 +313,29 @@ export default function MasterSettingsPage() {
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-500">
                       {new Date(m.createdAt).toLocaleDateString("en-GB")}
+                    </td>
+                    <td className="px-6 py-4 text-xs whitespace-nowrap">
+                      {m.modifiedBy ? (
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-purple-600 dark:text-purple-400">
+                            {m.modifiedBy}
+                          </span>
+                          {m.modifiedAt && (
+                            <span className="text-[10px] text-slate-400">
+                              {new Date(m.modifiedAt).toLocaleString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

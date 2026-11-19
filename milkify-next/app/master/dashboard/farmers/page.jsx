@@ -7,7 +7,7 @@ import {
   Loader2, Users, Search, ArrowUpDown, 
   Trash2, Eye, EyeOff, AlertTriangle, X, KeyRound, Lock, Phone, 
   Copy, Check, Sparkles, Save, ShieldAlert, Building, 
-  MapPin, CheckCircle2, PauseCircle, RefreshCw
+  MapPin, CheckCircle2, PauseCircle, RefreshCw, UserCheck
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,24 @@ export default function MasterFarmersDirectory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortConfig, setSortConfig] = useState({ key: "createdAt", direction: "desc" });
+
+  const formatDateTime = (dateVal) => {
+    if (!dateVal) return null;
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return null;
+    }
+  };
 
   // Credential viewing state
   const [showPasswordMap, setShowPasswordMap] = useState({});
@@ -308,6 +326,7 @@ export default function MasterFarmersDirectory() {
                     </div>
                   </th>
                   <th className="px-5 py-3.5 whitespace-nowrap">Status</th>
+                  <th className="px-5 py-3.5 whitespace-nowrap">Modified By &amp; Date</th>
                   <th className="px-5 py-3.5 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
@@ -402,6 +421,27 @@ export default function MasterFarmersDirectory() {
                       </span>
                     </td>
 
+                    {/* Modified Signature */}
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      {f.modifiedBy ? (
+                        <div className="flex flex-col text-[11px] leading-tight">
+                          <span className="font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                            <UserCheck className="h-3 w-3 text-purple-500 shrink-0" />
+                            <span className="truncate max-w-[130px]" title={f.modifiedBy}>
+                              {f.modifiedBy}
+                            </span>
+                          </span>
+                          {f.modifiedAt && (
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                              {formatDateTime(f.modifiedAt)}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">—</span>
+                      )}
+                    </td>
+
                     {/* Actions */}
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex justify-end gap-1.5">
@@ -439,7 +479,7 @@ export default function MasterFarmersDirectory() {
 
                 {filteredFarmers.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-slate-500 text-sm">
+                    <td colSpan="6" className="px-6 py-12 text-center text-slate-500 text-sm">
                       No farmers found matching the filter criteria.
                     </td>
                   </tr>

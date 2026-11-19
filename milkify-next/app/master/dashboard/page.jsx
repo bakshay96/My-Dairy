@@ -3,9 +3,9 @@
 import React, { useEffect, useState, useMemo, Fragment } from "react";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
-import { 
-  Loader2, Users, Search, Play, Pause, 
-  ArrowUpDown, ChevronUp, ChevronDown, Trash2, Eye, EyeOff, AlertTriangle, 
+import {
+  Loader2, Users, Search, Play, Pause,
+  ArrowUpDown, ChevronUp, ChevronDown, Trash2, Eye, EyeOff, AlertTriangle,
   X, KeyRound, Lock, Phone, Mail, Copy, Check, Sparkles, Save, ShieldAlert,
   Building, User, ChevronRight, Filter, Shield, UserCheck, RefreshCw
 } from "lucide-react";
@@ -262,15 +262,15 @@ export default function MasterDashboardOverview() {
   };
 
   const generateRandomPassword = (target = "admin") => {
-    const prefixes = target === "farmer" 
-      ? ["Kisan", "GauPal", "Dairy", "Mitra"] 
+    const prefixes = target === "farmer"
+      ? ["Kisan", "GauPal", "Dairy", "Mitra"]
       : ["Milkify", "Dairy", "Amrit", "Kalyan"];
     const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
     const num = Math.floor(1000 + Math.random() * 9000);
     const symbols = ["@", "#", "!", "$"];
     const symbol = symbols[Math.floor(Math.random() * symbols.length)];
     const pass = `${prefix}${symbol}${num}`;
-    
+
     if (target === "farmer") {
       setFarmerCredForm((prev) => ({ ...prev, password: pass }));
       setShowFarmerModalPassword(true);
@@ -384,9 +384,9 @@ export default function MasterDashboardOverview() {
   const filteredAdmins = admins
     .filter((a) => {
       const matchesDairy = selectedDairyId === "all" || String(a._id) === selectedDairyId;
-      const matchesSearch = 
-        a.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        a.shopName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      const matchesSearch =
+        a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.shopName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         a.mobile?.includes(searchTerm) ||
         a.email?.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesDairy && matchesSearch;
@@ -408,7 +408,7 @@ export default function MasterDashboardOverview() {
     .filter((f) => {
       const aId = String(f.adminId?._id || f.adminId || "");
       const matchesDairy = selectedDairyId === "all" || aId === selectedDairyId;
-      const matchesSearch = 
+      const matchesSearch =
         f.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         f.memberId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         f.mobile?.includes(searchTerm) ||
@@ -419,7 +419,7 @@ export default function MasterDashboardOverview() {
     })
     .sort((a, b) => (a.memberId || "").localeCompare(b.memberId || "", undefined, { numeric: true }));
 
-  const filteredMasters = masters.filter((m) => 
+  const filteredMasters = masters.filter((m) =>
     m.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -428,6 +428,46 @@ export default function MasterDashboardOverview() {
   );
 
   const totalUserCount = admins.length + farmers.length + masters.length;
+
+  const formatDateTime = (dateVal) => {
+    if (!dateVal) return null;
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const ModifiedSignature = ({ modifiedBy, modifiedAt }) => {
+    if (!modifiedBy && !modifiedAt) {
+      return <span className="text-slate-400 italic text-[11px]">—</span>;
+    }
+    const formattedDate = formatDateTime(modifiedAt);
+    return (
+      <div className="flex flex-col text-[11px] leading-tight">
+        <span className="font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1">
+          <UserCheck className="h-3 w-3 text-purple-500 shrink-0" />
+          <span className="truncate max-w-[130px]" title={modifiedBy || "Master Admin"}>
+            {modifiedBy || "Master Admin"}
+          </span>
+        </span>
+        {formattedDate && (
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+            {formattedDate}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -527,11 +567,10 @@ export default function MasterDashboardOverview() {
             <button
               type="button"
               onClick={() => setRoleFilter("admins")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                roleFilter === "admins"
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${roleFilter === "admins"
                   ? "bg-white dark:bg-slate-950 text-purple-600 shadow-sm"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-              }`}
+                }`}
             >
               <Building className="h-3.5 w-3.5 text-blue-600" />
               Dairy Admins &amp; Farmers ({admins.length})
@@ -540,11 +579,10 @@ export default function MasterDashboardOverview() {
             <button
               type="button"
               onClick={() => setRoleFilter("farmers")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                roleFilter === "farmers"
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${roleFilter === "farmers"
                   ? "bg-white dark:bg-slate-950 text-purple-600 shadow-sm"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-              }`}
+                }`}
             >
               <Users className="h-3.5 w-3.5 text-purple-600" />
               All Farmers ({farmers.length})
@@ -553,11 +591,10 @@ export default function MasterDashboardOverview() {
             <button
               type="button"
               onClick={() => setRoleFilter("masters")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                roleFilter === "masters"
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${roleFilter === "masters"
                   ? "bg-white dark:bg-slate-950 text-purple-600 shadow-sm"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-              }`}
+                }`}
             >
               <Shield className="h-3.5 w-3.5 text-emerald-600" />
               Master Admin Team ({masters.length})
@@ -594,8 +631,8 @@ export default function MasterDashboardOverview() {
                   roleFilter === "admins"
                     ? "Search admin, shop, mobile..."
                     : roleFilter === "farmers"
-                    ? "Search farmer, ID, village..."
-                    : "Search master admin..."
+                      ? "Search farmer, ID, village..."
+                      : "Search master admin..."
                 }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -634,6 +671,7 @@ export default function MasterDashboardOverview() {
                     <th className="px-4 py-3.5 whitespace-nowrap" onClick={() => handleSort("subscription")}>
                       Subscription <SortIcon column="subscription" />
                     </th>
+                    <th className="px-4 py-3.5 whitespace-nowrap">Modified By &amp; Date</th>
                     <th className="px-4 py-3.5 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
@@ -685,7 +723,7 @@ export default function MasterDashboardOverview() {
                                   <Phone className="h-3 w-3 text-slate-400 shrink-0" />
                                   <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{admin.mobile}</span>
                                 </div>
-                                <button 
+                                <button
                                   type="button"
                                   onClick={() => handleCopy(admin.mobile, `mobile-${admin._id}`)}
                                   className="text-slate-400 hover:text-purple-600 p-0.5 rounded"
@@ -706,7 +744,7 @@ export default function MasterDashboardOverview() {
                                 <div className="flex items-center gap-1 shrink-0">
                                   {admin.key && (
                                     <>
-                                      <button 
+                                      <button
                                         type="button"
                                         onClick={() => togglePasswordVisibility(admin._id)}
                                         className="text-slate-400 hover:text-purple-600 p-0.5 rounded"
@@ -714,7 +752,7 @@ export default function MasterDashboardOverview() {
                                       >
                                         {showPasswordMap[admin._id] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                       </button>
-                                      <button 
+                                      <button
                                         type="button"
                                         onClick={() => handleCopy(admin.key, `pass-${admin._id}`)}
                                         className="text-slate-400 hover:text-purple-600 p-0.5 rounded"
@@ -770,14 +808,19 @@ export default function MasterDashboardOverview() {
                             )}
                           </td>
 
+                          {/* Modified By Signature & Date */}
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            <ModifiedSignature modifiedBy={admin.modifiedBy} modifiedAt={admin.modifiedAt} />
+                          </td>
+
                           {/* Actions */}
                           <td className="px-4 py-3.5 text-right">
                             <div className="flex justify-end gap-1">
                               {extending === admin._id ? (
                                 <div className="flex items-center gap-1.5">
-                                  <input 
-                                    type="number" 
-                                    value={extendDays} 
+                                  <input
+                                    type="number"
+                                    value={extendDays}
                                     onChange={(e) => setExtendDays(Number(e.target.value))}
                                     className="w-14 h-7 text-xs border rounded px-1.5"
                                   />
@@ -789,36 +832,36 @@ export default function MasterDashboardOverview() {
                                   <Button size="sm" variant="outline" onClick={() => setExtending(admin._id)} className="text-purple-600 border-purple-200 hover:bg-purple-50 h-7 px-2 text-xs" title="Extend Subscription">
                                     + Days
                                   </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
                                     className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 h-7 px-2 text-xs"
                                     onClick={() => openCredentialModal(admin)}
                                     title="Set Admin Credentials"
                                   >
                                     <KeyRound className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
                                     className="text-blue-600 border-blue-200 hover:bg-blue-50 h-7 px-2 text-xs"
                                     onClick={() => setViewAdmin(admin)}
                                     title="View Admin Details"
                                   >
                                     <Eye className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
                                     className={admin.Status === "Active" ? "text-amber-600 border-amber-200 hover:bg-amber-50 h-7 px-2 text-xs" : "text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-7 px-2 text-xs"}
                                     onClick={() => handleStatusChange(admin._id, admin.Status)}
                                     title={admin.Status === "Active" ? "Pause Account" : "Activate Account"}
                                   >
                                     {admin.Status === "Active" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
                                   </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
                                     className="text-red-600 border-red-200 hover:bg-red-50 h-7 px-2 text-xs"
                                     onClick={() => setDeleteAdminId(admin._id)}
                                     title="Delete Admin"
@@ -834,7 +877,7 @@ export default function MasterDashboardOverview() {
                         {/* Nested Sub-Table: All Farmers Associated With This Admin */}
                         {isExpanded && (
                           <tr className="bg-slate-50/70 dark:bg-slate-900/40">
-                            <td colSpan={8} className="p-3 pl-8">
+                            <td colSpan={9} className="p-3 pl-8">
                               <div className="bg-white dark:bg-slate-950 border border-purple-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
                                 <div className="flex items-center justify-between border-b dark:border-slate-800 pb-2">
                                   <div className="flex items-center gap-2">
@@ -859,6 +902,7 @@ export default function MasterDashboardOverview() {
                                           <th className="py-2 px-3">Login Mobile (User ID)</th>
                                           <th className="py-2 px-3">Password (Key)</th>
                                           <th className="py-2 px-3">Status</th>
+                                          <th className="py-2 px-3 whitespace-nowrap">Modified By &amp; Date</th>
                                           <th className="py-2 px-3 text-right">Actions</th>
                                         </tr>
                                       </thead>
@@ -915,6 +959,9 @@ export default function MasterDashboardOverview() {
                                                 {farmer.status || "active"}
                                               </span>
                                             </td>
+                                            <td className="py-2 px-3 whitespace-nowrap">
+                                              <ModifiedSignature modifiedBy={farmer.modifiedBy} modifiedAt={farmer.modifiedAt} />
+                                            </td>
                                             <td className="py-2 px-3 text-right">
                                               <div className="flex justify-end gap-1">
                                                 <Button
@@ -951,7 +998,7 @@ export default function MasterDashboardOverview() {
 
                   {filteredAdmins.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-slate-500">No dairy admins found matching filters.</td>
+                      <td colSpan={9} className="px-6 py-8 text-center text-slate-500">No dairy admins found matching filters.</td>
                     </tr>
                   )}
                 </tbody>
@@ -976,6 +1023,7 @@ export default function MasterDashboardOverview() {
                       </div>
                     </th>
                     <th className="px-5 py-3.5">Status</th>
+                    <th className="px-5 py-3.5 whitespace-nowrap">Modified By &amp; Date</th>
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -1059,6 +1107,10 @@ export default function MasterDashboardOverview() {
                         </span>
                       </td>
 
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <ModifiedSignature modifiedBy={f.modifiedBy} modifiedAt={f.modifiedAt} />
+                      </td>
+
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex justify-end gap-1.5">
                           <Button
@@ -1084,7 +1136,7 @@ export default function MasterDashboardOverview() {
 
                   {filteredFarmers.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-slate-500">No farmers found matching filters.</td>
+                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">No farmers found matching filters.</td>
                     </tr>
                   )}
                 </tbody>
@@ -1105,6 +1157,7 @@ export default function MasterDashboardOverview() {
                     <th className="px-5 py-3.5">Username</th>
                     <th className="px-5 py-3.5">Password (Key)</th>
                     <th className="px-5 py-3.5">Role</th>
+                    <th className="px-5 py-3.5 whitespace-nowrap">Modified By &amp; Date</th>
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -1186,6 +1239,10 @@ export default function MasterDashboardOverview() {
                         </span>
                       </td>
 
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <ModifiedSignature modifiedBy={m.modifiedBy} modifiedAt={m.modifiedAt} />
+                      </td>
+
                       <td className="px-5 py-3.5 text-right">
                         <Button
                           size="sm"
@@ -1201,7 +1258,7 @@ export default function MasterDashboardOverview() {
 
                   {filteredMasters.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-slate-500">No master admins found matching filters.</td>
+                      <td colSpan={7} className="px-6 py-8 text-center text-slate-500">No master admins found matching filters.</td>
                     </tr>
                   )}
                 </tbody>
@@ -1229,8 +1286,8 @@ export default function MasterDashboardOverview() {
                   <span>{deleteProgress}%</span>
                 </div>
                 <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-red-600 transition-all duration-300 ease-out" 
+                  <div
+                    className="h-full bg-red-600 transition-all duration-300 ease-out"
                     style={{ width: `${deleteProgress}%` }}
                   />
                 </div>
@@ -1435,12 +1492,12 @@ export default function MasterDashboardOverview() {
             </div>
 
             <div className="p-6 bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-800 flex justify-end gap-3">
-              <Button 
+              <Button
                 onClick={() => {
                   const targetAdmin = viewAdmin;
                   setViewAdmin(null);
                   openCredentialModal(targetAdmin);
-                }} 
+                }}
                 className="bg-purple-600 hover:bg-purple-700 text-white font-bold gap-2"
               >
                 <KeyRound className="h-4 w-4" /> Manage Credentials
@@ -1468,8 +1525,8 @@ export default function MasterDashboardOverview() {
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setCredentialModalAdmin(null)} 
+              <button
+                onClick={() => setCredentialModalAdmin(null)}
                 className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"
               >
                 <X className="h-5 w-5" />

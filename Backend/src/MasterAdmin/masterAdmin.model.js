@@ -12,6 +12,8 @@ const master_adminSchema = new mongoose.Schema(
     key:        { type: String }, // plaintext backup (for dev reference)
     role:       { type: String, default: "master_admin", enum: ["master_admin"] },
     isActive:   { type: Boolean, default: true },
+    modifiedBy: { type: String, default: null },
+    modifiedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

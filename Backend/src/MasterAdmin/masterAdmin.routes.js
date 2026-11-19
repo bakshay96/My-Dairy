@@ -32,6 +32,7 @@ const {
   getFarmerDetailForMaster,
   getFarmersByAdminForMaster,
   updateFarmerCredentialsForMaster,
+  updateFarmerStatusForMaster,
   deleteFarmerForMaster,
 } = require("./masterAdmin.controller");
 
@@ -91,6 +92,7 @@ masterRouter.patch("/admins/:adminId/subscription/extend", masterAuthMiddleware,
 masterRouter.get("/farmers", masterAuthMiddleware, getAllFarmersForMaster);
 masterRouter.get("/farmers/:farmerId", masterAuthMiddleware, getFarmerDetailForMaster);
 masterRouter.patch("/farmers/:farmerId/credentials", masterAuthMiddleware, updateFarmerCredentialsForMaster);
+masterRouter.patch("/farmers/:farmerId/status", masterAuthMiddleware, updateFarmerStatusForMaster);
 masterRouter.put("/farmers/:farmerId/credentials", masterAuthMiddleware, updateFarmerCredentialsForMaster);
 masterRouter.delete("/farmers/:farmerId", masterAuthMiddleware, deleteFarmerForMaster);
 
