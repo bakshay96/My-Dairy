@@ -21,9 +21,11 @@ exports.createFarmer = async (req, res) => {
       farmerData.village = farmerData.address;
     }
 
-    // Generate unique memberId based on count (e.g. MI-001, MI-002)
-    const totalFarmers = await farmerModel.countDocuments({ adminId: req.admin.id });
-    farmerData.memberId = `MI-${(totalFarmers + 1).toString().padStart(3, '0')}`;
+    // Generate unique memberId (e.g. MI-FAR-0001, MI-FAR-0002)
+    const { generateFarmerMemberId } = require("../utils/memberIdGenerator");
+    if (!farmerData.memberId || farmerData.memberId.startsWith("MI-0")) {
+      farmerData.memberId = await generateFarmerMemberId();
+    }
 
     // Setup initial credentials (default password = last 4 digits of mobile)
     const rawPassword = farmerData.password || (farmerData.mobile ? farmerData.mobile.slice(-4) : "1234");

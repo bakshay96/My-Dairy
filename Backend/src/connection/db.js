@@ -1,13 +1,5 @@
-const mongoose = require("mongoose");
-const dns = require("dns");
+                                      const mongoose = require("mongoose");
 require("dotenv").config();
-
-// Fix for Windows / ISP DNS timeout on MongoDB Atlas SRV queryTxt
-try {
-  dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
-} catch (err) {
-  console.warn("[DB] Unable to override DNS servers:", err.message);
-}
 
 const mongo_url =
   process.env.mongo_url ||
@@ -16,6 +8,7 @@ const mongo_url =
   "";
 console.log("DEBUG: Using Mongo connection string:", mongo_url ? "[configured]" : "[missing]");
 
+
 if (!mongo_url) {
   console.error("ERROR: Mongo DB URL is not defined. Set mongo_url (or MONGO_URL) in .env");
   process.exit(1);
@@ -23,11 +16,10 @@ if (!mongo_url) {
 
 // Note: useNewUrlParser and useUnifiedTopology are no longer needed in Mongoose 8+
 const mongoOptions = {
-  serverSelectionTimeoutMS: 15000,
+  serverSelectionTimeoutMS: 10000, // Increased timeout to 10s
   socketTimeoutMS: 45000,
   maxPoolSize: 10,
   minPoolSize: 2,
-  family: 4, // Force IPv4 to avoid IPv6 DNS query timeouts
 };
 
 const connection = mongoose

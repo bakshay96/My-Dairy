@@ -293,7 +293,16 @@ export default function MasterSettingsPage() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {team.map((m) => (
                   <tr key={m._id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                    <td className="px-6 py-4 font-bold">{m.firstName} {m.lastName}</td>
+                    <td className="px-6 py-4 font-bold">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {m.memberId && (
+                          <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            {m.memberId}
+                          </span>
+                        )}
+                        <span>{m.firstName} {m.lastName}</span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                       <p>{m.email}</p>
                       <p className="text-xs text-slate-500">{m.mobile}</p>

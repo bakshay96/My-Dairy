@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
 		},
 		memberId: {
 			type: String,
+			index: true,
 		},
 		gender: {
 			type: String,

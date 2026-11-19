@@ -3,21 +3,11 @@ import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import ThemeInitializer from "@/components/ui/ThemeInitializer";
 
-const inter = Inter({ 
-  subsets: ["latin"], 
+const inter = Inter({
+  subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
-  fallback: [
-    "system-ui",
-    "-apple-system",
-    "BlinkMacSystemFont",
-    "Segoe UI",
-    "Roboto",
-    "Helvetica Neue",
-    "Arial",
-    "sans-serif"
-  ],
-  adjustFontFallbacks: true,
+  preload: true,
 });
 
 export const metadata = {
