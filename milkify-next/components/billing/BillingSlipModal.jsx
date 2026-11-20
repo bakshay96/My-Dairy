@@ -14,8 +14,7 @@ import {
   Calendar,
   Globe,
   Share2,
-  Clock,
-  FileText
+  Clock
 } from "lucide-react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -133,7 +132,7 @@ export default function BillingSlipModal({ slipData, isOpen, onClose, initialLan
 
   const t = useMemo(() => languageText[language] || languageText.en, [language]);
 
-  const { farmer, entries = [], summary = {}, dateRange = {}, payment = {} } = slipData || {};
+  const { farmer, entries = [], dateRange = {} } = slipData || {};
 
   // Compute breakdown counts and amounts
   const {
@@ -648,7 +647,7 @@ export default function BillingSlipModal({ slipData, isOpen, onClose, initialLan
                 ) : (
                   <tr>
                     <td colSpan={9} className="py-8 text-center text-slate-400">
-                      No entries found for category "{statusCategory}".
+                      No entries found for category &quot;{statusCategory}&quot;.
                     </td>
                   </tr>
                 )}

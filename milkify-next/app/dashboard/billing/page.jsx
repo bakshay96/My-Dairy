@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import BillingTable from "@/components/billing/BillingTable";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Download, Search, CheckCircle2, User, CreditCard, CalendarDays, ReceiptIndianRupee, IndianRupee, FileText } from "lucide-react";
+import { Download, Search, CheckCircle2, User, CreditCard, CalendarDays, ReceiptIndianRupee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, formatIndianDate, formatRupees } from "@/lib/utils";
 import MilkifyLoader from "@/components/ui/Loader";

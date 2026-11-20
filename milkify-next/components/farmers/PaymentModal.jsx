@@ -7,18 +7,11 @@ import { formatRupees, formatIndianDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { 
   X, 
-  ArrowLeft,
   Loader2, 
   CheckCircle, 
   IndianRupee, 
-  User, 
-  Phone, 
   Calendar, 
   History, 
-  ShieldCheck,
-  CreditCard,
-  FileCheck,
-  Sparkles,
   ReceiptIndianRupee,
   Tag
 } from "lucide-react";
@@ -29,7 +22,7 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
   const [loading, setLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [referenceId, setReferenceId] = useState("");
-  const [paymentMode, setPaymentMode] = useState("cash");
+  const [paymentMode] = useState("cash");
   const [historyLoading, setHistoryLoading] = useState(false);
   const [settlementHistory, setSettlementHistory] = useState([]);
 
