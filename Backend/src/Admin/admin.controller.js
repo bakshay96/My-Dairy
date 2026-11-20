@@ -6,6 +6,7 @@ const { AdminModel } = require("./admin.model");
 const { transporter } = require("../connection/mailConnection");
 const { farmerModel } = require("../Farmer/farmer.model");
 const { generateDairyAdminMemberId, generateAdminSelfFarmerMemberId } = require("../utils/memberIdGenerator");
+const { recordUserLogin } = require("../utils/userLoginTracker");
 
 require("dotenv").config();
 
@@ -136,6 +137,15 @@ const registerAdmin = async (req, res) => {
     });
     setAuthCookie(res, token);
 
+    // Record user-wise login event asynchronously
+    recordUserLogin({
+      req,
+      user: admin,
+      role: "admin",
+      userModel: "Admin",
+      status: "success",
+    }).catch((err) => console.error("[Auth] Admin login tracking error:", err?.message));
+
     return res.sendSuccess({
       admin: {
         name: admin.name,
@@ -186,6 +196,15 @@ const adminLogin = async (req, res) => {
       expiresIn: "30m",
     });
     setAuthCookie(res, token);
+
+    // Record user-wise login event asynchronously
+    recordUserLogin({
+      req,
+      user: admin,
+      role: "admin",
+      userModel: "Admin",
+      status: "success",
+    }).catch((err) => console.error("[Auth] Admin login tracking error:", err?.message));
 
     return res.sendSuccess({
       admin: {
