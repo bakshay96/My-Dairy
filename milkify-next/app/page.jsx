@@ -14,25 +14,20 @@ import {
   Calendar,
   Sparkles,
   ShieldCheck,
-  TrendingUp,
   Users,
   Bell,
-  Cpu,
   ArrowRight,
   CheckCircle2,
   Lock,
   Layers,
   ChevronRight,
   Database,
-  BarChart3,
   FileText,
-  Smartphone,
   Printer,
   Zap,
-  Check,
   Sun,
   Moon,
-  Receipt,
+  ReceiptIndianRupee,
   BadgeCheck,
   SlidersHorizontal,
   Workflow,
@@ -40,15 +35,11 @@ import {
   Activity,
   Laptop,
   CheckCircle,
-  Copy,
-  Radio,
-  ExternalLink,
-  Coins
+  Radio
 } from "lucide-react";
 
 export default function LandingPage() {
   const user = useAuthStore((state) => state.user);
-  const [mounted, setMounted] = useState(false);
 
   // ── Scroll Hide / Show Navbar State ──────────────────────────────────────
   const [navVisible, setNavVisible] = useState(true);
@@ -56,8 +47,6 @@ export default function LandingPage() {
   const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
-    setMounted(true);
-
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
@@ -142,7 +131,7 @@ export default function LandingPage() {
             </a>
             <a href="#updates" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
               <Sparkles className="h-4 w-4 text-amber-500" />
-              What's New
+              What&apos;s New
             </a>
           </nav>
 
@@ -258,7 +247,7 @@ export default function LandingPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-left">
                   <div className="flex items-center justify-between text-blue-600 dark:text-blue-400 mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider">Today's Intake</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">Today&apos;s Intake</span>
                     <Droplet className="h-5 w-5 fill-blue-500/20" />
                   </div>
                   <div className="text-2xl font-black text-slate-900 dark:text-white">1,480.50 L</div>
@@ -529,7 +518,7 @@ export default function LandingPage() {
 
                       {/* Quick Shift Summary Bar */}
                       <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 font-medium">
-                        <span>Today's Total: <strong>1,480.50 L</strong> (58 Farmers)</span>
+                        <span>Today&apos;s Total: <strong>1,480.50 L</strong> (58 Farmers)</span>
                         <Link href="/login" className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-1">
                           View Live Register <ChevronRight className="h-3.5 w-3.5" />
                         </Link>
@@ -691,7 +680,7 @@ export default function LandingPage() {
                           exit={{ opacity: 0, scale: 0.95 }}
                           className="p-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-300 dark:border-purple-800 rounded-xl text-xs font-mono text-purple-800 dark:text-purple-300 flex items-center justify-between"
                         >
-                          <span>📢 Broadcast: "Scheduled Database Backup at 11:00 PM IST" dispatched to 48 dairy sockets</span>
+                          <span>📢 Broadcast: &quot;Scheduled Database Backup at 11:00 PM IST&quot; dispatched to 48 dairy sockets</span>
                           <span className="font-bold">200 OK</span>
                         </motion.div>
                       )}
@@ -915,7 +904,7 @@ export default function LandingPage() {
               <Sparkles className="h-3.5 w-3.5" /> Latest Capabilities & Roadmap
             </span>
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
-              What's New in Milkify Platform
+              What&apos;s New in Milkify Platform
             </h2>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-3 font-medium">
               Explore the cutting-edge features built to streamline dairy management and scale cooperative societies.
@@ -926,7 +915,7 @@ export default function LandingPage() {
               {[
                 { id: "v24", label: "🚀 v2.4 Latest Release", icon: Zap },
                 { id: "collection", label: "🥛 Milk Intake & Slips", icon: Droplet },
-                { id: "billing", label: "🧾 Cycle Billing & PDF", icon: Receipt },
+                { id: "billing", label: "🧾 Cycle Billing & PDF", icon: ReceiptIndianRupee },
                 { id: "master", label: "🛡️ Superadmin & Telemetry", icon: ShieldCheck },
               ].map((tab) => {
                 const IconComponent = tab.icon;
@@ -1051,7 +1040,7 @@ export default function LandingPage() {
                     </div>
                     <div className="space-y-2">
                       <div className="text-purple-600 font-extrabold text-sm flex items-center gap-1.5">
-                        <Receipt className="h-4 w-4" /> Devanagari Bilingual
+                        <ReceiptIndianRupee className="h-4 w-4" /> Devanagari Bilingual
                       </div>
                       <p className="text-xs text-slate-500 leading-relaxed">
                         Full Marathi (मराठी) and English slip headers so village farmers can clearly verify their fat, rate, and daily earnings.

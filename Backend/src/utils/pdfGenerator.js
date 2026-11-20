@@ -10,43 +10,67 @@ const fs = require("fs");
 // ── i18n labels ────────────────────────────────────────────────────────────
 const LABELS = {
   en: {
-    title: "DIGITAL MILK COLLECTION SLIP",
+    title: "THERMAL MILK COLLECTION SLIP",
+    slipSubtitle: "POS 80mm Cycle Statement",
     farmer: "FARMER", memberId: "MEMBER ID", mobile: "MOBILE",
-    village: "VILLAGE", period: "PERIOD",
+    village: "VILLAGE", period: "PERIOD", filter: "VIEW",
     date: "DATE", shift: "S", category: "CAT", liters: "LTR",
-    fat: "FAT", snf: "SNF", amount: "AMT(Rs)",
+    fat: "FAT", snf: "SNF", amount: "AMT(Rs)", status: "STATUS",
     days: "DAYS", total: "TOTAL",
     totalQty: "Total Quantity", avgFatSnf: "Avg FAT / SNF",
-    avgRate: "Avg Rate / Ltr", netPayable: "NET PAYABLE",
-    receiverSign: "RECEIVER SIGN", officeSign: "OFFICE SIGN",
-    generated: "Generated", footer: "System Generated - Milkify Dairy",
+    avgRate: "Avg Rate / Ltr", grossTotal: "Gross Bill Total",
+    paidAmount: "Paid Amount", unpaidBalance: "Balance Payable",
+    netPayable: "NET PAYABLE",
+    paidStamp: "*** FULLY PAID / पूर्ण चुकता ***",
+    unpaidStamp: "*** BALANCE DUE / देय बाकी ***",
+    partialStamp: "*** PARTIALLY PAID / अंशतः चुकता ***",
+    receiverSign: "Farmer Sign", officeSign: "Authorized Sign",
+    generated: "Generated", footer: "System Generated - POS Thermal Slip",
     morning: "M", evening: "E",
+    statusPaid: "PAID", statusUnpaid: "UNPD",
+    allFilter: "All Entries", unpaidFilter: "Unpaid Only", paidFilter: "Paid Only",
   },
   hi: {
-    title: "दूध संग्रह पर्ची",
+    title: "थर्मल दूध संग्रह पर्ची",
+    slipSubtitle: "पीओएस 80mm चक्र विवरण",
     farmer: "किसान", memberId: "सदस्य ID", mobile: "मोबाइल",
-    village: "गाँव", period: "अवधि",
+    village: "गाँव", period: "अवधि", filter: "श्रेणी",
     date: "तारीख", shift: "प", category: "प्र", liters: "लीटर",
-    fat: "फैट", snf: "एसएनएफ", amount: "राशि",
+    fat: "फैट", snf: "एसएनएफ", amount: "राशि", status: "स्थिति",
     days: "दिन", total: "कुल",
-    totalQty: "कुल मात्रा", avgFatSnf: "औसत FAT / SNF",
-    avgRate: "औसत दर / लीटर", netPayable: "कुल देय राशि",
-    receiverSign: "प्राप्तकर्ता हस्ताक्षर", officeSign: "कार्यालय हस्ताक्षर",
-    generated: "निर्मिती समय", footer: "Milkify डेयरी प्रबंधन प्रणाली",
+    totalQty: "कुल दूध मात्रा", avgFatSnf: "औसत FAT / SNF",
+    avgRate: "औसत दर / लीटर", grossTotal: "कुल चक्र बिल",
+    paidAmount: "चुकता राशि", unpaidBalance: "बाकी देय राशि",
+    netPayable: "अंतिम देय राशि",
+    paidStamp: "*** पूर्ण चुकता / ALL PAID ***",
+    unpaidStamp: "*** देय बाकी / UNPAID ***",
+    partialStamp: "*** अंशतः चुकता / PARTIAL ***",
+    receiverSign: "किसान हस्ताक्षर", officeSign: "कार्यालय हस्ताक्षर",
+    generated: "निर्मिती समय", footer: "Milkify डेयरी - थर्मल पावती",
     morning: "स", evening: "श",
+    statusPaid: "चुकता", statusUnpaid: "बाकी",
+    allFilter: "सभी प्रविष्टियां", unpaidFilter: "केवल बाकी", paidFilter: "केवल चुकता",
   },
   mr: {
-    title: "दूध संकलन स्लिप",
+    title: "थर्मल दूध संकलन पावती",
+    slipSubtitle: "POS 80mm सायकल पावती",
     farmer: "शेतकरी", memberId: "सदस्य ID", mobile: "मोबाइल",
-    village: "गाव", period: "कालावधी",
+    village: "गाव", period: "कालावधी", filter: "प्रवर्ग",
     date: "तारीख", shift: "स", category: "प्र", liters: "लिटर",
-    fat: "फॅट", snf: "SNF", amount: "रक्कम",
+    fat: "फॅट", snf: "SNF", amount: "रक्कम", status: "स्थिती",
     days: "दिवस", total: "एकूण",
-    totalQty: "एकूण प्रमाण", avgFatSnf: "सरासरी FAT / SNF",
-    avgRate: "सरासरी दर / लिटर", netPayable: "एकूण देय रक्कम",
-    receiverSign: "प्राप्तकर्ता स्वाक्षरी", officeSign: "कार्यालय स्वाक्षरी",
-    generated: "निर्मिती वेळ", footer: "Milkify डेअरी व्यवस्थापन प्रणाली",
+    totalQty: "एकूण दूध प्रमाण", avgFatSnf: "सरासरी FAT / SNF",
+    avgRate: "सरासरी दर / लिटर", grossTotal: "एकूण चक्र बिल",
+    paidAmount: "चुकता रक्कम", unpaidBalance: "बाकी देय रक्कम",
+    netPayable: "एकूण देय रक्कम",
+    paidStamp: "*** पूर्ण चुकता / ALL PAID ***",
+    unpaidStamp: "*** देय बाकी / UNPAID ***",
+    partialStamp: "*** अंशतः चुकता / PARTIAL ***",
+    receiverSign: "शेतकरी स्वाक्षरी", officeSign: "डेअरी स्वाक्षरी",
+    generated: "निर्मिती वेळ", footer: "Milkify डेअरी - POS थर्मल पावती",
     morning: "स", evening: "सं",
+    statusPaid: "चुकता", statusUnpaid: "बाकी",
+    allFilter: "सर्व नोंदी", unpaidFilter: "फक्त बाकी नोंदी", paidFilter: "फक्त चुकता नोंदी",
   },
 };
 
@@ -66,23 +90,28 @@ const fmtDateTime = () =>
   }).format(new Date());
 
 const SHIFT_MAP = {
-  en: { morning: "Morning", evening: "Evening" },
-  hi: { morning: "सुबह", evening: "शाम" },
-  mr: { morning: "सकाळ", evening: "संध्याकाळ" },
+  en: { morning: "M", evening: "E" },
+  hi: { morning: "स", evening: "श" },
+  mr: { morning: "स", evening: "सं" },
 };
 
 const CAT_MAP = {
-  en: { cow: "Cow", goat: "Goat", buffalo: "Buffalo" },
+  en: { cow: "Cow", goat: "Goat", buffalo: "Buf" },
   hi: { cow: "गाय", goat: "बकरी", buffalo: "भैंस" },
   mr: { cow: "गाय", goat: "बकरी", buffalo: "म्हैस" },
 };
 
 function buildHtml(data, lang) {
-  const { farmer, entries, summary, dateRange, adminShopName = "Milkify Dairy" } = data;
+  const { farmer, entries, summary, dateRange, adminShopName = "Milkify Dairy", filterStatus = "all", payment = {} } = data;
   const L = LABELS[lang] || LABELS.en;
   
-  const avgRate = summary.totalLiters > 0 ? summary.totalAmount / summary.totalLiters : 0;
+  const avgRate = summary.totalLiters > 0 ? (summary.totalAmount / summary.totalLiters) : 0;
   const uniqueDays = new Set(entries.map((e) => new Date(e.createdAt).toDateString())).size;
+
+  const paidAmt = Number(summary.paidAmount != null ? summary.paidAmount : (payment.paidAmount || 0));
+  const unpaidAmt = Number(summary.unpaidAmount != null ? summary.unpaidAmount : (payment.unpaidAmount || summary.totalAmount));
+  const isPaidAll = summary.unpaidEntries === 0 && entries.length > 0;
+  const isPartial = (summary.paidEntries || 0) > 0 && (summary.unpaidEntries || 0) > 0;
 
   let logoBase64 = "";
   try {
@@ -101,6 +130,10 @@ function buildHtml(data, lang) {
     fontBase64 = `data:font/woff2;charset=utf-8;base64,${regWoff2.toString("base64")}`;
     fontBoldBase64 = `data:font/woff2;charset=utf-8;base64,${bldWoff2.toString("base64")}`;
   } catch (e) {}
+
+  const filterLabel = 
+    filterStatus === "unpaid" ? L.unpaidFilter :
+    filterStatus === "paid" ? L.paidFilter : L.allFilter;
 
   return `
   <!DOCTYPE html>
@@ -121,89 +154,113 @@ function buildHtml(data, lang) {
         font-style: normal;
       }
 
+      * { box-sizing: border-box; }
       body {
         margin: 0;
-        padding: 16px;
-        font-family: 'Noto Sans Devanagari', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 10px 8px;
+        font-family: 'Noto Sans Devanagari', 'Courier New', Courier, monospace;
         color: #000;
-        width: 300px;
-        box-sizing: border-box;
+        width: 290px;
+        background: #fff;
+        font-size: 10.5px;
+        line-height: 1.3;
       }
       .center { text-align: center; }
       .bold { font-weight: 700; }
-      .shop-name { font-size: 16px; margin-bottom: 2px; }
-      .title { font-size: 10px; color: #444; margin-bottom: 8px; }
-      .divider { border-bottom: 1.5px solid #333; margin: 6px 0; }
+      .shop-name { font-size: 15px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 2px; }
+      .title { font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: #222; }
+      .subtitle { font-size: 8.5px; color: #555; }
       
-      .info-box {
-        background-color: #f0f9ff;
-        border: 1px solid #bfdbfe;
-        border-radius: 6px;
-        padding: 8px;
-        margin: 8px 0;
-        font-size: 11px;
-        color: #1e3a5f;
-      }
-      .info-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+      .dashed-divider { border-top: 1.5px dashed #000; margin: 5px 0; }
+      .double-divider { border-top: 2px solid #000; border-bottom: 1px solid #000; height: 2px; margin: 5px 0; }
+      
+      .info-row { display: flex; justify-content: space-between; margin-bottom: 2.5px; font-size: 10px; }
       .info-row:last-child { margin-bottom: 0; }
       
-      table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10.5px; }
-      th { text-align: left; border-bottom: 1.5px solid #1e3a5f; padding: 4px 0; font-weight: 700; color: #1e3a5f; }
-      td { padding: 4px 0; border-bottom: 1px solid #eee; }
+      table { width: 100%; border-collapse: collapse; margin: 4px 0; font-size: 9.5px; }
+      th { text-align: left; border-bottom: 1.5px dashed #000; border-top: 1.5px dashed #000; padding: 3px 1px; font-weight: 700; }
+      td { padding: 3px 1px; border-bottom: 1px dotted #ccc; }
       th.right, td.right { text-align: right; }
+      th.center, td.center { text-align: center; }
       
-      .total-row { font-weight: 700; background-color: #f8fafc; color: #1e3a5f; }
-      .total-row td { border-bottom: 1.5px solid #1e3a5f; border-top: 1.5px solid #1e3a5f; }
-      
-      .summary { margin: 10px 0; font-size: 12px; }
-      .summary-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-      
-      .net-payable {
-        background-color: #0d4f2f;
-        color: #fff;
-        padding: 10px;
-        border-radius: 6px;
-        display: flex;
-        justify-content: space-between;
-        font-size: 14px;
-        font-weight: 700;
-        margin: 12px 0;
+      .badge-paid {
+        display: inline-block;
+        font-size: 8px;
+        font-weight: 800;
+        background: #e6f4ea;
+        color: #137333;
+        padding: 0 3px;
+        border-radius: 2px;
+        border: 0.5px solid #a8dab5;
+      }
+      .badge-unpaid {
+        display: inline-block;
+        font-size: 8px;
+        font-weight: 800;
+        background: #fef7e0;
+        color: #b06000;
+        padding: 0 3px;
+        border-radius: 2px;
+        border: 0.5px solid #f9ab00;
       }
       
-      .signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 11px; font-weight: 700; }
-      .sig-line { width: 40%; border-top: 1px dashed #777; margin-top: 24px; }
+      .total-row { font-weight: 700; border-top: 1.5px dashed #000; border-bottom: 1.5px dashed #000; }
+      .total-row td { border-bottom: none; padding: 4px 1px; }
+
+      .summary-box { margin: 6px 0; font-size: 10px; }
+      .summary-line { display: flex; justify-content: space-between; margin-bottom: 3px; }
       
-      .footer { margin-top: 16px; font-size: 9px; color: #666; text-align: center; }
+      .net-payable {
+        background: #000;
+        color: #fff;
+        padding: 6px 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        font-weight: 800;
+        margin: 6px 0;
+      }
+
+      .stamp-box {
+        border: 2px dashed #000;
+        padding: 5px;
+        margin: 6px 0;
+        text-align: center;
+        font-weight: 800;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+      }
       
-      .watermark {
-        position: fixed;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%) rotate(-30deg);
-        font-size: 60px;
-        font-weight: 900;
-        color: rgba(0,0,0,0.04);
-        pointer-events: none;
-        z-index: -1;
+      .signatures { display: flex; justify-content: space-between; margin-top: 24px; font-size: 9px; font-weight: 700; }
+      .sig-line { width: 42%; border-top: 1px dashed #444; margin-top: 20px; }
+      
+      .footer { margin-top: 10px; font-size: 8px; color: #444; text-align: center; }
+      .barcode {
+        letter-spacing: 4px;
+        font-family: monospace;
+        font-weight: 800;
+        font-size: 13px;
+        margin-top: 4px;
       }
     </style>
   </head>
   <body>
-    <div class="watermark">MILKIFY</div>
-    
     <div class="center">
-      ${logoBase64 ? `<img src="${logoBase64}" width="56" style="margin-bottom:6px">` : ''}
-      <div class="bold shop-name">${adminShopName.toUpperCase()}</div>
+      ${logoBase64 ? `<img src="${logoBase64}" width="42" style="margin-bottom:3px">` : ''}
+      <div class="shop-name">${adminShopName.toUpperCase()}</div>
       <div class="title">${L.title}</div>
+      <div class="subtitle">${L.slipSubtitle} • ${filterLabel}</div>
     </div>
-    <div class="divider"></div>
     
-    <div class="info-box">
-      <div class="info-row bold"><span>${L.farmer}:</span> <span>${(farmer?.name || "Unknown").toUpperCase()}</span></div>
-      <div class="info-row"><span>${L.memberId}:</span> <span>${farmer?.memberId || "#" + (farmer?.id || "").toString().slice(-6).toUpperCase()}</span></div>
-      <div class="info-row"><span>${L.mobile}:</span> <span>${farmer?.mobile || "N/A"}</span></div>
-      <div class="info-row"><span>${L.village}:</span> <span>${farmer?.village || "N/A"}</span></div>
-      <div class="info-row bold"><span>${L.period}:</span> <span>${fmtDate(dateRange.startDate)} - ${fmtDate(dateRange.endDate)}</span></div>
-    </div>
+    <div class="dashed-divider"></div>
+    
+    <div class="info-row bold"><span>${L.farmer}:</span> <span>${(farmer?.name || "Unknown").toUpperCase()}</span></div>
+    <div class="info-row"><span>${L.memberId}:</span> <span style="font-family:monospace;font-weight:700;">${farmer?.memberId || "#" + (farmer?.id || "").toString().slice(-6).toUpperCase()}</span></div>
+    <div class="info-row"><span>${L.mobile}:</span> <span>${farmer?.mobile || "N/A"}</span></div>
+    <div class="info-row"><span>${L.village}:</span> <span>${farmer?.village || "N/A"}</span></div>
+    <div class="info-row bold"><span>${L.period}:</span> <span>${fmtDate(dateRange.startDate)} - ${fmtDate(dateRange.endDate)}</span></div>
+    <div class="info-row"><span>${L.filter}:</span> <span class="bold">${filterLabel}</span></div>
     
     <table>
       <thead>
@@ -213,45 +270,59 @@ function buildHtml(data, lang) {
           <th>${L.category}</th>
           <th class="right">${L.liters}</th>
           <th class="right">${L.fat}</th>
-          <th class="right">${L.snf}</th>
           <th class="right">${L.amount}</th>
+          <th class="center">${L.status}</th>
         </tr>
       </thead>
       <tbody>
-        ${entries.map(e => `
-        <tr>
-          <td>${fmtShortDate(e.createdAt)}</td>
-          <td>${SHIFT_MAP[lang]?.[e.shift] || e.shift}</td>
-          <td>${CAT_MAP[lang]?.[e.category.toLowerCase()] || e.category.charAt(0).toUpperCase() + e.category.slice(1)}</td>
-          <td class="right">${Number(e.litter || 0).toFixed(1)}</td>
-          <td class="right">${Number(e.fat || 0).toFixed(1)}</td>
-          <td class="right">${Number(e.snf || 0).toFixed(1)}</td>
-          <td class="right">${Number(e.calculatedAmount || 0).toFixed(1)}</td>
-        </tr>
-        `).join("")}
+        ${entries.map(e => {
+          const isEPaid = e.paymentStatus === "paid";
+          return `
+          <tr>
+            <td>${fmtShortDate(e.createdAt)}</td>
+            <td>${SHIFT_MAP[lang]?.[e.shift] || e.shift?.charAt(0).toUpperCase()}</td>
+            <td>${CAT_MAP[lang]?.[e.category?.toLowerCase()] || e.category?.charAt(0).toUpperCase()}</td>
+            <td class="right">${Number(e.litter || 0).toFixed(1)}</td>
+            <td class="right">${Number(e.fat || 0).toFixed(1)}</td>
+            <td class="right bold">${Number(e.calculatedAmount || 0).toFixed(0)}</td>
+            <td class="center">
+              <span class="${isEPaid ? 'badge-paid' : 'badge-unpaid'}">
+                ${isEPaid ? L.statusPaid : L.statusUnpaid}
+              </span>
+            </td>
+          </tr>
+          `;
+        }).join("")}
         <tr class="total-row">
-          <td>${L.days}:${uniqueDays}</td>
-          <td></td>
+          <td colspan="2">${L.days}:${uniqueDays}</td>
           <td>${L.total}</td>
-          <td class="right">${summary.totalLiters.toFixed(1)}</td>
-          <td class="right">${summary.avgFat.toFixed(1)}</td>
-          <td class="right">${summary.avgSnf.toFixed(1)}</td>
-          <td class="right">${summary.totalAmount.toFixed(1)}</td>
+          <td class="right">${summary.totalLiters.toFixed(1)}L</td>
+          <td class="right">${summary.avgFat.toFixed(1)}%</td>
+          <td class="right bold">${Number(summary.totalAmount || 0).toFixed(0)}</td>
+          <td></td>
         </tr>
       </tbody>
     </table>
     
-    <div class="summary">
-      <div class="summary-row"><span>${L.totalQty}:</span> <span>${summary.totalLiters.toFixed(2)} L</span></div>
-      <div class="summary-row"><span>${L.avgFatSnf}:</span> <span>${summary.avgFat.toFixed(2)} / ${summary.avgSnf.toFixed(2)}</span></div>
-      <div class="summary-row"><span>${L.avgRate}:</span> <span>Rs. ${avgRate.toFixed(2)}</span></div>
+    <div class="summary-box">
+      <div class="summary-line"><span>${L.totalQty}:</span> <span class="bold">${summary.totalLiters.toFixed(2)} L</span></div>
+      <div class="summary-line"><span>${L.avgFatSnf}:</span> <span>${summary.avgFat.toFixed(2)}% / ${summary.avgSnf.toFixed(2)}</span></div>
+      <div class="summary-line"><span>${L.avgRate}:</span> <span>Rs. ${avgRate.toFixed(2)} / L</span></div>
+      <div class="dashed-divider"></div>
+      <div class="summary-line"><span>${L.grossTotal}:</span> <span>${formatINR(summary.totalAmount)}</span></div>
+      <div class="summary-line"><span>${L.paidAmount}:</span> <span style="color:#137333;font-weight:700;">${formatINR(paidAmt)}</span></div>
+      <div class="summary-line bold"><span>${L.unpaidBalance}:</span> <span style="color:#b06000;">${formatINR(unpaidAmt)}</span></div>
     </div>
     
     <div class="net-payable">
       <span>${L.netPayable}</span>
-      <span>${formatINR(summary.totalAmount)}</span>
+      <span>${formatINR(filterStatus === 'paid' ? paidAmt : (filterStatus === 'unpaid' ? unpaidAmt : unpaidAmt))}</span>
     </div>
     
+    <div class="stamp-box">
+      ${isPaidAll ? L.paidStamp : (isPartial ? L.partialStamp : L.unpaidStamp)}
+    </div>
+
     <div class="signatures">
       <span>${L.receiverSign}</span>
       <span>${L.officeSign}</span>
@@ -262,6 +333,7 @@ function buildHtml(data, lang) {
     </div>
     
     <div class="footer">
+      <div class="barcode">|| | | ||| || ||| | |||</div>
       <div>${L.generated}: ${fmtDateTime()}</div>
       <div>${L.footer}</div>
     </div>

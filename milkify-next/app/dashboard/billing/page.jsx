@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import BillingTable from "@/components/billing/BillingTable";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Download, Search, CheckCircle2, User, CreditCard, CalendarDays, Receipt } from "lucide-react";
+import { Download, Search, CheckCircle2, User, CreditCard, CalendarDays, ReceiptIndianRupee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, formatIndianDate, formatRupees } from "@/lib/utils";
 import MilkifyLoader from "@/components/ui/Loader";
@@ -160,7 +160,7 @@ export default function BillingPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            <Receipt className="h-7 w-7 text-purple-600 dark:text-purple-400" /> Billing Hub
+            <ReceiptIndianRupee className="h-7 w-7 text-purple-600 dark:text-purple-400" /> Billing Hub
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Settle pending sheets and track historical cooperative payouts.</p>
         </div>
@@ -199,7 +199,7 @@ export default function BillingPage() {
                   : "text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200"
               )}
             >
-              <Receipt className="h-3.5 w-3.5 shrink-0" />
+              <ReceiptIndianRupee className="h-3.5 w-3.5 shrink-0" />
               <span>Pending Billing</span>
             </button>
             <button
@@ -340,7 +340,7 @@ export default function BillingPage() {
             )}
 
             {/* Active farmer details ledger */}
-            <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 backdrop-blur-md shadow-sm overflow-hidden rounded-2xl">
+            <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm rounded-2xl">
               <CardHeader className="border-b border-slate-100 dark:border-slate-800/60 pb-4">
                 <CardTitle className="text-lg font-black text-slate-800 dark:text-slate-200">Active Collection Sheets</CardTitle>
                 <CardDescription>Individual farmer collection aggregates waiting for clearance.</CardDescription>
@@ -364,7 +364,7 @@ export default function BillingPage() {
                   />
                 ) : (
                   <div className="text-center py-16 text-slate-400 dark:text-slate-500 flex flex-col items-center gap-3">
-                    <Receipt className="h-10 w-10 opacity-20 text-slate-300 dark:text-slate-600" />
+                    <ReceiptIndianRupee className="h-10 w-10 opacity-20 text-slate-300 dark:text-slate-600" />
                     <p className="text-sm font-semibold">No pending collections found for this query.</p>
                   </div>
                 )}
@@ -426,7 +426,7 @@ export default function BillingPage() {
           <CardContent className="p-4 sm:p-6">
             {filteredSettlements.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500">
-                <Receipt className="h-12 w-12 mb-3.5 opacity-20 text-slate-300 dark:text-slate-600" />
+                <ReceiptIndianRupee className="h-12 w-12 mb-3.5 opacity-20 text-slate-300 dark:text-slate-600" />
                 <p className="text-sm font-semibold">No settled payment records found for this period.</p>
               </div>
             ) : (

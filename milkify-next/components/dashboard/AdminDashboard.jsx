@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import MilkifyLoader from "@/components/ui/Loader";
 import { formatRupees, formatIndianDate } from "@/lib/utils";
-import { Droplet, Users, IndianRupee, Activity, CalendarDays, Receipt } from "lucide-react";
+import { Droplet, Users, IndianRupee, Activity, CalendarDays, ReceiptIndianRupee } from "lucide-react";
 
 export default function AdminDashboard() {
   const [data, setData] = useState(null);
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
       <Card className="shadow-sm border-gray-200">
         <CardHeader className="border-b bg-gray-50/50 pb-4">
           <CardTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-primary" /> Farmer Billing Breakdown
+            <ReceiptIndianRupee className="h-5 w-5 text-primary" /> Farmer Billing Breakdown
           </CardTitle>
           <CardDescription>Review the calculated payouts for the current 10-day cycle and process payments.</CardDescription>
         </CardHeader>
