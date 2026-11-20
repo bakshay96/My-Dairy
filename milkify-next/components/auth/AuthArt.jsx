@@ -116,7 +116,7 @@ export default function AuthArt({ type = "admin" }) {
       {/* Top Header - Animated Brand Showcase */}
       <div className="w-full flex flex-col items-center text-center mt-6 z-10">
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={false}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="relative inline-block"
@@ -147,9 +147,9 @@ export default function AuthArt({ type = "admin" }) {
 
         {/* Brand Name Text Animation */}
         <motion.h1
-          initial={{ y: 20, opacity: 0 }}
+          initial={false}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
+          transition={{ duration: 0.4 }}
           className={`text-4xl font-extrabold tracking-tight mt-5 bg-clip-text text-transparent transition-all duration-500 ${isMaster
               ? "bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 dark:from-purple-400 dark:via-fuchsia-400 dark:to-indigo-400"
               : "bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 dark:from-blue-400 dark:via-indigo-400 dark:to-emerald-400"
@@ -159,9 +159,9 @@ export default function AuthArt({ type = "admin" }) {
         </motion.h1>
 
         <motion.p
-          initial={{ y: 15, opacity: 0 }}
+          initial={false}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
+          transition={{ duration: 0.4 }}
           className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mt-2 font-medium tracking-wide"
         >
           {isMaster
@@ -183,10 +183,10 @@ export default function AuthArt({ type = "admin" }) {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeHighlight}
-              initial={{ opacity: 0, y: 15 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.4 }}
+              transition={{ duration: 0.3 }}
               className="flex items-start gap-4"
             >
               <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-100 dark:border-slate-700/50">

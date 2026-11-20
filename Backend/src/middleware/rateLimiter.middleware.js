@@ -16,7 +16,7 @@ const generalLimiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  skip: (req) => process.env.NODE_ENV === "test" // Skip in test environment
+  skip: (req) => process.env.NODE_ENV === "test" || process.env.NODE_ENV === "development" || req.ip === "127.0.0.1" || req.ip === "::1" || req.ip === "::ffff:127.0.0.1"
 });
 
 /**
@@ -34,7 +34,7 @@ const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => process.env.NODE_ENV === "test",
+  skip: (req) => process.env.NODE_ENV === "test" || process.env.NODE_ENV === "development" || req.ip === "127.0.0.1" || req.ip === "::1" || req.ip === "::ffff:127.0.0.1",
   keyGenerator: (req) => {
     // Rate limit by email if provided, otherwise by IP
     return (req.body && req.body.email) || req.ip;
