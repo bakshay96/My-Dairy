@@ -11,6 +11,8 @@ const { SubscriptionModel } = require("./subscription.model");
 const { PromoCodeModel, PlanConfigModel } = require("./promoCode.model");
 const { transporter } = require("../connection/mailConnection");
 const { VisitorStatsModel } = require("./visitorStats.model");
+const { UserLoginLogModel } = require("./userLoginLog.model");
+const { recordUserLogin } = require("../utils/userLoginTracker");
 
 
 // ────────────────────────────────────────────────────────────
@@ -66,6 +68,15 @@ const masterLogin = async (req, res) => {
 
     const token = signMasterToken(master._id);
     setMasterCookie(res, token);
+
+    // Record Master Admin Login Event asynchronously
+    recordUserLogin({
+      req,
+      user: master,
+      role: "master_admin",
+      userModel: "MasterAdmin",
+      status: "success",
+    }).catch((err) => console.error("[Auth] Master login tracking error:", err?.message));
 
     return res.status(200).json({
       success: true,
@@ -1440,6 +1451,137 @@ const getVisitorSummary = async (req, res) => {
 };
 
 // ────────────────────────────────────────────────────────────
+// USER LOGIN ACTIVITY AUDIT (Master Admin & Dairy Admin)
+// ────────────────────────────────────────────────────────────
+const getUserLoginHistory = async (req, res) => {
+  try {
+    const {
+      role = "all",
+      search = "",
+      fromDate,
+      toDate,
+      page = 1,
+      limit = 25,
+      sortBy = "timestamp",
+      sortOrder = "desc",
+    } = req.query;
+
+    const filter = {};
+
+    // Role filtering
+    if (role && role !== "all") {
+      filter.role = role;
+    }
+
+    // Date range filtering
+    if (fromDate || toDate) {
+      filter.timestamp = {};
+      if (fromDate) {
+        const start = new Date(fromDate);
+        start.setHours(0, 0, 0, 0);
+        filter.timestamp.$gte = start;
+      }
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        filter.timestamp.$lte = end;
+      }
+    }
+
+    // Search query: matches name, email, mobile, memberId, shopName, ipAddress, city, state, country, browser, os
+    if (search && search.trim()) {
+      const q = search.trim();
+      const regex = new RegExp(q, "i");
+      filter.$or = [
+        { name: regex },
+        { email: regex },
+        { mobile: regex },
+        { memberId: regex },
+        { shopName: regex },
+        { ipAddress: regex },
+        { city: regex },
+        { state: regex },
+        { country: regex },
+        { browser: regex },
+        { os: regex },
+      ];
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+    const skip = (pageNum - 1) * limitNum;
+
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    const sortObj = { [sortBy]: sortDirection };
+
+    // Fetch paginated logins and total count
+    const [logins, totalCount] = await Promise.all([
+      UserLoginLogModel.find(filter)
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      UserLoginLogModel.countDocuments(filter),
+    ]);
+
+    // Aggregate summary stats (all-time & today)
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const [
+      totalLogins,
+      masterAdminLogins,
+      dairyAdminLogins,
+      todayLogins,
+      uniqueUsersToday,
+      topStates,
+      deviceBreakdown,
+    ] = await Promise.all([
+      UserLoginLogModel.countDocuments(),
+      UserLoginLogModel.countDocuments({ role: "master_admin" }),
+      UserLoginLogModel.countDocuments({ role: "admin" }),
+      UserLoginLogModel.countDocuments({ timestamp: { $gte: startOfToday } }),
+      UserLoginLogModel.distinct("userId", { timestamp: { $gte: startOfToday } }),
+      UserLoginLogModel.aggregate([
+        { $match: { state: { $ne: "" } } },
+        { $group: { _id: "$state", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]),
+      UserLoginLogModel.aggregate([
+        { $group: { _id: "$deviceType", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        logins,
+        pagination: {
+          total: totalCount,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(totalCount / limitNum) || 1,
+        },
+        summary: {
+          totalLogins,
+          masterAdminLogins,
+          dairyAdminLogins,
+          todayLogins,
+          uniqueUsersToday: uniqueUsersToday.length,
+          topStates: topStates.map((s) => ({ state: s._id || "Unknown", count: s.count })),
+          deviceBreakdown: deviceBreakdown.map((d) => ({ device: d._id || "desktop", count: d.count })),
+        },
+      },
+    });
+  } catch (err) {
+    console.error("[UserLoginHistory] Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ────────────────────────────────────────────────────────────
 // INTERNAL: Create trial subscription for new admin
 // ────────────────────────────────────────────────────────────
 const _createTrialSubscription = async (adminId) => {
@@ -1487,6 +1629,8 @@ const getDatabaseSchemaStats = async (req, res) => {
     const { AdvertisementModel } = require("./advertisement.model");
     const { NotificationSettingsModel } = require("./notificationSettings.model");
     const { VisitorStatsModel } = require("./visitorStats.model");
+const { UserLoginLogModel } = require("./userLoginLog.model");
+const { recordUserLogin } = require("../utils/userLoginTracker");
     const { AiInsightCacheModel } = require("../Analytics/aiInsightCache.model");
 
     const [
@@ -1505,6 +1649,7 @@ const getDatabaseSchemaStats = async (req, res) => {
       notifSettingsCount,
       visitorCount,
       aiCacheCount,
+      userLoginCount,
     ] = await Promise.all([
       adminModel.countDocuments().catch(() => 0),
       farmerModel.countDocuments().catch(() => 0),
@@ -1521,6 +1666,7 @@ const getDatabaseSchemaStats = async (req, res) => {
       NotificationSettingsModel.countDocuments().catch(() => 0),
       VisitorStatsModel.countDocuments().catch(() => 0),
       AiInsightCacheModel.countDocuments().catch(() => 0),
+      UserLoginLogModel.countDocuments().catch(() => 0),
     ]);
 
     const collectionStats = {
@@ -1539,6 +1685,7 @@ const getDatabaseSchemaStats = async (req, res) => {
       NotificationSettings: { count: notifSettingsCount, collection: "notificationsettings", indexes: 3 },
       VisitorStats: { count: visitorCount, collection: "visitorstats", indexes: 5, ttl: "90 days" },
       AiInsightCache: { count: aiCacheCount, collection: "aiinsightcaches", indexes: 3, ttl: "7 days" },
+      UserLoginLog: { count: userLoginCount, collection: "userloginlogs", indexes: 5 },
     };
 
     const totalDocs = Object.values(collectionStats).reduce((acc, curr) => acc + (curr.count || 0), 0);
@@ -1606,4 +1753,5 @@ module.exports = {
   updateFarmerStatusForMaster,
   deleteFarmerForMaster,
   getDatabaseSchemaStats,
+  getUserLoginHistory,
 };

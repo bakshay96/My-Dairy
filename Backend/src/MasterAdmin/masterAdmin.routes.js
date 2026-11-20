@@ -35,6 +35,7 @@ const {
   updateFarmerStatusForMaster,
   deleteFarmerForMaster,
   getDatabaseSchemaStats,
+  getUserLoginHistory,
 } = require("./masterAdmin.controller");
 
 const {
@@ -122,6 +123,7 @@ masterRouter.patch("/advertisements/:id/dismiss", authMiddleware, dismissAdverti
 // ── Visitor Stats (Master admin only) ──────────────────
 masterRouter.get("/visitor-stats", masterAuthMiddleware, getVisitorStats);
 masterRouter.get("/visitor-stats/summary", masterAuthMiddleware, getVisitorSummary);
+masterRouter.get("/visitor-stats/user-logins", masterAuthMiddleware, getUserLoginHistory);
 
 // ── Notification Settings (Master admin only) ──────────────────
 masterRouter.get("/notification-settings", masterAuthMiddleware, getAllNotificationSettings);
