@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Tag, IndianRupee, LogOut, Loader2, ArrowLeftRight,
   Settings, Menu, X, PanelLeftClose, PanelLeftOpen, Shield,
-  Megaphone, TicketIcon, Eye, Bell, Users,
+  Megaphone, TicketIcon, Eye, Bell, Users, Cpu,
 } from "lucide-react";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -26,6 +26,7 @@ const navItems = [
   { name: "Advertisements",    href: "/master/dashboard/advertisements",   icon: Megaphone },
   { name: "Support Desk",      href: "/master/dashboard/tickets",          icon: TicketIcon },
   { name: "Settings",          href: "/master/dashboard/settings",         icon: Settings },
+  { name: "My Application",     href: "/master/dashboard/application",      icon: Cpu }
 ];
 
 export default function MasterDashboardLayout({ children }) {
@@ -124,7 +125,7 @@ export default function MasterDashboardLayout({ children }) {
 
   // ── Shared nav link renderer ──────────────────────────────────────────────
   const NavLink = ({ item, mobile = false }) => {
-    const active = pathname === item.href;
+    const active = pathname === item.href || (item.href === "/master/dashboard/application" && pathname === "/master/dashboard/architecture");
     return (
       <Link
         href={item.href}

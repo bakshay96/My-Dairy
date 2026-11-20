@@ -34,6 +34,7 @@ const {
   updateFarmerCredentialsForMaster,
   updateFarmerStatusForMaster,
   deleteFarmerForMaster,
+  getDatabaseSchemaStats,
 } = require("./masterAdmin.controller");
 
 const {
@@ -76,6 +77,7 @@ masterRouter.post("/credentials", masterAuthMiddleware, createMasterAdmin);
 masterRouter.get("/credentials/list", masterAuthMiddleware, getAllMasterAdmins);
 masterRouter.patch("/credentials/:id", masterAuthMiddleware, updateMasterAdminCredentials);
 masterRouter.get("/dashboard/stats", masterAuthMiddleware, getMasterDashboardStats);
+masterRouter.get("/database/schema-stats", masterAuthMiddleware, getDatabaseSchemaStats);
 
 // ─── Admins Management (Master Auth) ────────────────────
 masterRouter.get("/admins", masterAuthMiddleware, getAllAdmins);

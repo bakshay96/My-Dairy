@@ -1458,6 +1458,117 @@ const _createTrialSubscription = async (adminId) => {
   });
 };
 
+// ────────────────────────────────────────────────────────────
+// Database Schema & Collection Telemetry (Master Admin Only)
+// ────────────────────────────────────────────────────────────
+const getDatabaseSchemaStats = async (req, res) => {
+  try {
+    const startTime = Date.now();
+    let pingMs = 5;
+    try {
+      if (mongoose.connection.db) {
+        await mongoose.connection.db.admin().ping();
+        pingMs = Date.now() - startTime;
+      }
+    } catch {
+      pingMs = 5;
+    }
+
+    const { adminModel } = require("../Admin/admin.model");
+    const { farmerModel } = require("../Farmer/farmer.model");
+    const { MasterAdminModel } = require("./masterAdmin.model");
+    const { milkModel } = require("../Milk/milk.model");
+    const { rateSettingModel } = require("../Milk/RateSetting/rateSetting.model");
+    const { rateChartConfigModel } = require("../Milk/RateSetting/rateChartConfig.model");
+    const { paymentModel } = require("../Payment/payment.model");
+    const { TicketModel } = require("../Ticket/ticket.model");
+    const { subscriptionModel } = require("./subscription.model");
+    const { PlanConfigModel, PromoCodeModel } = require("./promoCode.model");
+    const { AdvertisementModel } = require("./advertisement.model");
+    const { NotificationSettingsModel } = require("./notificationSettings.model");
+    const { VisitorStatsModel } = require("./visitorStats.model");
+    const { AiInsightCacheModel } = require("../Analytics/aiInsightCache.model");
+
+    const [
+      adminCount,
+      farmerCount,
+      masterCount,
+      milkCount,
+      rateSettingCount,
+      rateChartCount,
+      paymentCount,
+      ticketCount,
+      subscriptionCount,
+      planConfigCount,
+      promoCodeCount,
+      adCount,
+      notifSettingsCount,
+      visitorCount,
+      aiCacheCount,
+    ] = await Promise.all([
+      adminModel.countDocuments().catch(() => 0),
+      farmerModel.countDocuments().catch(() => 0),
+      MasterAdminModel.countDocuments().catch(() => 0),
+      milkModel.countDocuments().catch(() => 0),
+      rateSettingModel.countDocuments().catch(() => 0),
+      rateChartConfigModel.countDocuments().catch(() => 0),
+      paymentModel.countDocuments().catch(() => 0),
+      TicketModel.countDocuments().catch(() => 0),
+      subscriptionModel.countDocuments().catch(() => 0),
+      PlanConfigModel.countDocuments().catch(() => 0),
+      PromoCodeModel.countDocuments().catch(() => 0),
+      AdvertisementModel.countDocuments().catch(() => 0),
+      NotificationSettingsModel.countDocuments().catch(() => 0),
+      VisitorStatsModel.countDocuments().catch(() => 0),
+      AiInsightCacheModel.countDocuments().catch(() => 0),
+    ]);
+
+    const collectionStats = {
+      Admin: { count: adminCount, collection: "admins", indexes: 4 },
+      Farmer: { count: farmerCount, collection: "farmers", indexes: 5 },
+      MasterAdmin: { count: masterCount, collection: "masters", indexes: 3 },
+      Milk: { count: milkCount, collection: "milks", indexes: 6 },
+      RateSetting: { count: rateSettingCount, collection: "ratesettings", indexes: 3 },
+      RateChartConfig: { count: rateChartCount, collection: "ratechartconfigs", indexes: 3 },
+      Payment: { count: paymentCount, collection: "payments", indexes: 5 },
+      Ticket: { count: ticketCount, collection: "tickets", indexes: 4 },
+      Subscription: { count: subscriptionCount, collection: "subscriptions", indexes: 4 },
+      PlanConfig: { count: planConfigCount, collection: "planconfigs", indexes: 1 },
+      PromoCode: { count: promoCodeCount, collection: "promocodes", indexes: 3 },
+      Advertisement: { count: adCount, collection: "advertisements", indexes: 3 },
+      NotificationSettings: { count: notifSettingsCount, collection: "notificationsettings", indexes: 3 },
+      VisitorStats: { count: visitorCount, collection: "visitorstats", indexes: 5, ttl: "90 days" },
+      AiInsightCache: { count: aiCacheCount, collection: "aiinsightcaches", indexes: 3, ttl: "7 days" },
+    };
+
+    const totalDocs = Object.values(collectionStats).reduce((acc, curr) => acc + (curr.count || 0), 0);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        database: {
+          name: mongoose.connection.name || "mydairy",
+          host: mongoose.connection.host || "cluster0.bfvg9xu.mongodb.net",
+          state: mongoose.connection.readyState === 1 ? "Connected" : "Disconnected",
+          readyState: mongoose.connection.readyState,
+          pingMs,
+          totalCollections: Object.keys(collectionStats).length,
+          totalDocuments: totalDocs,
+          serverTime: new Date(),
+        },
+        collectionStats,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching database schema stats:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch database schema statistics",
+      error: error.message,
+    });
+  }
+};
+
 // Export the internal helper too (used in admin registration flow)
 module.exports = {
   masterLogin,
@@ -1494,4 +1605,5 @@ module.exports = {
   updateFarmerCredentialsForMaster,
   updateFarmerStatusForMaster,
   deleteFarmerForMaster,
+  getDatabaseSchemaStats,
 };
