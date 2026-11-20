@@ -14,6 +14,8 @@ import {
   Shield, ShieldCheck, Store, MapPin, Search, Clock,
   CheckCircle2, XCircle, Mail, Phone, ChevronLeft, ChevronRight,
   Laptop, X, ArrowRight, ExternalLink, Sparkles,
+  SlidersHorizontal, ArrowUpDown, ArrowUp, ArrowDown,
+  ChevronDown, ChevronUp, RotateCcw,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -167,11 +169,21 @@ export default function VisitorStatsPage() {
   const [loginsSummary, setLoginsSummary] = useState(null);
   const [loginsLoading, setLoginsLoading] = useState(false);
   const [loginRole, setLoginRole]       = useState("all");
+  const [loginStatus, setLoginStatus]   = useState("all");
+  const [loginDeviceType, setLoginDeviceType] = useState("all");
+  const [loginOS, setLoginOS]           = useState("all");
+  const [loginState, setLoginState]     = useState("all");
+  const [loginIpFilter, setLoginIpFilter] = useState("");
+  const [loginMemberId, setLoginMemberId] = useState("");
   const [loginSearch, setLoginSearch]   = useState("");
   const [loginFromDate, setLoginFromDate] = useState("");
   const [loginToDate, setLoginToDate]   = useState("");
-  const [loginPage, setLoginPage]       = useState(1);
-  const [loginPagination, setLoginPagination] = useState({ total: 0, page: 1, limit: 20, totalPages: 1 });
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [loginPage, setLoginPage]           = useState(1);
+  const [loginLimit, setLoginLimit]         = useState(10);
+  const [loginSortBy, setLoginSortBy]       = useState("timestamp");
+  const [loginSortOrder, setLoginSortOrder] = useState("desc");
+  const [loginPagination, setLoginPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
 
   // ── Country Drilldown Modal State ──────────────────────────────────────────
   const [selectedCountryModal, setSelectedCountryModal] = useState(null);
@@ -211,10 +223,18 @@ export default function VisitorStatsPage() {
       setLoginsLoading(true);
       const params = {
         role: loginRole,
+        status: loginStatus,
+        deviceType: loginDeviceType,
+        os: loginOS,
+        state: loginState,
         search: loginSearch.trim(),
         page: loginPage,
-        limit: 20,
+        limit: loginLimit,
+        sortBy: loginSortBy,
+        sortOrder: loginSortOrder,
       };
+      if (loginIpFilter && loginIpFilter.trim()) params.ipAddress = loginIpFilter.trim();
+      if (loginMemberId && loginMemberId.trim()) params.memberId = loginMemberId.trim();
       if (loginFromDate) params.fromDate = loginFromDate;
       if (loginToDate) params.toDate = loginToDate;
 
@@ -222,7 +242,13 @@ export default function VisitorStatsPage() {
       // Handled for both unwrapped (via axios interceptor res.data = res.data.data) and raw responses
       const payload = res.data?.data || res.data || {};
       const loginItems = Array.isArray(payload.logins) ? payload.logins : (Array.isArray(payload) ? payload : []);
-      const paginationInfo = payload.pagination || { total: loginItems.length, page: 1, limit: 20, totalPages: 1 };
+      const totalCount = payload.pagination?.total !== undefined ? payload.pagination.total : loginItems.length;
+      const paginationInfo = {
+        total: totalCount,
+        page: payload.pagination?.page || loginPage,
+        limit: payload.pagination?.limit || loginLimit,
+        totalPages: Math.ceil(totalCount / loginLimit) || 1,
+      };
       const summaryInfo = payload.summary || null;
 
       setLogins(loginItems);
@@ -233,7 +259,22 @@ export default function VisitorStatsPage() {
     } finally {
       setLoginsLoading(false);
     }
-  }, [loginRole, loginSearch, loginPage, loginFromDate, loginToDate]);
+  }, [
+    loginRole,
+    loginStatus,
+    loginDeviceType,
+    loginOS,
+    loginState,
+    loginIpFilter,
+    loginMemberId,
+    loginSearch,
+    loginPage,
+    loginLimit,
+    loginSortBy,
+    loginSortOrder,
+    loginFromDate,
+    loginToDate,
+  ]);
 
   const fetchSummaryRef = useRef(fetchSummary);
   const fetchStatsRef = useRef(fetchStats);
@@ -263,12 +304,23 @@ export default function VisitorStatsPage() {
     fetchStatsRef.current();
   }, [groupBy, sortBy]);
 
-  // Trigger login fetch when active tab is logins or filters change
+  // Trigger login fetch when active tab is logins or any filter / pagination / sorting changes
   useEffect(() => {
     if (activeTab === "logins") {
       fetchUserLoginsRef.current();
     }
-  }, [activeTab, loginRole, loginPage]);
+  }, [
+    activeTab,
+    loginRole,
+    loginStatus,
+    loginDeviceType,
+    loginOS,
+    loginState,
+    loginPage,
+    loginLimit,
+    loginSortBy,
+    loginSortOrder,
+  ]);
 
   // ── Open Country Drilldown Handler ─────────────────────────────────────
   const handleOpenCountryDrilldown = async (countryCode, count) => {
@@ -328,6 +380,17 @@ export default function VisitorStatsPage() {
     setTimeout(() => fetchStats(), 50);
   };
 
+  // ── Column Sort Handler ────────────────────────────────────────────────
+  const handleSortColumn = (columnKey) => {
+    if (loginSortBy === columnKey) {
+      setLoginSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setLoginSortBy(columnKey);
+      setLoginSortOrder(columnKey === "timestamp" ? "desc" : "asc");
+    }
+    setLoginPage(1);
+  };
+
   const handleApplyLoginFilters = (e) => {
     if (e) e.preventDefault();
     setLoginPage(1);
@@ -336,14 +399,54 @@ export default function VisitorStatsPage() {
 
   const handleResetLoginFilters = () => {
     setLoginRole("all");
+    setLoginStatus("all");
+    setLoginDeviceType("all");
+    setLoginOS("all");
+    setLoginState("all");
+    setLoginIpFilter("");
+    setLoginMemberId("");
     setLoginSearch("");
     setLoginFromDate("");
     setLoginToDate("");
+    setLoginSortBy("timestamp");
+    setLoginSortOrder("desc");
     setLoginPage(1);
     setTimeout(() => {
       fetchUserLogins();
     }, 0);
   };
+
+  const handleSetLoginDatePreset = (days) => {
+    if (days === null) {
+      setLoginFromDate("");
+      setLoginToDate("");
+      setLoginPage(1);
+      return;
+    }
+    const to = new Date();
+    const from = new Date();
+    if (days === 0) {
+      from.setHours(0, 0, 0, 0);
+    } else {
+      from.setDate(from.getDate() - days);
+    }
+    setLoginFromDate(from.toISOString().split("T")[0]);
+    setLoginToDate(to.toISOString().split("T")[0]);
+    setLoginPage(1);
+  };
+
+  const activeLoginFilterCount = [
+    loginRole !== "all",
+    loginStatus !== "all",
+    loginDeviceType !== "all",
+    loginOS !== "all",
+    loginState !== "all",
+    Boolean(loginIpFilter.trim()),
+    Boolean(loginMemberId.trim()),
+    Boolean(loginSearch.trim()),
+    Boolean(loginFromDate),
+    Boolean(loginToDate),
+  ].filter(Boolean).length;
 
   // ── CSV Export for Traffic ──────────────────────────────────────────────
   const handleExportTrafficCSV = () => {
@@ -1171,60 +1274,88 @@ export default function VisitorStatsPage() {
 
           {/* ── Search, Filters & Action HUD ─────────────────────────────── */}
           <Card className="p-4 sm:p-5 bg-white dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/60 shadow-sm space-y-4">
+            {/* Top Toolbar: Roles & Global Actions */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               {/* Role Filter Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
                 <button
+                  type="button"
                   onClick={() => { setLoginRole("all"); setLoginPage(1); }}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                     loginRole === "all"
                       ? "bg-indigo-600 text-white shadow-sm"
                       : "bg-slate-100 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                   }`}
                 >
-                  All Users
+                  All Roles
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setLoginRole("master_admin"); setLoginPage(1); }}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
                     loginRole === "master_admin"
                       ? "bg-purple-600 text-white shadow-sm"
                       : "bg-slate-100 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                   }`}
                 >
                   <Shield className="w-3.5 h-3.5" />
-                  Master Admin Only
+                  Master Admin
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setLoginRole("admin"); setLoginPage(1); }}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
                     loginRole === "admin"
                       ? "bg-emerald-600 text-white shadow-sm"
                       : "bg-slate-100 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                   }`}
                 >
                   <Store className="w-3.5 h-3.5" />
-                  Dairy Admin Only
+                  Dairy Admin
                 </button>
               </div>
 
-              {/* Action Buttons: Refresh & CSV Export */}
-              <div className="flex items-center gap-2 self-end lg:self-auto">
+              {/* Action Buttons: Advanced Filter Toggle, Refresh & CSV Export */}
+              <div className="flex items-center gap-2 self-end lg:self-auto flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                    showAdvancedFilters || activeLoginFilterCount > 0
+                      ? "bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700"
+                      : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <Filter className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Filters</span>
+                  {activeLoginFilterCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">
+                      {activeLoginFilterCount}
+                    </span>
+                  )}
+                  {showAdvancedFilters ? (
+                    <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </button>
+
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={fetchUserLogins}
                   disabled={loginsLoading}
-                  className="flex items-center gap-1.5 text-xs h-9"
+                  className="flex items-center gap-1.5 text-xs h-9 bg-white dark:bg-slate-800"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${loginsLoading ? "animate-spin" : ""}`} /> Refresh
                 </Button>
+
                 {logins.length > 0 && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleExportLoginsCSV}
-                    className="flex items-center gap-1.5 text-xs h-9 text-slate-700 dark:text-slate-200"
+                    className="flex items-center gap-1.5 text-xs h-9 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800"
                   >
                     <Download className="w-3.5 h-3.5" /> Export Logins CSV
                   </Button>
@@ -1232,14 +1363,51 @@ export default function VisitorStatsPage() {
               </div>
             </div>
 
+            {/* Quick Date Range Presets */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+              <span className="text-slate-400 font-medium text-[11px] uppercase tracking-wider">Date Presets:</span>
+              <button
+                type="button"
+                onClick={() => handleSetLoginDatePreset(null)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  !loginFromDate && !loginToDate
+                    ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetLoginDatePreset(0)}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetLoginDatePreset(7)}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all"
+              >
+                Last 7 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetLoginDatePreset(30)}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 transition-all"
+              >
+                Last 30 Days
+              </button>
+            </div>
+
             {/* Search Bar & Date Controls */}
-            <form onSubmit={handleApplyLoginFilters} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 pt-1 border-t border-slate-100 dark:border-slate-700/60">
-              {/* Search input */}
+            <form onSubmit={handleApplyLoginFilters} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+              {/* Universal Search Input */}
               <div className="lg:col-span-5 relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search by Name, Member ID (MI-DA-*), Email, Mobile, City, IP..."
+                  placeholder="Search by Name, Member ID, Email, Phone, City, IP..."
                   value={loginSearch}
                   onChange={(e) => setLoginSearch(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
@@ -1268,7 +1436,7 @@ export default function VisitorStatsPage() {
 
               {/* Submit & Reset */}
               <div className="lg:col-span-3 flex items-center gap-2">
-                <Button type="submit" disabled={loginsLoading} className="flex-1 text-xs h-9">
+                <Button type="submit" disabled={loginsLoading} className="flex-1 text-xs h-9 bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
                   {loginsLoading ? "Searching..." : "Apply Filters"}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleResetLoginFilters} className="text-xs h-9">
@@ -1276,190 +1444,881 @@ export default function VisitorStatsPage() {
                 </Button>
               </div>
             </form>
+
+            {/* ── EXPANDABLE ADVANCED 7-FIELD FILTERS PANEL ─────────────────── */}
+            {showAdvancedFilters && (
+              <div className="p-4 bg-slate-50/90 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 space-y-3 pt-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+                    Field-Specific Filters (User, Role, Date, Location, Device, IP, Status)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResetLoginFilters}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Reset All
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                  {/* Field 1: Status */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={loginStatus}
+                      onChange={(e) => {
+                        setLoginStatus(e.target.value);
+                        setLoginPage(1);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 font-medium"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="success">Success Only</option>
+                      <option value="failed">Failed Only</option>
+                    </select>
+                  </div>
+
+                  {/* Field 2: Device Type */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Device Type
+                    </label>
+                    <select
+                      value={loginDeviceType}
+                      onChange={(e) => {
+                        setLoginDeviceType(e.target.value);
+                        setLoginPage(1);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 font-medium"
+                    >
+                      <option value="all">All Devices</option>
+                      <option value="desktop">Desktop / Laptop</option>
+                      <option value="mobile">Mobile Phones</option>
+                      <option value="tablet">Tablets</option>
+                    </select>
+                  </div>
+
+                  {/* Field 3: Operating System */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Operating System
+                    </label>
+                    <select
+                      value={loginOS}
+                      onChange={(e) => {
+                        setLoginOS(e.target.value);
+                        setLoginPage(1);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 font-medium"
+                    >
+                      <option value="all">All Operating Systems</option>
+                      <option value="Windows">Windows</option>
+                      <option value="Android">Android</option>
+                      <option value="iOS">iOS</option>
+                      <option value="macOS">macOS</option>
+                      <option value="Linux">Linux</option>
+                    </select>
+                  </div>
+
+                  {/* Field 4: Location (State / Region) */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Location (State)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Maharashtra, Gujarat"
+                      value={loginState === "all" ? "" : loginState}
+                      onChange={(e) => {
+                        setLoginState(e.target.value.trim() ? e.target.value : "all");
+                        setLoginPage(1);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 font-medium text-xs"
+                    />
+                  </div>
+
+                  {/* Field 5: Member ID */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Member ID
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. MI-DA-0001"
+                      value={loginMemberId}
+                      onChange={(e) => {
+                        setLoginMemberId(e.target.value);
+                        setLoginPage(1);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
+                    />
+                  </div>
+
+                  {/* Field 6: IP Address */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      IP Address
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 192.168.1.1"
+                      value={loginIpFilter}
+                      onChange={(e) => {
+                        setLoginIpFilter(e.target.value);
+                        setLoginPage(1);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── ACTIVE FILTERS TAGS ROW ────────────────────────────────────── */}
+            {activeLoginFilterCount > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 text-xs border-t border-slate-100 dark:border-slate-700/60">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mr-1">
+                  Active Filters:
+                </span>
+
+                {loginRole !== "all" && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold">
+                    Role: {loginRole === "master_admin" ? "Master Admin" : "Dairy Admin"}
+                    <button type="button" onClick={() => setLoginRole("all")} className="hover:text-indigo-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {loginStatus !== "all" && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold capitalize">
+                    Status: {loginStatus}
+                    <button type="button" onClick={() => setLoginStatus("all")} className="hover:text-indigo-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {loginDeviceType !== "all" && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold capitalize">
+                    Device: {loginDeviceType}
+                    <button type="button" onClick={() => setLoginDeviceType("all")} className="hover:text-indigo-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {loginOS !== "all" && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold">
+                    OS: {loginOS}
+                    <button type="button" onClick={() => setLoginOS("all")} className="hover:text-indigo-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {loginState !== "all" && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold">
+                    Location: {loginState}
+                    <button type="button" onClick={() => setLoginState("all")} className="hover:text-indigo-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {loginMemberId && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold">
+                    ID: {loginMemberId}
+                    <button type="button" onClick={() => setLoginMemberId("")} className="hover:text-indigo-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {loginIpFilter && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold">
+                    IP: {loginIpFilter}
+                    <button type="button" onClick={() => setLoginIpFilter("")} className="hover:text-indigo-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {loginSearch && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold">
+                    Search: &quot;{loginSearch}&quot;
+                    <button type="button" onClick={() => setLoginSearch("")} className="hover:text-indigo-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {(loginFromDate || loginToDate) && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold">
+                    Date: {loginFromDate || "Start"} to {loginToDate || "Today"}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginFromDate("");
+                        setLoginToDate("");
+                      }}
+                      className="hover:text-indigo-900"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleResetLoginFilters}
+                  className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline ml-1"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            )}
+
+            {/* Quick Sorting HUD Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+                  Sort By:
+                </span>
+                <select
+                  value={loginSortBy}
+                  onChange={(e) => {
+                    setLoginSortBy(e.target.value);
+                    setLoginPage(1);
+                  }}
+                  className="px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="timestamp">Login Date & Time</option>
+                  <option value="name">User Identity (Name)</option>
+                  <option value="memberId">Member ID</option>
+                  <option value="role">Role / Privilege</option>
+                  <option value="state">Location (State / Region)</option>
+                  <option value="deviceType">Device & OS</option>
+                  <option value="ipAddress">IP Address</option>
+                  <option value="status">Status (Success / Failed)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                    setLoginPage(1);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-800 dark:text-slate-200 transition-colors shadow-xs"
+                  title="Click to toggle Ascending / Descending order for all records"
+                >
+                  {loginSortOrder === "asc" ? (
+                    <>
+                      <ArrowUp className="w-3.5 h-3.5 text-emerald-500 font-bold" />
+                      <span>Ascending (A-Z / Oldest First)</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDown className="w-3.5 h-3.5 text-indigo-500 font-bold" />
+                      <span>Descending (Z-A / Newest First)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </Card>
 
-          {/* ── User Login Audit Table ────────────────────────────────────── */}
+          {/* ── User Login Audit Records (Desktop Table & Mobile Cards) ────── */}
           <Card className="overflow-hidden bg-white dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/60 shadow-sm">
-            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Users className="w-4 h-4 text-indigo-500" /> User Login Audit Records
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Detailed timeline of user sessions with geographic and device telemetry
+                  Click any column header icon to toggle Ascending (A-Z / Oldest) ⇄ Descending (Z-A / Newest) across all records
                 </p>
               </div>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {loginPagination.total} record(s) found
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/60 px-2.5 py-1 rounded-lg">
+                  {loginPagination.total} record(s) found
+                </span>
+              </div>
+            </div>
+
+            {/* Mobile Quick Sort Chips (Visible on Mobile screens) */}
+            <div className="block md:hidden px-4 py-3 bg-slate-50/70 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-700/60">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-2 uppercase tracking-wider">
+                Sort Records By:
               </span>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                {[
+                  { key: "timestamp", label: "Time", asc: "Oldest", desc: "Newest" },
+                  { key: "name", label: "User", asc: "A-Z", desc: "Z-A" },
+                  { key: "memberId", label: "Member ID", asc: "A-Z", desc: "Z-A" },
+                  { key: "role", label: "Role", asc: "A-Z", desc: "Z-A" },
+                  { key: "state", label: "Location", asc: "A-Z", desc: "Z-A" },
+                  { key: "deviceType", label: "Device", asc: "A-Z", desc: "Z-A" },
+                  { key: "ipAddress", label: "IP", asc: "0-9", desc: "9-0" },
+                  { key: "status", label: "Status", asc: "Fail 1st", desc: "Pass 1st" },
+                ].map((s) => {
+                  const isActive = loginSortBy === s.key;
+                  return (
+                    <button
+                      key={s.key}
+                      onClick={() => handleSortColumn(s.key)}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold text-xs shrink-0 transition-all ${
+                        isActive
+                          ? "bg-indigo-600 text-white shadow-xs"
+                          : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      <span>{s.label}</span>
+                      {isActive ? (
+                        loginSortOrder === "asc" ? (
+                          <>
+                            <ArrowUp className="w-3 h-3 font-bold" />
+                            <span className="text-[10px] opacity-90">({s.asc})</span>
+                          </>
+                        ) : (
+                          <>
+                            <ArrowDown className="w-3 h-3 font-bold" />
+                            <span className="text-[10px] opacity-90">({s.desc})</span>
+                          </>
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 opacity-50" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {loginsLoading ? (
-              <div className="p-8 space-y-4">
+              <div className="p-6 space-y-3">
                 {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
+                  <Skeleton key={i} className="h-16 w-full rounded-xl" />
                 ))}
               </div>
             ) : logins.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-100 dark:border-slate-700/60">
-                    <tr>
-                      <th className="py-3 px-4 text-left">User Identity & ID</th>
-                      <th className="py-3 px-4 text-left">Role / Privilege</th>
-                      <th className="py-3 px-4 text-left">Login Date & Time</th>
-                      <th className="py-3 px-4 text-left">Location (Country / State)</th>
-                      <th className="py-3 px-4 text-left">Device & OS</th>
-                      <th className="py-3 px-4 text-left">IP Address</th>
-                      <th className="py-3 px-4 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
-                    {logins.map((item, idx) => {
-                      const isMaster = item.role === "master_admin";
-                      const DeviceIcon = item.deviceType === "mobile"
-                        ? Smartphone
-                        : item.deviceType === "tablet"
-                        ? Tablet
-                        : Monitor;
-
-                      const flag = COUNTRY_FLAGS[item.countryCode] || COUNTRY_FLAGS[item.country] || "🇮🇳";
-
-                      return (
-                        <tr
-                          key={item._id || idx}
-                          className="hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors group"
+              <>
+                {/* ── DESKTOP & TABLET VIEW (7-Column Table) ────────────────── */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-100 dark:border-slate-700/60 select-none">
+                      <tr>
+                        {/* 1. User Identity & ID */}
+                        <th
+                          onClick={() => handleSortColumn("name")}
+                          className={`py-3.5 px-4 text-left cursor-pointer transition-colors group ${
+                            loginSortBy === "name"
+                              ? "bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-950 dark:text-indigo-200 border-b-2 border-indigo-600 dark:border-indigo-400"
+                              : "hover:bg-slate-100/70 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300"
+                          }`}
+                          title={`Click to sort by User Identity (${loginSortBy === "name" && loginSortOrder === "asc" ? "Switch to Descending Z-A" : "Switch to Ascending A-Z"})`}
                         >
-                          {/* User Identity */}
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-start gap-3">
-                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                isMaster
-                                  ? "bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300"
-                                  : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
-                              }`}>
-                                {item.name ? item.name.charAt(0).toUpperCase() : "U"}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-slate-900 dark:text-white truncate">
-                                    {item.name || "Unknown User"}
-                                  </span>
-                                  {item.memberId && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-600">
-                                      {item.memberId}
-                                    </span>
-                                  )}
-                                </div>
-                                {item.shopName && (
-                                  <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                    <Store className="w-3 h-3 text-slate-400 shrink-0" />
-                                    <span className="truncate">{item.shopName}</span>
-                                  </div>
+                          <div className="flex items-center gap-1.5">
+                            <span>User Identity & ID</span>
+                            {loginSortBy === "name" ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold shadow-xs">
+                                {loginSortOrder === "asc" ? (
+                                  <>
+                                    <ArrowUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>A-Z</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                    <span>Z-A</span>
+                                  </>
                                 )}
-                                <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                                  {item.mobile && (
-                                    <span className="flex items-center gap-1">
-                                      <Phone className="w-3 h-3" /> {item.mobile}
+                              </span>
+                            ) : (
+                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-indigo-500 transition-opacity" />
+                            )}
+                          </div>
+                        </th>
+
+                        {/* 2. Role / Privilege */}
+                        <th
+                          onClick={() => handleSortColumn("role")}
+                          className={`py-3.5 px-4 text-left cursor-pointer transition-colors group ${
+                            loginSortBy === "role"
+                              ? "bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-950 dark:text-indigo-200 border-b-2 border-indigo-600 dark:border-indigo-400"
+                              : "hover:bg-slate-100/70 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300"
+                          }`}
+                          title={`Click to sort by Role (${loginSortBy === "role" && loginSortOrder === "asc" ? "Switch to Descending" : "Switch to Ascending"})`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>Role / Privilege</span>
+                            {loginSortBy === "role" ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold shadow-xs">
+                                {loginSortOrder === "asc" ? (
+                                  <>
+                                    <ArrowUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>A-Z</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                    <span>Z-A</span>
+                                  </>
+                                )}
+                              </span>
+                            ) : (
+                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-indigo-500 transition-opacity" />
+                            )}
+                          </div>
+                        </th>
+
+                        {/* 3. Login Date & Time */}
+                        <th
+                          onClick={() => handleSortColumn("timestamp")}
+                          className={`py-3.5 px-4 text-left cursor-pointer transition-colors group ${
+                            loginSortBy === "timestamp"
+                              ? "bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-950 dark:text-indigo-200 border-b-2 border-indigo-600 dark:border-indigo-400"
+                              : "hover:bg-slate-100/70 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300"
+                          }`}
+                          title={`Click to sort by Date & Time (${loginSortBy === "timestamp" && loginSortOrder === "asc" ? "Switch to Newest First" : "Switch to Oldest First"})`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>Login Date & Time</span>
+                            {loginSortBy === "timestamp" ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold shadow-xs">
+                                {loginSortOrder === "asc" ? (
+                                  <>
+                                    <ArrowUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Oldest</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                    <span>Newest</span>
+                                  </>
+                                )}
+                              </span>
+                            ) : (
+                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-indigo-500 transition-opacity" />
+                            )}
+                          </div>
+                        </th>
+
+                        {/* 4. Location (Country / State) */}
+                        <th
+                          onClick={() => handleSortColumn("state")}
+                          className={`py-3.5 px-4 text-left cursor-pointer transition-colors group ${
+                            loginSortBy === "state"
+                              ? "bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-950 dark:text-indigo-200 border-b-2 border-indigo-600 dark:border-indigo-400"
+                              : "hover:bg-slate-100/70 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300"
+                          }`}
+                          title={`Click to sort by Location (${loginSortBy === "state" && loginSortOrder === "asc" ? "Switch to Descending Z-A" : "Switch to Ascending A-Z"})`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>Location (Country / State)</span>
+                            {loginSortBy === "state" ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold shadow-xs">
+                                {loginSortOrder === "asc" ? (
+                                  <>
+                                    <ArrowUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>A-Z</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                    <span>Z-A</span>
+                                  </>
+                                )}
+                              </span>
+                            ) : (
+                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-indigo-500 transition-opacity" />
+                            )}
+                          </div>
+                        </th>
+
+                        {/* 5. Device & OS */}
+                        <th
+                          onClick={() => handleSortColumn("deviceType")}
+                          className={`py-3.5 px-4 text-left cursor-pointer transition-colors group ${
+                            loginSortBy === "deviceType"
+                              ? "bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-950 dark:text-indigo-200 border-b-2 border-indigo-600 dark:border-indigo-400"
+                              : "hover:bg-slate-100/70 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300"
+                          }`}
+                          title={`Click to sort by Device Type (${loginSortBy === "deviceType" && loginSortOrder === "asc" ? "Switch to Descending" : "Switch to Ascending"})`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>Device & OS</span>
+                            {loginSortBy === "deviceType" ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold shadow-xs">
+                                {loginSortOrder === "asc" ? (
+                                  <>
+                                    <ArrowUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>A-Z</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                    <span>Z-A</span>
+                                  </>
+                                )}
+                              </span>
+                            ) : (
+                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-indigo-500 transition-opacity" />
+                            )}
+                          </div>
+                        </th>
+
+                        {/* 6. IP Address */}
+                        <th
+                          onClick={() => handleSortColumn("ipAddress")}
+                          className={`py-3.5 px-4 text-left cursor-pointer transition-colors group ${
+                            loginSortBy === "ipAddress"
+                              ? "bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-950 dark:text-indigo-200 border-b-2 border-indigo-600 dark:border-indigo-400"
+                              : "hover:bg-slate-100/70 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300"
+                          }`}
+                          title={`Click to sort by IP Address (${loginSortBy === "ipAddress" && loginSortOrder === "asc" ? "Switch to 9-0" : "Switch to 0-9"})`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>IP Address</span>
+                            {loginSortBy === "ipAddress" ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold shadow-xs">
+                                {loginSortOrder === "asc" ? (
+                                  <>
+                                    <ArrowUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>0-9</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                    <span>9-0</span>
+                                  </>
+                                )}
+                              </span>
+                            ) : (
+                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-indigo-500 transition-opacity" />
+                            )}
+                          </div>
+                        </th>
+
+                        {/* 7. Status */}
+                        <th
+                          onClick={() => handleSortColumn("status")}
+                          className={`py-3.5 px-4 text-center cursor-pointer transition-colors group ${
+                            loginSortBy === "status"
+                              ? "bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-950 dark:text-indigo-200 border-b-2 border-indigo-600 dark:border-indigo-400"
+                              : "hover:bg-slate-100/70 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300"
+                          }`}
+                          title={`Click to sort by Status (${loginSortBy === "status" && loginSortOrder === "asc" ? "Switch to Success First" : "Switch to Failed First"})`}
+                        >
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span>Status</span>
+                            {loginSortBy === "status" ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold shadow-xs">
+                                {loginSortOrder === "asc" ? (
+                                  <>
+                                    <ArrowUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Fail 1st</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                    <span>Pass 1st</span>
+                                  </>
+                                )}
+                              </span>
+                            ) : (
+                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 group-hover:text-indigo-500 transition-opacity" />
+                            )}
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                      {logins.map((item, idx) => {
+                        const isMaster = item.role === "master_admin";
+                        const DeviceIcon = item.deviceType === "mobile"
+                          ? Smartphone
+                          : item.deviceType === "tablet"
+                          ? Tablet
+                          : Monitor;
+
+                        const flag = COUNTRY_FLAGS[item.countryCode] || COUNTRY_FLAGS[item.country] || "🇮🇳";
+
+                        return (
+                          <tr
+                            key={item._id || idx}
+                            className="hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors group"
+                          >
+                            {/* User Identity */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-start gap-3">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                                  isMaster
+                                    ? "bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300"
+                                    : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+                                }`}>
+                                  {item.name ? item.name.charAt(0).toUpperCase() : "U"}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-900 dark:text-white truncate">
+                                      {item.name || "Unknown User"}
                                     </span>
+                                    {item.memberId && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-600">
+                                        {item.memberId}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {item.shopName && (
+                                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                      <Store className="w-3 h-3 text-slate-400 shrink-0" />
+                                      <span className="truncate">{item.shopName}</span>
+                                    </div>
                                   )}
-                                  {item.email && (
-                                    <span className="flex items-center gap-1 truncate max-w-[150px]">
-                                      <Mail className="w-3 h-3" /> {item.email}
-                                    </span>
-                                  )}
+                                  <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                    {item.mobile && (
+                                      <span className="flex items-center gap-1">
+                                        <Phone className="w-3 h-3" /> {item.mobile}
+                                      </span>
+                                    )}
+                                    {item.email && (
+                                      <span className="flex items-center gap-1 truncate max-w-[150px]">
+                                        <Mail className="w-3 h-3" /> {item.email}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Role Badge */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            {isMaster ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800">
+                            {/* Role Badge */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              {isMaster ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800">
                                 <Shield className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                                 Master Admin
                               </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
-                                <Store className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                Dairy Admin
-                              </span>
-                            )}
-                          </td>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
+                                  <Store className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                  Dairy Admin
+                                </span>
+                              )}
+                            </td>
 
-                          {/* Timestamp */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <div className="font-semibold text-slate-900 dark:text-white text-xs">
-                              {formatDateTime(item.timestamp)}
-                            </div>
-                            <div className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5">
-                              <Clock className="w-3 h-3" /> {formatRelativeTime(item.timestamp)}
-                            </div>
-                          </td>
+                            {/* Timestamp */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <div className="font-semibold text-slate-900 dark:text-white text-xs">
+                                {formatDateTime(item.timestamp)}
+                              </div>
+                              <div className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5">
+                                <Clock className="w-3 h-3" /> {formatRelativeTime(item.timestamp)}
+                              </div>
+                            </td>
 
-                          {/* Location (Country / State / City) */}
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200 text-xs">
-                              <span className="text-base">{flag}</span>
-                              <span>{item.country || "India"}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                              <MapPin className="w-3 h-3 text-indigo-500 shrink-0" />
-                              <span className="font-medium text-slate-700 dark:text-slate-300">
-                                {item.state || "Maharashtra"}
+                            {/* Location (Country / State / City) */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                                <span className="text-base">{flag}</span>
+                                <span>{item.country || "India"}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                <MapPin className="w-3 h-3 text-indigo-500 shrink-0" />
+                                <span className="font-medium text-slate-700 dark:text-slate-300">
+                                  {item.state || "Maharashtra"}
+                                </span>
+                                {item.city && (
+                                  <>
+                                    <span className="text-slate-300 dark:text-slate-600">•</span>
+                                    <span>{item.city}</span>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Device & OS */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                                  <DeviceIcon className="w-3.5 h-3.5" />
+                                </div>
+                                <div>
+                                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                    {item.os || "Windows"}
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 dark:text-slate-500">
+                                    {item.browser || "Chrome"} • <span className="capitalize">{item.deviceType || "desktop"}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* IP Address */}
+                            <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-slate-600 dark:text-slate-400">
+                              <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-1 rounded border border-slate-200/60 dark:border-slate-700">
+                                {item.ipAddress || "127.0.0.1"}
                               </span>
-                              {item.city && (
-                                <>
-                                  <span className="text-slate-300 dark:text-slate-600">•</span>
-                                  <span>{item.city}</span>
-                                </>
+                            </td>
+
+                            {/* Status */}
+                            <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                              {item.status === "failed" ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                                  <XCircle className="w-3 h-3" /> Failed
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                  <CheckCircle2 className="w-3 h-3" /> Success
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ── MOBILE VIEW (Card Layout for Mobile Screens) ──────────── */}
+                <div className="block md:hidden p-3.5 space-y-3">
+                  {logins.map((item, idx) => {
+                    const isMaster = item.role === "master_admin";
+                    const DeviceIcon = item.deviceType === "mobile"
+                      ? Smartphone
+                      : item.deviceType === "tablet"
+                      ? Tablet
+                      : Monitor;
+
+                    const flag = COUNTRY_FLAGS[item.countryCode] || COUNTRY_FLAGS[item.country] || "🇮🇳";
+
+                    return (
+                      <div
+                        key={item._id || idx}
+                        className={`bg-white dark:bg-slate-850 p-4 rounded-2xl border shadow-xs space-y-3 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all ${
+                          item.status === "failed"
+                            ? "border-rose-200 dark:border-rose-900/60 border-l-4 border-l-rose-500"
+                            : isMaster
+                            ? "border-purple-200/80 dark:border-purple-900/60 border-l-4 border-l-purple-500"
+                            : "border-slate-200/80 dark:border-slate-700/70 border-l-4 border-l-emerald-500"
+                        }`}
+                      >
+                        {/* Top: Avatar, Name, Member ID, Role & Status */}
+                        <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-750 pb-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                              isMaster
+                                ? "bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300"
+                                : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
+                            }`}>
+                              {item.name ? item.name.charAt(0).toUpperCase() : "U"}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-slate-900 dark:text-white text-sm truncate">
+                                {item.name || "Unknown User"}
+                              </div>
+                              {item.memberId && (
+                                <span className="inline-block font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-600">
+                                  {item.memberId}
+                                </span>
                               )}
                             </div>
-                          </td>
+                          </div>
 
-                          {/* Device & OS */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
-                                <DeviceIcon className="w-3.5 h-3.5" />
-                              </div>
-                              <div>
-                                <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                  {item.os || "Windows"}
-                                </div>
-                                <div className="text-[11px] text-slate-400 dark:text-slate-500">
-                                  {item.browser || "Chrome"} • <span className="capitalize">{item.deviceType || "desktop"}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* IP Address */}
-                          <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-slate-600 dark:text-slate-400">
-                            <span className="bg-slate-100 dark:bg-slate-700/60 px-2 py-1 rounded border border-slate-200/60 dark:border-slate-700">
-                              {item.ipAddress || "127.0.0.1"}
-                            </span>
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            {item.status === "failed" ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                                <XCircle className="w-3 h-3" /> Failed
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {isMaster ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-200">
+                                <Shield className="w-2.5 h-2.5" /> Master
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                <CheckCircle2 className="w-3 h-3" /> Success
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200">
+                                <Store className="w-2.5 h-2.5" /> Dairy Admin
                               </span>
                             )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            {item.status === "failed" ? (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950">
+                                <XCircle className="w-2.5 h-2.5" /> Failed
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> Success
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Mid Details: Shop, Time, Contact */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {item.shopName && (
+                            <div className="col-span-2 flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                              <Store className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="font-semibold">{item.shopName}</span>
+                            </div>
+                          )}
+
+                          {item.failureReason && (
+                            <div className="col-span-2 text-[11px] text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-lg border border-rose-200/60 dark:border-rose-900/60 font-medium">
+                              Failure Reason: {item.failureReason}
+                            </div>
+                          )}
+
+                          <div className="col-span-2 flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px]">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-slate-400" />
+                              {formatDateTime(item.timestamp)}
+                            </span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">
+                              {formatRelativeTime(item.timestamp)}
+                            </span>
+                          </div>
+
+                          {item.mobile && (
+                            <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 text-[11px]">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              <span>{item.mobile}</span>
+                            </div>
+                          )}
+
+                          {item.email && (
+                            <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 text-[11px] truncate">
+                              <Mail className="w-3 h-3 text-slate-400" />
+                              <span className="truncate">{item.email}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Bottom: Location & Device Badges */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-750 text-xs">
+                          <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
+                            <span>{flag}</span>
+                            <span>{item.state || "Maharashtra"}</span>
+                            {item.city && (
+                              <span className="text-slate-400 text-[11px]">({item.city})</span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 rounded">
+                              <DeviceIcon className="w-3 h-3 text-slate-400" />
+                              {item.os || "Windows"}
+                            </span>
+                            <span className="font-mono text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                              {item.ipAddress || "127.0.0.1"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             ) : (
               <div className="p-12 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center">
@@ -1482,29 +2341,72 @@ export default function VisitorStatsPage() {
               </div>
             )}
 
-            {/* Pagination HUD */}
-            {loginPagination.totalPages > 1 && (
-              <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Page <span className="font-bold text-slate-800 dark:text-slate-200">{loginPagination.page}</span> of{" "}
-                  <span className="font-bold text-slate-800 dark:text-slate-200">{loginPagination.totalPages}</span> ({loginPagination.total} total logins)
-                </span>
-                <div className="flex items-center gap-2">
+            {/* ── ALWAYS-VISIBLE PROFESSIONAL PAGINATION FOOTER ───────────── */}
+            {logins.length > 0 && (
+              <div className="px-5 py-3.5 bg-slate-50/90 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                {/* Left info & Page Size Selector */}
+                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                  <span>
+                    Showing <span className="font-bold text-slate-800 dark:text-slate-200">{(loginPage - 1) * loginLimit + 1}</span> to{" "}
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{Math.min(loginPage * loginLimit, loginPagination.total || logins.length)}</span> of{" "}
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{loginPagination.total || logins.length}</span> login records
+                  </span>
+
+                  <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-700">
+                    <span className="text-[11px] font-medium text-slate-400">Rows:</span>
+                    <select
+                      value={loginLimit}
+                      onChange={(e) => {
+                        setLoginLimit(Number(e.target.value));
+                        setLoginPage(1);
+                      }}
+                      className="px-2 py-1 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value={5}>5 / page</option>
+                      <option value={10}>10 / page</option>
+                      <option value={20}>20 / page</option>
+                      <option value={50}>50 / page</option>
+                      <option value={100}>100 / page</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right Navigation Controls */}
+                <div className="flex items-center gap-1.5 self-end sm:self-auto">
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={loginPagination.page <= 1}
+                    disabled={loginPage <= 1 || loginsLoading}
                     onClick={() => setLoginPage((prev) => Math.max(1, prev - 1))}
-                    className="h-8 px-2.5 text-xs flex items-center gap-1"
+                    className="h-8 px-2.5 text-xs flex items-center gap-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   >
-                    <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                    <ChevronLeft className="w-3.5 h-3.5" /> Prev
                   </Button>
+
+                  {/* Numbered Page Buttons */}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(loginPagination.totalPages || 1, 6) }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setLoginPage(pageNum)}
+                        disabled={loginsLoading}
+                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold transition-all ${
+                          pageNum === loginPage
+                            ? "bg-indigo-600 text-white shadow-xs"
+                            : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/60"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                  </div>
+
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={loginPagination.page >= loginPagination.totalPages}
-                    onClick={() => setLoginPage((prev) => Math.min(loginPagination.totalPages, prev + 1))}
-                    className="h-8 px-2.5 text-xs flex items-center gap-1"
+                    disabled={loginPage >= (loginPagination.totalPages || 1) || loginsLoading}
+                    onClick={() => setLoginPage((prev) => Math.min(loginPagination.totalPages || 1, prev + 1))}
+                    className="h-8 px-2.5 text-xs flex items-center gap-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   >
                     Next <ChevronRight className="w-3.5 h-3.5" />
                   </Button>

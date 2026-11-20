@@ -1587,23 +1587,74 @@ const getUserLoginHistory = async (req, res) => {
   try {
     const {
       role = "all",
+      status = "all",
+      deviceType = "all",
+      os = "all",
+      state = "all",
+      country = "all",
+      ipAddress = "",
+      memberId = "",
+      name = "",
       search = "",
       fromDate,
       toDate,
       page = 1,
-      limit = 25,
+      limit = 10,
       sortBy = "timestamp",
       sortOrder = "desc",
     } = req.query;
 
     const filter = {};
 
-    // Role filtering
+    // 1. Role filtering
     if (role && role !== "all") {
       filter.role = role;
     }
 
-    // Date range filtering
+    // 2. Status filtering (success / failed)
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    // 3. Device type filtering (desktop / mobile / tablet)
+    if (deviceType && deviceType !== "all") {
+      filter.deviceType = deviceType;
+    }
+
+    // 4. Operating System filtering
+    if (os && os !== "all") {
+      filter.os = new RegExp(`^${os}`, "i");
+    }
+
+    // 5. State / Region filtering
+    if (state && state !== "all") {
+      filter.state = new RegExp(state, "i");
+    }
+
+    // 6. Country filtering
+    if (country && country !== "all") {
+      filter.$or = [
+        { country: new RegExp(country, "i") },
+        { countryCode: country.toUpperCase() },
+      ];
+    }
+
+    // 7. IP Address specific filter
+    if (ipAddress && ipAddress.trim()) {
+      filter.ipAddress = new RegExp(ipAddress.trim(), "i");
+    }
+
+    // 8. Member ID specific filter
+    if (memberId && memberId.trim()) {
+      filter.memberId = new RegExp(memberId.trim(), "i");
+    }
+
+    // 9. Name specific filter
+    if (name && name.trim()) {
+      filter.name = new RegExp(name.trim(), "i");
+    }
+
+    // 10. Date range filtering
     if (fromDate || toDate) {
       filter.timestamp = {};
       if (fromDate) {
@@ -1618,11 +1669,11 @@ const getUserLoginHistory = async (req, res) => {
       }
     }
 
-    // Search query: matches name, email, mobile, memberId, shopName, ipAddress, city, state, country, browser, os
+    // 11. Search query: matches across name, email, mobile, memberId, shopName, ipAddress, city, state, country, browser, os
     if (search && search.trim()) {
       const q = search.trim();
       const regex = new RegExp(q, "i");
-      filter.$or = [
+      const searchConditions = [
         { name: regex },
         { email: regex },
         { mobile: regex },
@@ -1635,14 +1686,36 @@ const getUserLoginHistory = async (req, res) => {
         { browser: regex },
         { os: regex },
       ];
+
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: searchConditions }];
+        delete filter.$or;
+      } else {
+        filter.$or = searchConditions;
+      }
     }
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
     const skip = (pageNum - 1) * limitNum;
 
+    const validSortFields = [
+      "timestamp",
+      "name",
+      "memberId",
+      "role",
+      "state",
+      "country",
+      "city",
+      "deviceType",
+      "os",
+      "browser",
+      "ipAddress",
+      "status",
+    ];
+    const resolvedSortField = validSortFields.includes(sortBy) ? sortBy : "timestamp";
     const sortDirection = sortOrder === "asc" ? 1 : -1;
-    const sortObj = { [sortBy]: sortDirection };
+    const sortObj = { [resolvedSortField]: sortDirection };
 
     // Fetch paginated logins and total count
     const [logins, totalCount] = await Promise.all([
