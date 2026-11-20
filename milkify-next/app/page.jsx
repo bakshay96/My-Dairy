@@ -32,7 +32,7 @@ import {
   Check,
   Sun,
   Moon,
-  Receipt,
+  ReceiptIndianRupee,
   BadgeCheck,
   SlidersHorizontal,
   Workflow,
@@ -926,7 +926,7 @@ export default function LandingPage() {
               {[
                 { id: "v24", label: "🚀 v2.4 Latest Release", icon: Zap },
                 { id: "collection", label: "🥛 Milk Intake & Slips", icon: Droplet },
-                { id: "billing", label: "🧾 Cycle Billing & PDF", icon: Receipt },
+                { id: "billing", label: "🧾 Cycle Billing & PDF", icon: ReceiptIndianRupee },
                 { id: "master", label: "🛡️ Superadmin & Telemetry", icon: ShieldCheck },
               ].map((tab) => {
                 const IconComponent = tab.icon;
@@ -1051,7 +1051,7 @@ export default function LandingPage() {
                     </div>
                     <div className="space-y-2">
                       <div className="text-purple-600 font-extrabold text-sm flex items-center gap-1.5">
-                        <Receipt className="h-4 w-4" /> Devanagari Bilingual
+                        <ReceiptIndianRupee className="h-4 w-4" /> Devanagari Bilingual
                       </div>
                       <p className="text-xs text-slate-500 leading-relaxed">
                         Full Marathi (मराठी) and English slip headers so village farmers can clearly verify their fat, rate, and daily earnings.

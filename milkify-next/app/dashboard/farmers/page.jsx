@@ -218,7 +218,16 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <span className="font-bold text-green-600">{formatRupees(m.calculatedAmount)}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              m.paymentStatus === "paid" 
+                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300"
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300"
+                            }`}>
+                              {m.paymentStatus === "paid" ? "✓ Paid" : "⏳ Unpaid"}
+                            </span>
+                            <span className="font-bold text-green-600">{formatRupees(m.calculatedAmount)}</span>
+                          </div>
                           <div className="flex gap-1">
                             <button
                               disabled={deleteLoadingId === m._id}

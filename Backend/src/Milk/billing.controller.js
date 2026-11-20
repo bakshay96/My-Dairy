@@ -415,7 +415,7 @@ exports.getTenDayBilling = async (req, res) => {
 // ─── GET /api/billing/slip/:farmerId ──────────────────────────────────────────
 /**
  * Returns bill-ready slip data (entries + totals) for selected date range.
- * Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), lang (en|hi|mr)
+ * Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), lang (en|hi|mr), status (all|unpaid|paid)
  */
 exports.getBillingSlipData = async (req, res) => {
   try {
@@ -427,16 +427,24 @@ exports.getBillingSlipData = async (req, res) => {
     const adminId = new mongoose.Types.ObjectId(req.admin._id);
     const { start, end, startDate, endDate } = buildDateRange(req.query);
     const lang = ["en", "hi", "mr"].includes(req.query.lang) ? req.query.lang : "en";
+    const statusFilter = req.query.status || "all";
+
+    const milkQuery = {
+      adminId,
+      farmerId: new mongoose.Types.ObjectId(farmerId),
+      createdAt: { $gte: start, $lte: end },
+    };
+
+    if (statusFilter === "unpaid") {
+      milkQuery.paymentStatus = { $ne: "paid" };
+    } else if (statusFilter === "paid") {
+      milkQuery.paymentStatus = "paid";
+    }
 
     const [farmer, entries] = await Promise.all([
       farmerModel.findOne({ _id: farmerId, adminId }).lean(),
-      MilkModel.find({
-        adminId,
-        farmerId: new mongoose.Types.ObjectId(farmerId),
-        createdAt: { $gte: start, $lte: end },
-        paymentStatus: { $ne: "paid" },
-      })
-        .select("createdAt shift category litter fat snf calculatedAmount paymentStatus")
+      MilkModel.find(milkQuery)
+        .select("createdAt shift category litter fat snf calculatedAmount paymentStatus rate")
         .sort({ createdAt: 1 })
         .lean(),
     ]);
@@ -445,34 +453,71 @@ exports.getBillingSlipData = async (req, res) => {
       return res.status(404).json({ success: false, message: "Farmer not found" });
     }
 
-    const totals = entries.reduce(
-      (acc, entry) => {
-        acc.totalLiters += Number(entry.litter || 0);
-        acc.totalAmount += Number(entry.calculatedAmount || 0);
-        acc.totalFat += Number(entry.fat || 0);
-        acc.totalSnf += Number(entry.snf || 0);
-        return acc;
-      },
-      { totalLiters: 0, totalAmount: 0, totalFat: 0, totalSnf: 0 }
-    );
+    let totalLiters = 0;
+    let totalAmount = 0;
+    let totalFat = 0;
+    let totalSnf = 0;
+    let paidEntries = 0;
+    let paidLiters = 0;
+    let paidAmount = 0;
+    let unpaidEntries = 0;
+    let unpaidLiters = 0;
+    let unpaidAmount = 0;
+
+    entries.forEach((entry) => {
+      const l = Number(entry.litter || 0);
+      const a = Number(entry.calculatedAmount || 0);
+      const f = Number(entry.fat || 0);
+      const s = Number(entry.snf || 0);
+
+      totalLiters += l;
+      totalAmount += a;
+      totalFat += f;
+      totalSnf += s;
+
+      if (entry.paymentStatus === "paid") {
+        paidEntries += 1;
+        paidLiters += l;
+        paidAmount += a;
+      } else {
+        unpaidEntries += 1;
+        unpaidLiters += l;
+        unpaidAmount += a;
+      }
+    });
 
     const count = entries.length || 1;
+    let statusBadge = "unpaid";
+    if (entries.length > 0 && unpaidEntries === 0) {
+      statusBadge = "paid";
+    } else if (paidEntries > 0 && unpaidEntries > 0) {
+      statusBadge = "partial";
+    } else if (entries.length === 0) {
+      statusBadge = "none";
+    }
+
     const summary = {
       totalEntries: entries.length,
-      totalLiters: parseFloat(totals.totalLiters.toFixed(3)),
-      totalAmount: parseFloat(totals.totalAmount.toFixed(2)),
-      avgFat: parseFloat((totals.totalFat / count).toFixed(2)),
-      avgSnf: parseFloat((totals.totalSnf / count).toFixed(2)),
+      totalLiters: parseFloat(totalLiters.toFixed(3)),
+      totalAmount: parseFloat(totalAmount.toFixed(2)),
+      paidEntries,
+      paidLiters: parseFloat(paidLiters.toFixed(3)),
+      paidAmount: parseFloat(paidAmount.toFixed(2)),
+      unpaidEntries,
+      unpaidLiters: parseFloat(unpaidLiters.toFixed(3)),
+      unpaidAmount: parseFloat(unpaidAmount.toFixed(2)),
+      avgFat: parseFloat((totalFat / count).toFixed(2)),
+      avgSnf: parseFloat((totalSnf / count).toFixed(2)),
+      avgRate: totalLiters > 0 ? parseFloat((totalAmount / totalLiters).toFixed(2)) : 0,
     };
-
-    const paidEntries = entries.filter((entry) => entry.paymentStatus === "paid").length;
 
     return res.status(200).json({
       success: true,
       data: {
         lang,
-        adminShopName: req.admin.shopName || "Milkify",
+        adminShopName: req.admin.shopName || "Milkify Dairy",
         dateRange: { startDate, endDate },
+        filterStatus: statusFilter,
         farmer: {
           id: farmer._id,
           memberId: farmer.memberId,
@@ -482,9 +527,11 @@ exports.getBillingSlipData = async (req, res) => {
         },
         summary,
         payment: {
-          status: entries.length > 0 && paidEntries === entries.length ? "paid" : "unpaid",
+          status: statusBadge,
           paidEntries,
-          unpaidEntries: entries.length - paidEntries,
+          unpaidEntries,
+          paidAmount: parseFloat(paidAmount.toFixed(2)),
+          unpaidAmount: parseFloat(unpaidAmount.toFixed(2)),
         },
         entries,
       },
@@ -501,24 +548,32 @@ exports.getBillingSlipData = async (req, res) => {
 
 // ─── GET /api/billing/pdf/:farmerId ──────────────────────────────────────────
 /**
- * Generates and returns a premium PDF billing slip.
- * Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD)
+ * Generates and returns a dedicated 80mm thermal PDF billing slip.
+ * Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), lang (en|hi|mr), status (all|unpaid|paid)
  */
 exports.generateBillingSlipPdf = async (req, res) => {
   try {
     const { farmerId } = req.params;
     const adminId = new mongoose.Types.ObjectId(req.admin._id);
     const { start, end, startDate, endDate } = buildDateRange(req.query);
+    const statusFilter = req.query.status || "all";
+
+    const milkQuery = {
+      adminId,
+      farmerId: new mongoose.Types.ObjectId(farmerId),
+      createdAt: { $gte: start, $lte: end },
+    };
+
+    if (statusFilter === "unpaid") {
+      milkQuery.paymentStatus = { $ne: "paid" };
+    } else if (statusFilter === "paid") {
+      milkQuery.paymentStatus = "paid";
+    }
 
     const [farmer, entries] = await Promise.all([
       farmerModel.findOne({ _id: farmerId, adminId }).lean(),
-      MilkModel.find({
-        adminId,
-        farmerId: new mongoose.Types.ObjectId(farmerId),
-        createdAt: { $gte: start, $lte: end },
-        paymentStatus: { $ne: "paid" },
-      })
-        .select("createdAt shift category litter fat snf calculatedAmount")
+      MilkModel.find(milkQuery)
+        .select("createdAt shift category litter fat snf calculatedAmount paymentStatus rate")
         .sort({ createdAt: 1 })
         .lean(),
     ]);
@@ -526,29 +581,77 @@ exports.generateBillingSlipPdf = async (req, res) => {
     if (!farmer) return res.status(404).json({ message: "Farmer not found" });
     if (!entries.length) return res.status(404).json({ message: "No entries found for this range" });
 
-    const totals = entries.reduce(
-      (acc, entry) => {
-        acc.totalLiters += Number(entry.litter || 0);
-        acc.totalAmount += Number(entry.calculatedAmount || 0);
-        acc.totalFat += Number(entry.fat || 0);
-        acc.totalSnf += Number(entry.snf || 0);
-        return acc;
-      },
-      { totalLiters: 0, totalAmount: 0, totalFat: 0, totalSnf: 0 }
-    );
+    let totalLiters = 0;
+    let totalAmount = 0;
+    let totalFat = 0;
+    let totalSnf = 0;
+    let paidEntries = 0;
+    let paidLiters = 0;
+    let paidAmount = 0;
+    let unpaidEntries = 0;
+    let unpaidLiters = 0;
+    let unpaidAmount = 0;
+
+    entries.forEach((e) => {
+      const l = Number(e.litter || 0);
+      const a = Number(e.calculatedAmount || 0);
+      const f = Number(e.fat || 0);
+      const s = Number(e.snf || 0);
+
+      totalLiters += l;
+      totalAmount += a;
+      totalFat += f;
+      totalSnf += s;
+
+      if (e.paymentStatus === "paid") {
+        paidEntries += 1;
+        paidLiters += l;
+        paidAmount += a;
+      } else {
+        unpaidEntries += 1;
+        unpaidLiters += l;
+        unpaidAmount += a;
+      }
+    });
+
+    const count = entries.length || 1;
+    let statusBadge = "unpaid";
+    if (entries.length > 0 && unpaidEntries === 0) {
+      statusBadge = "paid";
+    } else if (paidEntries > 0 && unpaidEntries > 0) {
+      statusBadge = "partial";
+    } else if (entries.length === 0) {
+      statusBadge = "none";
+    }
 
     const summary = {
-      totalLiters: totals.totalLiters,
-      totalAmount: totals.totalAmount,
-      avgFat: totals.totalFat / entries.length,
-      avgSnf: totals.totalSnf / entries.length,
+      totalEntries: entries.length,
+      totalLiters: parseFloat(totalLiters.toFixed(3)),
+      totalAmount: parseFloat(totalAmount.toFixed(2)),
+      paidEntries,
+      paidLiters: parseFloat(paidLiters.toFixed(3)),
+      paidAmount: parseFloat(paidAmount.toFixed(2)),
+      unpaidEntries,
+      unpaidLiters: parseFloat(unpaidLiters.toFixed(3)),
+      unpaidAmount: parseFloat(unpaidAmount.toFixed(2)),
+      avgFat: parseFloat((totalFat / count).toFixed(2)),
+      avgSnf: parseFloat((totalSnf / count).toFixed(2)),
+      avgRate: totalLiters > 0 ? parseFloat((totalAmount / totalLiters).toFixed(2)) : 0,
     };
 
     const pdfData = {
       adminShopName: req.admin.shopName || "Milkify Dairy",
       dateRange: { startDate, endDate },
+      filterStatus: statusFilter,
       farmer: { id: farmer._id, memberId: farmer.memberId, name: farmer.name, mobile: farmer.mobile, village: farmer.village },
       summary,
+      payment: {
+        status: statusBadge,
+        paidEntries,
+        unpaidEntries,
+        paidAmount: parseFloat(paidAmount.toFixed(2)),
+        unpaidAmount: parseFloat(unpaidAmount.toFixed(2)),
+      },
       entries,
     };
 
@@ -564,8 +667,8 @@ exports.generateBillingSlipPdf = async (req, res) => {
 
 // ─── POST /api/billing/email/:farmerId ──────────────────────────────────────────────────────
 /**
- * Generates PDF billing slip and sends it to the farmer's email.
- * Query params: startDate, endDate, lang
+ * Generates thermal PDF billing slip and sends it to the farmer's email.
+ * Query params: startDate, endDate, lang, status
  */
 exports.sendBillingEmail = async (req, res) => {
   try {
@@ -573,16 +676,24 @@ exports.sendBillingEmail = async (req, res) => {
     const adminId = new mongoose.Types.ObjectId(req.admin._id);
     const { start, end, startDate, endDate } = buildDateRange(req.query);
     const lang = ["en", "hi", "mr"].includes(req.query.lang) ? req.query.lang : "en";
+    const statusFilter = req.query.status || "all";
+
+    const milkQuery = {
+      adminId,
+      farmerId: new mongoose.Types.ObjectId(farmerId),
+      createdAt: { $gte: start, $lte: end },
+    };
+
+    if (statusFilter === "unpaid") {
+      milkQuery.paymentStatus = { $ne: "paid" };
+    } else if (statusFilter === "paid") {
+      milkQuery.paymentStatus = "paid";
+    }
 
     const [farmer, entries] = await Promise.all([
       farmerModel.findOne({ _id: farmerId, adminId }).lean(),
-      MilkModel.find({
-        adminId,
-        farmerId: new mongoose.Types.ObjectId(farmerId),
-        createdAt: { $gte: start, $lte: end },
-        paymentStatus: { $ne: "paid" },
-      })
-        .select("createdAt shift category litter fat snf calculatedAmount")
+      MilkModel.find(milkQuery)
+        .select("createdAt shift category litter fat snf calculatedAmount paymentStatus rate")
         .sort({ createdAt: 1 })
         .lean(),
     ]);
@@ -591,34 +702,76 @@ exports.sendBillingEmail = async (req, res) => {
     if (!farmer.email)   return res.status(400).json({ message: "Farmer does not have an email address on record" });
     if (!entries.length) return res.status(404).json({ message: "No entries found for this date range" });
 
-    const totals = entries.reduce(
-      (acc, e) => {
-        acc.totalLiters += Number(e.litter || 0);
-        acc.totalAmount += Number(e.calculatedAmount || 0);
-        acc.totalFat    += Number(e.fat || 0);
-        acc.totalSnf    += Number(e.snf || 0);
-        return acc;
-      },
-      { totalLiters: 0, totalAmount: 0, totalFat: 0, totalSnf: 0 }
-    );
+    let totalLiters = 0;
+    let totalAmount = 0;
+    let totalFat = 0;
+    let totalSnf = 0;
+    let paidEntries = 0;
+    let paidAmount = 0;
+    let unpaidEntries = 0;
+    let unpaidAmount = 0;
+
+    entries.forEach((e) => {
+      const l = Number(e.litter || 0);
+      const a = Number(e.calculatedAmount || 0);
+      const f = Number(e.fat || 0);
+      const s = Number(e.snf || 0);
+
+      totalLiters += l;
+      totalAmount += a;
+      totalFat += f;
+      totalSnf += s;
+
+      if (e.paymentStatus === "paid") {
+        paidEntries += 1;
+        paidAmount += a;
+      } else {
+        unpaidEntries += 1;
+        unpaidAmount += a;
+      }
+    });
+
+    const count = entries.length || 1;
+    let statusBadge = "unpaid";
+    if (entries.length > 0 && unpaidEntries === 0) {
+      statusBadge = "paid";
+    } else if (paidEntries > 0 && unpaidEntries > 0) {
+      statusBadge = "partial";
+    } else if (entries.length === 0) {
+      statusBadge = "none";
+    }
 
     const summary = {
-      totalLiters:  totals.totalLiters,
-      totalAmount:  totals.totalAmount,
-      avgFat:       totals.totalFat / entries.length,
-      avgSnf:       totals.totalSnf / entries.length,
+      totalEntries: entries.length,
+      totalLiters: parseFloat(totalLiters.toFixed(3)),
+      totalAmount: parseFloat(totalAmount.toFixed(2)),
+      paidEntries,
+      paidAmount: parseFloat(paidAmount.toFixed(2)),
+      unpaidEntries,
+      unpaidAmount: parseFloat(unpaidAmount.toFixed(2)),
+      avgFat: parseFloat((totalFat / count).toFixed(2)),
+      avgSnf: parseFloat((totalSnf / count).toFixed(2)),
+      avgRate: totalLiters > 0 ? parseFloat((totalAmount / totalLiters).toFixed(2)) : 0,
     };
 
     const pdfData = {
       adminShopName: req.admin.shopName || "Milkify Dairy",
       dateRange: { startDate, endDate },
+      filterStatus: statusFilter,
       farmer: { id: farmer._id, memberId: farmer.memberId, name: farmer.name, mobile: farmer.mobile, village: farmer.village },
       summary,
+      payment: {
+        status: statusBadge,
+        paidEntries,
+        unpaidEntries,
+        paidAmount,
+        unpaidAmount,
+      },
       entries,
     };
 
     // Respond immediately to prevent frontend timeout (Fire and Forget)
-    res.status(200).json({ success: true, message: `Processing bill delivery. It will arrive at ${farmer.email} shortly.` });
+    res.status(200).json({ success: true, message: `Processing thermal bill delivery. It will arrive at ${farmer.email} shortly.` });
 
     // Generate PDF and send email asynchronously in the background
     (async () => {
@@ -635,21 +788,24 @@ exports.sendBillingEmail = async (req, res) => {
           avgSnf:       summary.avgSnf,
           totalAmount:  summary.totalAmount,
           totalEntries: entries.length,
+          paidAmount:   summary.paidAmount,
+          unpaidAmount: summary.unpaidAmount,
+          statusBadge,
         };
 
         await transporter.sendMail({
           from:    `"${req.admin.shopName || "Milkify Dairy"}" <${process.env.SMTP_EMAIL}>`,
           to:      farmer.email,
-          subject: `📄 Milk Collection Bill Statement: ${startDate} to ${endDate} | ${req.admin.shopName || "Milkify Dairy"}`,
+          subject: `📄 Thermal Milk Collection Bill: ${startDate} to ${endDate} | ${req.admin.shopName || "Milkify Dairy"}`,
           html:    billingEmailHtml(emailOpts),
           text:    billingEmailText(emailOpts),
           attachments: [{
-            filename:    `Bill_${farmer.name}_${startDate}.pdf`,
+            filename:    `Thermal_Bill_${farmer.name}_${startDate}.pdf`,
             content:     pdfBuffer,
             contentType: "application/pdf",
           }],
         });
-        console.log(`[Billing] Bill emailed to ${farmer.email} for farmer ${farmer.name}`);
+        console.log(`[Billing] Thermal bill emailed to ${farmer.email} for farmer ${farmer.name}`);
       } catch (bgError) {
         console.error("[Billing] Background Email/PDF generation error:", bgError);
       }
@@ -708,8 +864,15 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
         acc.totalAmount += amount;
         acc.totalFat += fat;
         acc.totalSnf += snf;
-        if (entry.paymentStatus === "paid") acc.paidEntries += 1;
-        else acc.unpaidEntries += 1;
+        if (entry.paymentStatus === "paid") {
+          acc.paidEntries += 1;
+          acc.paidAmount += amount;
+          acc.paidLiters += liters;
+        } else {
+          acc.unpaidEntries += 1;
+          acc.unpaidAmount += amount;
+          acc.unpaidLiters += liters;
+        }
         return acc;
       },
       {
@@ -718,6 +881,10 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
         unpaidEntries: 0,
         totalLiters: 0,
         totalAmount: 0,
+        paidAmount: 0,
+        unpaidAmount: 0,
+        paidLiters: 0,
+        unpaidLiters: 0,
         totalFat: 0,
         totalSnf: 0,
       }
@@ -738,6 +905,10 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
           unpaidEntries: totals.unpaidEntries,
           totalLiters: Number(totals.totalLiters.toFixed(3)),
           totalAmount: Number(totals.totalAmount.toFixed(2)),
+          paidAmount: Number(totals.paidAmount.toFixed(2)),
+          unpaidAmount: Number(totals.unpaidAmount.toFixed(2)),
+          paidLiters: Number(totals.paidLiters.toFixed(3)),
+          unpaidLiters: Number(totals.unpaidLiters.toFixed(3)),
           avgFat: Number(avgFat.toFixed(2)),
           avgSnf: Number(avgSnf.toFixed(2)),
           ratePerLiter: Number(ratePerLiter.toFixed(2)),
