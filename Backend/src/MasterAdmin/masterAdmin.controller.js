@@ -1333,6 +1333,8 @@ const getMasterDashboardStats = async (req, res) => {
 // ────────────────────────────────────────────────────────────
 // VISITOR STATS – Get aggregated visitor data
 // ────────────────────────────────────────────────────────────
+// VISITOR STATS – Get aggregated visitor data (Enriched with logins & devices)
+// ────────────────────────────────────────────────────────────
 const getVisitorStats = async (req, res) => {
   try {
     const { fromDate, toDate, groupBy = "day", sortBy = "date" } = req.query;
@@ -1357,6 +1359,43 @@ const getVisitorStats = async (req, res) => {
         $group: {
           _id: groupStage[groupBy] || groupStage.day,
           count: { $sum: 1 },
+          uniqueIps: { $addToSet: "$ipAddress" },
+          desktopCount: {
+            $sum: { $cond: [{ $eq: ["$deviceType", "desktop"] }, 1, 0] },
+          },
+          mobileCount: {
+            $sum: { $cond: [{ $eq: ["$deviceType", "mobile"] }, 1, 0] },
+          },
+          tabletCount: {
+            $sum: { $cond: [{ $eq: ["$deviceType", "tablet"] }, 1, 0] },
+          },
+          countries: { $addToSet: "$country" },
+          successCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gte: ["$statusCode", 200] },
+                    { $lt: ["$statusCode", 400] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          count: 1,
+          uniqueIps: { $size: "$uniqueIps" },
+          desktopCount: 1,
+          mobileCount: 1,
+          tabletCount: 1,
+          countries: 1,
+          successCount: 1,
         },
       },
     ];
@@ -1367,7 +1406,45 @@ const getVisitorStats = async (req, res) => {
       pipeline.push({ $sort: { _id: 1 } });
     }
 
-    const stats = await VisitorStatsModel.aggregate(pipeline);
+    const [stats, loginStats] = await Promise.all([
+      VisitorStatsModel.aggregate(pipeline),
+      UserLoginLogModel.aggregate([
+        { $match: { timestamp: { $gte: start, $lte: end } } },
+        {
+          $group: {
+            _id: groupStage[groupBy] || groupStage.day,
+            totalLogins: { $sum: 1 },
+            masterLogins: { $sum: { $cond: [{ $eq: ["$role", "master_admin"] }, 1, 0] } },
+            dairyLogins: { $sum: { $cond: [{ $eq: ["$role", "admin"] }, 1, 0] } },
+            uniqueLoginUsers: { $addToSet: "$userId" },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            totalLogins: 1,
+            masterLogins: 1,
+            dairyLogins: 1,
+            uniqueLoginUsers: { $size: "$uniqueLoginUsers" },
+          },
+        },
+      ]),
+    ]);
+
+    // Merge login stats into stats by _id
+    const loginMap = new Map();
+    loginStats.forEach((l) => loginMap.set(l._id, l));
+
+    const enrichedStats = stats.map((item) => {
+      const login = loginMap.get(item._id) || {};
+      return {
+        ...item,
+        totalLogins: login.totalLogins || 0,
+        masterLogins: login.masterLogins || 0,
+        dairyLogins: login.dairyLogins || 0,
+        uniqueLoginUsers: login.uniqueLoginUsers || 0,
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -1375,10 +1452,63 @@ const getVisitorStats = async (req, res) => {
         groupBy,
         fromDate: start.toISOString().split("T")[0],
         toDate: end.toISOString().split("T")[0],
-        stats,
+        stats: enrichedStats,
       },
     });
   } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ────────────────────────────────────────────────────────────
+// VISITOR STATS – Country-Wise User Logins Drill-down
+// ────────────────────────────────────────────────────────────
+const getCountryUserLogins = async (req, res) => {
+  try {
+    const { country, countryCode } = req.query;
+
+    const filter = {};
+    if (countryCode && countryCode !== "Unknown") {
+      filter.$or = [
+        { countryCode: countryCode.toUpperCase() },
+        { country: new RegExp(`^${countryCode}$`, "i") },
+      ];
+    } else if (country) {
+      filter.country = new RegExp(`^${country}$`, "i");
+    }
+
+    const [logins, totalLogins, masterLogins, dairyLogins, uniqueUsers, topCities] = await Promise.all([
+      UserLoginLogModel.find(filter)
+        .sort({ timestamp: -1 })
+        .limit(50)
+        .lean(),
+      UserLoginLogModel.countDocuments(filter),
+      UserLoginLogModel.countDocuments({ ...filter, role: "master_admin" }),
+      UserLoginLogModel.countDocuments({ ...filter, role: "admin" }),
+      UserLoginLogModel.distinct("userId", filter),
+      UserLoginLogModel.aggregate([
+        { $match: { ...filter, city: { $ne: "" } } },
+        { $group: { _id: "$city", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        country: country || countryCode || "All",
+        countryCode: countryCode || "",
+        totalLogins,
+        masterLogins,
+        dairyLogins,
+        uniqueUsers: uniqueUsers.length,
+        topCities: topCities.map((c) => ({ city: c._id || "Unknown", count: c.count })),
+        logins,
+      },
+    });
+  } catch (err) {
+    console.error("[CountryUserLogins] Error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -1754,4 +1884,5 @@ module.exports = {
   deleteFarmerForMaster,
   getDatabaseSchemaStats,
   getUserLoginHistory,
+  getCountryUserLogins,
 };
