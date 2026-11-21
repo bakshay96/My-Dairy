@@ -67,6 +67,19 @@ const adminSchema = new mongoose.Schema(
       default: 10,
       enum: [5, 7, 10, 15, 20, 30],
     },
+    sprintMode: {
+      type: String,
+      enum: ["auto", "custom"],
+      default: "auto",
+    },
+    customSprintDurationDays: {
+      type: Number,
+      default: 10,
+    },
+    autoCloseOnSprintEnd: {
+      type: Boolean,
+      default: false,
+    },
     autoEmailOnSprintClose: {
       type: Boolean,
       default: true,

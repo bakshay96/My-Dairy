@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import PaymentModal from "@/components/farmers/PaymentModal";
 import BillingSlipModal from "@/components/billing/BillingSlipModal";
 import { formatRupees, formatIndianDate } from "@/lib/utils";
 import api from "@/lib/api";
-import { ChevronDown, ChevronUp, Loader2, FileText, IndianRupee, CheckCircle2, Clock } from "lucide-react";
+import { toast } from "@/lib/toast";
+import { ChevronDown, ChevronUp, Loader2, FileText, IndianRupee, CheckCircle2, Clock, Lock } from "lucide-react";
 import { buildDateQuery } from "@/lib/dateRange";
 
 export default function BillingTable({ farmers, onPaymentSuccess, startDate = "", endDate = "" }) {
@@ -21,6 +22,14 @@ export default function BillingTable({ farmers, onPaymentSuccess, startDate = ""
   const [loadingSlipId, setLoadingSlipId] = useState(null);
   const [slipData, setSlipData] = useState(null);
   const [showSlipModal, setShowSlipModal] = useState(false);
+
+  // Business Rule: Settlement cannot proceed before the billing sprint has completed
+  const isSprintOngoing = useMemo(() => {
+    if (!endDate) return false;
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return new Date() < end;
+  }, [endDate]);
 
   const getFilteredBreakdownEntries = (farmerId) => {
     const raw = breakdownData[farmerId]?.entries || [];
@@ -141,11 +150,27 @@ export default function BillingTable({ farmers, onPaymentSuccess, startDate = ""
                       </Button>
                       <Button 
                         size="sm" 
-                        className="h-8 px-3 text-xs font-extrabold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20 gap-1.5"
-                        onClick={(e) => handlePayClick(farmer, e)}
+                        className={`h-8 px-3 text-xs font-extrabold rounded-lg gap-1.5 shadow-sm transition-all ${
+                          isSprintOngoing
+                            ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+                            : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20"
+                        }`}
+                        onClick={(e) => {
+                          if (isSprintOngoing) {
+                            e.stopPropagation();
+                            toast.error(`Settlement is locked because sprint is active. Unlocks on ${formatIndianDate(endDate)}.`);
+                            return;
+                          }
+                          handlePayClick(farmer, e);
+                        }}
+                        title={isSprintOngoing ? `Sprint active until ${formatIndianDate(endDate)}. Settlement unlocks once completed.` : "Settle and pay farmer"}
                       >
-                        <IndianRupee className="h-3.5 w-3.5" />
-                        <span>Pay</span>
+                        {isSprintOngoing ? (
+                          <Lock className="h-3 w-3 text-amber-500" />
+                        ) : (
+                          <IndianRupee className="h-3.5 w-3.5" />
+                        )}
+                        <span>{isSprintOngoing ? "Locked" : "Pay"}</span>
                       </Button>
                     </div>
                   </td>
@@ -432,11 +457,26 @@ export default function BillingTable({ farmers, onPaymentSuccess, startDate = ""
                 </Button>
                 <Button 
                   size="sm" 
-                  className="flex-1 h-9 text-xs font-extrabold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20 gap-1.5"
-                  onClick={(e) => handlePayClick(farmer, e)}
+                  className={`flex-1 h-9 text-xs font-extrabold rounded-xl gap-1.5 shadow-sm transition-all ${
+                    isSprintOngoing
+                      ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 border border-slate-200 dark:border-slate-700"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20"
+                  }`}
+                  onClick={(e) => {
+                    if (isSprintOngoing) {
+                      e.stopPropagation();
+                      toast.error(`Settlement is locked because sprint is active. Unlocks on ${formatIndianDate(endDate)}.`);
+                      return;
+                    }
+                    handlePayClick(farmer, e);
+                  }}
                 >
-                  <IndianRupee className="h-3.5 w-3.5" />
-                  <span>Settle / Pay</span>
+                  {isSprintOngoing ? (
+                    <Lock className="h-3 w-3 text-amber-500" />
+                  ) : (
+                    <IndianRupee className="h-3.5 w-3.5" />
+                  )}
+                  <span>{isSprintOngoing ? "Locked (Sprint Active)" : "Settle / Pay"}</span>
                 </Button>
               </div>
             </div>

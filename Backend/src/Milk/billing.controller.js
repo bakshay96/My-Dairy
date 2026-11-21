@@ -5,6 +5,7 @@ const {
   getSprintsForMonth,
   getCurrentSprint,
   getRecentSprints,
+  getRecentSprintsGrouped,
 } = require("../utils/milkCalculator");
 const mongoose = require("mongoose");
 const { farmerModel } = require("../Farmer/farmer.model");
@@ -292,6 +293,18 @@ exports.getTenDayBilling = async (req, res) => {
           totalEntries: { $sum: 1 },
           lastEntry:    { $max: "$createdAt" },
           categories:   { $addToSet: "$category" },
+          cowLiters: {
+            $sum: { $cond: [{ $eq: ["$category", "cow"] }, "$litter", 0] },
+          },
+          cowAmount: {
+            $sum: { $cond: [{ $eq: ["$category", "cow"] }, "$calculatedAmount", 0] },
+          },
+          buffaloLiters: {
+            $sum: { $cond: [{ $eq: ["$category", "buffalo"] }, "$litter", 0] },
+          },
+          buffaloAmount: {
+            $sum: { $cond: [{ $eq: ["$category", "buffalo"] }, "$calculatedAmount", 0] },
+          },
         },
       },
       // ── Stage 3: Join Farmer model ────────────────────────────────────────
@@ -315,6 +328,7 @@ exports.getTenDayBilling = async (req, res) => {
         $project: {
           _id:          0,
           farmerId:     "$_id",
+          farmerMemberId: { $ifNull: ["$farmerInfo.farmerMemberId", { $ifNull: ["$farmerInfo.memberId", ""] }] },
           farmerName:   { $ifNull: ["$farmerInfo.name",   "Unknown Farmer"] },
           farmerMobile: { $ifNull: ["$farmerInfo.mobile", ""] },
           village:      { $ifNull: ["$farmerInfo.village",""] },
@@ -325,6 +339,24 @@ exports.getTenDayBilling = async (req, res) => {
           totalEntries: 1,
           lastEntry:    1,
           categories:   1,
+          cowLiters:    { $round: [{ $ifNull: ["$cowLiters", 0] }, 2] },
+          cowAmount:    { $round: [{ $ifNull: ["$cowAmount", 0] }, 2] },
+          cowRate: {
+            $cond: [
+              { $gt: ["$cowLiters", 0] },
+              { $round: [{ $divide: ["$cowAmount", "$cowLiters"] }, 2] },
+              0,
+            ],
+          },
+          buffaloLiters: { $round: [{ $ifNull: ["$buffaloLiters", 0] }, 2] },
+          buffaloAmount: { $round: [{ $ifNull: ["$buffaloAmount", 0] }, 2] },
+          buffaloRate: {
+            $cond: [
+              { $gt: ["$buffaloLiters", 0] },
+              { $round: [{ $divide: ["$buffaloAmount", "$buffaloLiters"] }, 2] },
+              0,
+            ],
+          },
         },
       },
       // ── Stage 6: Sort — highest earners first ────────────────────────────
@@ -334,7 +366,7 @@ exports.getTenDayBilling = async (req, res) => {
     const farmersWithEntries = await MilkModel.aggregate(pipeline);
     const activeFarmers = await farmerModel
       .find({ adminId, status: "active" })
-      .select("_id name mobile village status")
+      .select("_id name mobile village farmerMemberId memberId status")
       .lean();
 
     const billingMap = new Map(
@@ -346,6 +378,7 @@ exports.getTenDayBilling = async (req, res) => {
       if (existing) return existing;
       return {
         farmerId: farmer._id,
+        farmerMemberId: farmer.farmerMemberId || farmer.memberId || "",
         farmerName: farmer.name,
         farmerMobile: farmer.mobile || "",
         village: farmer.village || "",
@@ -356,6 +389,12 @@ exports.getTenDayBilling = async (req, res) => {
         totalEntries: 0,
         lastEntry: null,
         categories: [],
+        cowLiters: 0,
+        cowAmount: 0,
+        cowRate: 0,
+        buffaloLiters: 0,
+        buffaloAmount: 0,
+        buffaloRate: 0,
       };
     });
     farmers.sort((a, b) => (b.totalAmount || 0) - (a.totalAmount || 0));
@@ -841,7 +880,9 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid farmer ID" });
     }
 
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, paymentStatus, paymentId } = req.query;
+
+    const farmer = await farmerModel.findById(farmerId).select("name mobile village farmerMemberId memberId").lean();
 
     let windowStart, windowEnd;
     const now = new Date();
@@ -860,11 +901,31 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
       windowEnd = now;
     }
 
-    const entries = await MilkModel.find({
+    // Build precise query to avoid mixing settled and unsettled records
+    const query = {
       adminId,
       farmerId: new mongoose.Types.ObjectId(farmerId),
-      createdAt: { $gte: windowStart, $lte: windowEnd }
-    }).sort({ createdAt: -1 });
+    };
+
+    if (paymentId && mongoose.Types.ObjectId.isValid(paymentId)) {
+      // If linked to a specific payment, match by paymentId or (paymentStatus: 'paid' within date window)
+      query.$or = [
+        { paymentId: new mongoose.Types.ObjectId(paymentId) },
+        { paymentStatus: "paid", createdAt: { $gte: windowStart, $lte: windowEnd } }
+      ];
+    } else {
+      if (startDate && endDate) {
+        query.createdAt = { $gte: windowStart, $lte: windowEnd };
+      }
+      if (paymentStatus === "paid") {
+        query.paymentStatus = "paid";
+      } else if (paymentStatus === "unpaid") {
+        query.paymentStatus = { $ne: "paid" };
+        query.isActive = { $ne: false };
+      }
+    }
+
+    const entries = await MilkModel.find(query).sort({ createdAt: -1 });
 
     const totals = entries.reduce(
       (acc, entry) => {
@@ -877,6 +938,17 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
         acc.totalAmount += amount;
         acc.totalFat += fat;
         acc.totalSnf += snf;
+
+        if (entry.category === "cow") {
+          acc.cowLiters += liters;
+          acc.cowAmount += amount;
+          acc.cowEntries += 1;
+        } else if (entry.category === "buffalo") {
+          acc.buffaloLiters += liters;
+          acc.buffaloAmount += amount;
+          acc.buffaloEntries += 1;
+        }
+
         if (entry.paymentStatus === "paid") {
           acc.paidEntries += 1;
           acc.paidAmount += amount;
@@ -900,6 +972,12 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
         unpaidLiters: 0,
         totalFat: 0,
         totalSnf: 0,
+        cowLiters: 0,
+        cowAmount: 0,
+        cowEntries: 0,
+        buffaloLiters: 0,
+        buffaloAmount: 0,
+        buffaloEntries: 0,
       }
     );
 
@@ -907,10 +985,21 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
     const avgFat = totals.totalFat / count;
     const avgSnf = totals.totalSnf / count;
     const ratePerLiter = totals.totalLiters > 0 ? totals.totalAmount / totals.totalLiters : 0;
+    const cowRate = totals.cowLiters > 0 ? totals.cowAmount / totals.cowLiters : 0;
+    const buffaloRate = totals.buffaloLiters > 0 ? totals.buffaloAmount / totals.buffaloLiters : 0;
+
+    const farmerMemberId = farmer?.farmerMemberId || farmer?.memberId || "#" + String(farmerId).slice(-6).toUpperCase();
 
     return res.status(200).json({
       success: true,
       data: {
+        farmerId,
+        farmerMemberId,
+        farmerName: farmer?.name || "Farmer",
+        farmerMobile: farmer?.mobile || "",
+        village: farmer?.village || "",
+        windowStart: startDate || windowStart.toISOString().split("T")[0],
+        windowEnd: endDate || windowEnd.toISOString().split("T")[0],
         entries,
         summary: {
           totalEntries: totals.totalEntries,
@@ -925,6 +1014,14 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
           avgFat: Number(avgFat.toFixed(2)),
           avgSnf: Number(avgSnf.toFixed(2)),
           ratePerLiter: Number(ratePerLiter.toFixed(2)),
+          cowLiters: Number(totals.cowLiters.toFixed(2)),
+          cowAmount: Number(totals.cowAmount.toFixed(2)),
+          cowRate: Number(cowRate.toFixed(2)),
+          cowEntries: totals.cowEntries,
+          buffaloLiters: Number(totals.buffaloLiters.toFixed(2)),
+          buffaloAmount: Number(totals.buffaloAmount.toFixed(2)),
+          buffaloRate: Number(buffaloRate.toFixed(2)),
+          buffaloEntries: totals.buffaloEntries,
         },
       }
     });
@@ -951,20 +1048,28 @@ exports.getSprintConfig = async (req, res) => {
     const admin = await AdminModel.findById(adminId).lean();
 
     const cycleDays = admin?.billingCycleDays || 10;
+    const sprintMode = admin?.sprintMode || "auto";
+    const customSprintDurationDays = admin?.customSprintDurationDays || 10;
+    const autoCloseOnSprintEnd = admin?.autoCloseOnSprintEnd || false;
     const autoEmailOnSprintClose = admin?.autoEmailOnSprintClose !== false;
     const notifyZeroCollectionFarmers = admin?.notifyZeroCollectionFarmers !== false;
 
     const currentSprint = getCurrentSprint(cycleDays);
-    const availableSprints = getRecentSprints(cycleDays, 2);
+    const availableSprints = getRecentSprints(cycleDays, 3);
+    const availableSprintsGrouped = getRecentSprintsGrouped(cycleDays, 3);
 
     return res.status(200).json({
       success: true,
       data: {
         cycleDays,
+        sprintMode,
+        customSprintDurationDays,
+        autoCloseOnSprintEnd,
         autoEmailOnSprintClose,
         notifyZeroCollectionFarmers,
         currentSprint,
         availableSprints,
+        availableSprintsGrouped,
       },
     });
   } catch (error) {
@@ -975,12 +1080,19 @@ exports.getSprintConfig = async (req, res) => {
 
 /**
  * PUT /api/billing/sprint/config
- * Updates Admin's billing cycle preferences (e.g. 5, 7, 10, 15, 20, 30 days).
+ * Updates Admin's billing cycle preferences (auto vs custom, cycle days, auto-close toggle).
  */
 exports.updateSprintConfig = async (req, res) => {
   try {
     const adminId = req.admin._id || req.admin.id;
-    const { billingCycleDays, autoEmailOnSprintClose, notifyZeroCollectionFarmers } = req.body;
+    const {
+      billingCycleDays,
+      sprintMode,
+      customSprintDurationDays,
+      autoCloseOnSprintEnd,
+      autoEmailOnSprintClose,
+      notifyZeroCollectionFarmers,
+    } = req.body;
 
     const update = {};
     if (billingCycleDays !== undefined) {
@@ -994,6 +1106,23 @@ exports.updateSprintConfig = async (req, res) => {
       update.billingCycleDays = parsedDays;
     }
 
+    if (sprintMode !== undefined) {
+      if (!["auto", "custom"].includes(sprintMode)) {
+        return res.status(400).json({ success: false, message: "Invalid sprintMode. Must be 'auto' or 'custom'." });
+      }
+      update.sprintMode = sprintMode;
+    }
+
+    if (customSprintDurationDays !== undefined) {
+      const d = Number(customSprintDurationDays);
+      if (d > 0 && d <= 90) {
+        update.customSprintDurationDays = d;
+      }
+    }
+
+    if (autoCloseOnSprintEnd !== undefined) {
+      update.autoCloseOnSprintEnd = Boolean(autoCloseOnSprintEnd);
+    }
     if (autoEmailOnSprintClose !== undefined) {
       update.autoEmailOnSprintClose = Boolean(autoEmailOnSprintClose);
     }
@@ -1009,17 +1138,22 @@ exports.updateSprintConfig = async (req, res) => {
 
     const cycleDays = updatedAdmin.billingCycleDays || 10;
     const currentSprint = getCurrentSprint(cycleDays);
-    const availableSprints = getRecentSprints(cycleDays, 2);
+    const availableSprints = getRecentSprints(cycleDays, 3);
+    const availableSprintsGrouped = getRecentSprintsGrouped(cycleDays, 3);
 
     return res.status(200).json({
       success: true,
       message: "Billing cycle configuration updated successfully",
       data: {
         cycleDays,
+        sprintMode: updatedAdmin.sprintMode || "auto",
+        customSprintDurationDays: updatedAdmin.customSprintDurationDays || 10,
+        autoCloseOnSprintEnd: updatedAdmin.autoCloseOnSprintEnd || false,
         autoEmailOnSprintClose: updatedAdmin.autoEmailOnSprintClose,
         notifyZeroCollectionFarmers: updatedAdmin.notifyZeroCollectionFarmers,
         currentSprint,
         availableSprints,
+        availableSprintsGrouped,
       },
     });
   } catch (error) {
@@ -1105,6 +1239,16 @@ exports.processSprintBilling = async (req, res) => {
 
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
+
+    // Business Rule: Settlement / Closing cannot proceed before sprint has completed
+    const now = new Date();
+    if (now < end && !req.body.forceEarlySettle) {
+      const endFormatted = `${String(end.getDate()).padStart(2, "0")}-${String(end.getMonth() + 1).padStart(2, "0")}-${end.getFullYear()}`;
+      return res.status(400).json({
+        success: false,
+        message: `Settlement cannot proceed before the sprint has completed. This sprint span ends on ${endFormatted}. You can close and settle once the sprint duration completes.`,
+      });
+    }
 
     // Multi-tenant safe: Only query farmers and milk entries belonging to this admin
     const [activeFarmers, milkEntries] = await Promise.all([

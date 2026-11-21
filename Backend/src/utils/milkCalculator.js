@@ -257,15 +257,26 @@ function getSprintsForMonth(year, monthIndex, cycleDays = 10) {
     const endStr = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const fullMonthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
     const monthName = monthNames[monthIndex];
+    const fullMonthName = fullMonthNames[monthIndex];
 
     sprints.push({
       sprintIndex,
       sprintName: `Sprint ${sprintIndex} (${startDay} ${monthName} - ${endDay} ${monthName})`,
+      displayLabel: `Sprint ${sprintIndex} (${startDay}-${endDay} ${monthName})`,
       startDate: startStr,
       endDate: endStr,
       startDay,
       endDay,
+      monthShort: monthName,
+      monthFull: fullMonthName,
+      monthYear: `${fullMonthName} ${year}`,
+      year,
+      monthIndex,
       cycleDays: cDays,
       daysCount: endDay - startDay + 1,
     });
@@ -295,21 +306,26 @@ function getCurrentSprint(cycleDays = 10, date = new Date()) {
   return found || sprints[sprints.length - 1];
 }
 
+const MONTH_THEMES = ["purple", "sky", "emerald", "amber", "rose", "indigo"];
+
 /**
- * Get recent sprints across current and previous months for dropdown/pill selectors.
+ * Get recent sprints across current and previous months for dropdown/pill selectors,
+ * enriched with month-wise visual metadata and color combinations.
  *
  * @param {number} [cycleDays=10]
- * @param {number} [monthsBack=2]
+ * @param {number} [monthsBack=3]
  * @returns {Array<Object>}
  */
-function getRecentSprints(cycleDays = 10, monthsBack = 2) {
+function getRecentSprints(cycleDays = 10, monthsBack = 3) {
   const now = new Date();
   const currentSprint = getCurrentSprint(cycleDays, now);
   const result = [];
 
   for (let m = 0; m <= monthsBack; m++) {
     const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const colorScheme = MONTH_THEMES[m % MONTH_THEMES.length];
     const sprints = getSprintsForMonth(d.getFullYear(), d.getMonth(), cycleDays);
+
     // Reverse sprints within the month so latest sprint is first
     for (let i = sprints.length - 1; i >= 0; i--) {
       const s = sprints[i];
@@ -317,11 +333,40 @@ function getRecentSprints(cycleDays = 10, monthsBack = 2) {
       result.push({
         ...s,
         isCurrent,
+        monthOffset: m,
+        colorScheme,
       });
     }
   }
 
   return result;
+}
+
+/**
+ * Get recent sprints grouped cleanly by month with visual color styling.
+ */
+function getRecentSprintsGrouped(cycleDays = 10, monthsBack = 3) {
+  const flat = getRecentSprints(cycleDays, monthsBack);
+  const groups = [];
+  const map = new Map();
+
+  flat.forEach((s) => {
+    if (!map.has(s.monthYear)) {
+      const group = {
+        monthYear: s.monthYear,
+        monthShort: s.monthShort,
+        year: s.year,
+        colorScheme: s.colorScheme,
+        isCurrentMonth: s.monthOffset === 0,
+        sprints: [],
+      };
+      map.set(s.monthYear, group);
+      groups.push(group);
+    }
+    map.get(s.monthYear).sprints.push(s);
+  });
+
+  return groups;
 }
 
 module.exports = {
@@ -331,6 +376,7 @@ module.exports = {
   getSprintsForMonth,
   getCurrentSprint,
   getRecentSprints,
+  getRecentSprintsGrouped,
   calculateSnfFromDegree,
   calculateMilkRate,
   calculateMilkRatePerKg,

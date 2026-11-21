@@ -218,6 +218,16 @@ exports.createOrderFromBilling = async (req, res) => {
     }
 
     const { start, end, startDate: cycleStart, endDate: cycleEnd } = getDateRange(startDate, endDate);
+
+    // Business Rule: Settlement cannot proceed before the billing sprint has completed
+    const now = new Date();
+    if (now < end && !req.body.forceEarlySettle) {
+      const endFormatted = `${String(end.getDate()).padStart(2, "0")}-${String(end.getMonth() + 1).padStart(2, "0")}-${end.getFullYear()}`;
+      return res.status(400).json({
+        success: false,
+        message: `Settlement cannot proceed before the billing sprint has completed. Sprint ends on ${endFormatted}.`,
+      });
+    }
     const internalOrderId = generateInternalOrderId({
       startDate: cycleStart,
       endDate: cycleEnd,
@@ -330,6 +340,16 @@ exports.createManualPaymentIntent = async (req, res) => {
     }
 
     const { start, end, startDate: cycleStart, endDate: cycleEnd } = getDateRange(startDate, endDate);
+
+    // Business Rule: Settlement cannot proceed before the billing sprint has completed
+    const now = new Date();
+    if (now < end && !req.body.forceEarlySettle) {
+      const endFormatted = `${String(end.getDate()).padStart(2, "0")}-${String(end.getMonth() + 1).padStart(2, "0")}-${end.getFullYear()}`;
+      return res.status(400).json({
+        success: false,
+        message: `Settlement cannot proceed before the billing sprint has completed. Sprint ends on ${endFormatted}.`,
+      });
+    }
     const internalOrderId = generateInternalOrderId({
       startDate: cycleStart,
       endDate: cycleEnd,
@@ -431,6 +451,16 @@ exports.settleBillingPayment = async (req, res) => {
 
     const { start, end, startDate: cycleStart, endDate: cycleEnd } = getDateRange(startDate, endDate);
 
+    // Business Rule: Settlement cannot proceed before the billing sprint has completed
+    const now = new Date();
+    if (now < end && !req.body.forceEarlySettle) {
+      const endFormatted = `${String(end.getDate()).padStart(2, "0")}-${String(end.getMonth() + 1).padStart(2, "0")}-${end.getFullYear()}`;
+      return res.status(400).json({
+        success: false,
+        message: `Settlement cannot proceed before the billing sprint has completed. Sprint ends on ${endFormatted}.`,
+      });
+    }
+
     const [agg] = await MilkModel.aggregate([
       {
         $match: {
@@ -449,6 +479,18 @@ exports.settleBillingPayment = async (req, res) => {
           avgFat: { $avg: "$fat" },
           totalEntries: { $sum: 1 },
           categories: { $push: "$category" },
+          cowLiters: {
+            $sum: { $cond: [{ $eq: ["$category", "cow"] }, "$litter", 0] },
+          },
+          cowAmount: {
+            $sum: { $cond: [{ $eq: ["$category", "cow"] }, "$calculatedAmount", 0] },
+          },
+          buffaloLiters: {
+            $sum: { $cond: [{ $eq: ["$category", "buffalo"] }, "$litter", 0] },
+          },
+          buffaloAmount: {
+            $sum: { $cond: [{ $eq: ["$category", "buffalo"] }, "$calculatedAmount", 0] },
+          },
         },
       },
     ]);
@@ -456,6 +498,13 @@ exports.settleBillingPayment = async (req, res) => {
     if (!agg || agg.totalAmount <= 0) {
       return res.status(400).json({ message: "No unpaid entries found in selected date range" });
     }
+
+    const cowL = Number((agg.cowLiters || 0).toFixed(2));
+    const cowA = Number((agg.cowAmount || 0).toFixed(2));
+    const cowR = cowL > 0 ? Number((cowA / cowL).toFixed(2)) : 0;
+    const bufL = Number((agg.buffaloLiters || 0).toFixed(2));
+    const bufA = Number((agg.buffaloAmount || 0).toFixed(2));
+    const bufR = bufL > 0 ? Number((bufA / bufL).toFixed(2)) : 0;
 
     const amountInPaise = Math.round(Number(agg.totalAmount.toFixed(2)) * 100);
     let payment;
@@ -487,6 +536,12 @@ exports.settleBillingPayment = async (req, res) => {
               totalEntries: agg.totalEntries,
               categories: agg.categories || [],
               referenceId,
+              cowLiters: cowL,
+              cowAmount: cowA,
+              cowRate: cowR,
+              buffaloLiters: bufL,
+              buffaloAmount: bufA,
+              buffaloRate: bufR,
             },
           },
         },
@@ -517,6 +572,12 @@ exports.settleBillingPayment = async (req, res) => {
           totalEntries: agg.totalEntries,
           categories: agg.categories || [],
           referenceId,
+          cowLiters: cowL,
+          cowAmount: cowA,
+          cowRate: cowR,
+          buffaloLiters: bufL,
+          buffaloAmount: bufA,
+          buffaloRate: bufR,
         },
       }).save();
     }
@@ -722,7 +783,7 @@ exports.getPaymentHistory = async (req, res) => {
 
     const [payments, total] = await Promise.all([
       PaymentModel.find(filter)
-        .populate("farmerId", "name mobile email")
+        .populate("farmerId", "name mobile email farmerMemberId memberId village")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(pageSize)
@@ -746,7 +807,7 @@ exports.getPaymentHistory = async (req, res) => {
 exports.getSinglePayment = async (req, res) => {
   try {
     const payment = await PaymentModel.findOne({ _id: req.params.id, adminId: req.admin.id })
-      .populate("farmerId", "name mobile email");
+      .populate("farmerId", "name mobile email farmerMemberId memberId village");
 
     if (!payment) return res.status(404).json({ message: "Payment not found" });
     res.status(200).json({ success: true, payment });
