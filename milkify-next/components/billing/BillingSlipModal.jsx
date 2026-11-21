@@ -223,13 +223,20 @@ export default function BillingSlipModal({ slipData, isOpen, onClose, initialLan
     try {
       setPdfLoading(true);
       setShowLangPicker(false);
-      const url = `/billing/pdf/${farmer.id}?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&lang=${selectedLang}&status=${statusCategory}`;
+      const targetFarmerId = farmer?.id || farmer?._id;
+      if (!targetFarmerId) {
+        toast.error("Farmer ID missing for PDF download");
+        return;
+      }
+      const url = `/billing/pdf/${targetFarmerId}?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&lang=${selectedLang}&status=${statusCategory}`;
       const response = await api.get(url, { responseType: "blob" });
       const blob = new Blob([response.data], { type: "application/pdf" });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.setAttribute("download", `Thermal_Bill_${farmer.name}_${statusCategory}_${dateRange.startDate}.pdf`);
+      const startFormatted = formatIndianDate(dateRange?.startDate);
+      const endFormatted = formatIndianDate(dateRange?.endDate);
+      link.setAttribute("download", `Thermal_Bill_${farmer?.name || "Farmer"}_${statusCategory}_${startFormatted}_to_${endFormatted}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -248,8 +255,13 @@ export default function BillingSlipModal({ slipData, isOpen, onClose, initialLan
     try {
       setEmailLoading(true);
       setShowEmailPicker(false);
+      const targetFarmerId = farmer?.id || farmer?._id;
+      if (!targetFarmerId) {
+        toast.error("Farmer ID missing for email dispatch");
+        return;
+      }
       await api.post(
-        `/billing/email/${farmer.id}?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&lang=${selectedLang}&status=${statusCategory}`
+        `/billing/email/${targetFarmerId}?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&lang=${selectedLang}&status=${statusCategory}`
       );
       toast.success(`Thermal bill sent successfully to farmer's email!`);
     } catch (error) {

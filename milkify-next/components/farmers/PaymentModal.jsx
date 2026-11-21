@@ -13,7 +13,8 @@ import {
   Calendar, 
   History, 
   ReceiptIndianRupee,
-  Tag
+  Tag,
+  FileText
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 
@@ -25,6 +26,11 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
   const [paymentMode] = useState("cash");
   const [historyLoading, setHistoryLoading] = useState(false);
   const [settlementHistory, setSettlementHistory] = useState([]);
+
+  // Sprint Detailed Shift Records state
+  const [activeRightTab, setActiveRightTab] = useState("sprint_records"); // "sprint_records" | "history"
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+  const [breakdownData, setBreakdownData] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -47,6 +53,7 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
     };
   }, [isOpen, onClose, loading, paymentSuccess]);
 
+  // Fetch past clearance history
   useEffect(() => {
     const fetchHistory = async () => {
       if (!isOpen || !farmer?.farmerId) return;
@@ -65,6 +72,24 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
     };
     fetchHistory();
   }, [isOpen, farmer?.farmerId, paymentSuccess]);
+
+  // Fetch detailed shift entries for the selected sprint
+  useEffect(() => {
+    const fetchSprintBreakdown = async () => {
+      if (!isOpen || !farmer?.farmerId) return;
+      try {
+        setBreakdownLoading(true);
+        const query = `?startDate=${startDate}&endDate=${endDate}&paymentStatus=unpaid`;
+        const res = await api.get(`/billing/breakdown/${farmer.farmerId}${query}`);
+        setBreakdownData(res.data?.data || res.data);
+      } catch (err) {
+        console.error("Failed to load sprint breakdown in PaymentModal:", err);
+      } finally {
+        setBreakdownLoading(false);
+      }
+    };
+    fetchSprintBreakdown();
+  }, [isOpen, farmer?.farmerId, startDate, endDate]);
 
   const handlePayment = async () => {
     try {
@@ -91,12 +116,25 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
 
   if (!isOpen || !farmer || !mounted) return null;
 
+  const farmerCode = farmer.farmerMemberId || farmer.memberId || "#" + String(farmer.farmerId).slice(-6).toUpperCase();
+  const entries = breakdownData?.entries || [];
+  const cowEntries = entries.filter((e) => e.category === "cow");
+  const buffaloEntries = entries.filter((e) => e.category === "buffalo");
+
+  const cowLiters = cowEntries.reduce((s, e) => s + Number(e.litter || 0), 0);
+  const cowAmount = cowEntries.reduce((s, e) => s + Number(e.calculatedAmount || 0), 0);
+  const cowRate = cowLiters > 0 ? cowAmount / cowLiters : 0;
+
+  const buffaloLiters = buffaloEntries.reduce((s, e) => s + Number(e.litter || 0), 0);
+  const buffaloAmount = buffaloEntries.reduce((s, e) => s + Number(e.calculatedAmount || 0), 0);
+  const buffaloRate = buffaloLiters > 0 ? buffaloAmount / buffaloLiters : 0;
+
   // ── Render Directly to document.body via Portal ─────────────────────────
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-in fade-in duration-200">
       
-      {/* ── Main Compact Interactive Cockpit (Fits In One View Without Scrolling) ── */}
-      <div className="w-full max-w-5xl max-h-[94vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+      {/* ── Main Compact Interactive Cockpit ── */}
+      <div className="w-full max-w-6xl max-h-[95vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         
         {/* ── Compact Header Bar ─────────────────────────────────────────── */}
         <header className="bg-slate-50/90 dark:bg-slate-850/90 px-5 sm:px-7 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
@@ -110,7 +148,7 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
                   Cash Clearance Desk
                 </h3>
                 <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-mono font-bold border border-emerald-300 dark:border-emerald-800">
-                  {farmer.farmerMemberId || "#" + String(farmer.farmerId).slice(-6).toUpperCase()}
+                  {farmerCode}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -120,9 +158,9 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/60 dark:bg-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-              <Calendar className="h-3 w-3 text-slate-400" />
-              {startDate ? formatIndianDate(startDate) : "Cycle Start"} → {endDate ? formatIndianDate(endDate) : "Today"}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/60 dark:bg-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+              <Calendar className="h-3 w-3 text-purple-600" />
+              <span>Sprint Window: {startDate ? formatIndianDate(startDate) : "Start"} → {endDate ? formatIndianDate(endDate) : "End"}</span>
             </span>
 
             <button
@@ -152,8 +190,8 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
               
-              {/* LEFT COLUMN: Hero Amount, Quick Presets & Farmer Info (7 cols) ─ */}
-              <div className="lg:col-span-7 space-y-4 flex flex-col justify-between">
+              {/* LEFT COLUMN: Hero Amount, Presets & Farmer Info (5 cols) ─ */}
+              <div className="lg:col-span-5 space-y-4 flex flex-col justify-between">
                 
                 {/* Hero Payable Amount Box */}
                 <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-blue-500/10 dark:from-emerald-950/40 dark:to-slate-800 border border-emerald-200/80 dark:border-emerald-800/60">
@@ -172,7 +210,7 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
                         {Number(farmer.totalLiters || 0).toFixed(2)} L
                       </span>
                       <span className="text-[10px] text-slate-400 block mt-0.5 font-semibold">
-                        {farmer.totalEntries || 0} Collections
+                        {farmer.totalEntries || entries.length || 0} Collections
                       </span>
                     </div>
                   </div>
@@ -197,6 +235,31 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
                     <strong className="text-emerald-600 dark:text-emerald-400 font-extrabold truncate block">
                       Cash Desk
                     </strong>
+                  </div>
+                </div>
+
+                {/* Cow & Buffalo Quick Snapshot */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/40">
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase text-emerald-700 dark:text-emerald-400">
+                      <span>🐄 Cow Milk</span>
+                      <span>{cowRate > 0 ? `₹${cowRate.toFixed(1)}/L` : "--"}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1">
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-100">{cowLiters.toFixed(1)} L</span>
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{formatRupees(cowAmount)}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/40">
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase text-blue-700 dark:text-blue-400">
+                      <span>🐃 Buffalo Milk</span>
+                      <span>{buffaloRate > 0 ? `₹${buffaloRate.toFixed(1)}/L` : "--"}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between mt-1">
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-100">{buffaloLiters.toFixed(1)} L</span>
+                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{formatRupees(buffaloAmount)}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -239,7 +302,7 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
                   />
                 </div>
 
-                {/* Quick Settle Action Block (Right here in Left Column) */}
+                {/* Quick Settle Action Block */}
                 <div className="pt-1">
                   <Button
                     onClick={handlePayment}
@@ -260,61 +323,150 @@ export default function PaymentModal({ farmer, isOpen, onClose, onSuccess, start
 
               </div>
 
-              {/* RIGHT COLUMN: Farmer Settlement Ledger History (5 cols) ─────── */}
-              <div className="lg:col-span-5 bg-slate-50/60 dark:bg-slate-800/40 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-4 flex flex-col justify-between">
+              {/* RIGHT COLUMN: Detailed Records of Selected Sprint & History Tabs (7 cols) ─────── */}
+              <div className="lg:col-span-7 bg-slate-50/60 dark:bg-slate-800/40 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-4 flex flex-col justify-between">
                 <div>
+                  {/* Segmented Tab Headers */}
                   <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-2">
-                      <History className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                      <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                        Past Clearance History
-                      </span>
+                    <div className="flex items-center gap-1.5 bg-slate-200/70 dark:bg-slate-800 p-1 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => setActiveRightTab("sprint_records")}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          activeRightTab === "sprint_records"
+                            ? "bg-purple-600 text-white shadow-sm"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                        }`}
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        <span>Sprint Records ({entries.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveRightTab("history")}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                          activeRightTab === "history"
+                            ? "bg-purple-600 text-white shadow-sm"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                        }`}
+                      >
+                        <History className="h-3.5 w-3.5" />
+                        <span>Past Settlements ({settlementHistory.length})</span>
+                      </button>
                     </div>
-                    {historyLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
-                    ) : (
-                      <span className="text-[10px] font-bold text-slate-500 bg-slate-200/60 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-                        {settlementHistory.length} Settled
-                      </span>
-                    )}
+
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {activeRightTab === "sprint_records" ? "Unsettled Sprint Shifts" : "Past Cleared Vouchers"}
+                    </div>
                   </div>
 
-                  {/* Scrollable History List (Internal scroll so rest of page never scrolls!) */}
-                  {settlementHistory.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-center space-y-1.5">
-                      <ReceiptIndianRupee className="h-8 w-8 opacity-25" />
-                      <p className="text-xs font-bold text-slate-500">No prior settlements found</p>
-                      <p className="text-[10px] text-slate-400">First time cycle settlement for this farmer.</p>
+                  {/* Tab 1: Detailed Daily Shift Records of this Sprint */}
+                  {activeRightTab === "sprint_records" && (
+                    <div>
+                      {breakdownLoading ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                          <Loader2 className="h-6 w-6 animate-spin text-purple-600 mb-2" />
+                          <p className="text-xs font-bold">Loading shift records...</p>
+                        </div>
+                      ) : entries.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-14 text-slate-400 text-center space-y-1.5">
+                          <ReceiptIndianRupee className="h-8 w-8 opacity-25" />
+                          <p className="text-xs font-bold text-slate-500">No shift entries found for this sprint window</p>
+                          <p className="text-[10px] text-slate-400">{startDate} to {endDate}</p>
+                        </div>
+                      ) : (
+                        <div className="max-h-[320px] overflow-y-auto pr-1 scrollbar-thin border border-slate-200/60 dark:border-slate-700/60 rounded-xl overflow-hidden">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-slate-100/80 dark:bg-slate-800/80 text-[10px] font-black uppercase text-slate-500 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
+                              <tr>
+                                <th className="py-2 px-2.5">Date</th>
+                                <th className="py-2 px-2">Shift</th>
+                                <th className="py-2 px-2">Animal</th>
+                                <th className="py-2 px-2 text-right">Liters</th>
+                                <th className="py-2 px-2 text-right">FAT%</th>
+                                <th className="py-2 px-2 text-right">SNF%</th>
+                                <th className="py-2 px-2 text-right">Rate</th>
+                                <th className="py-2 px-2.5 text-right">Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-850">
+                              {entries.map((e) => (
+                                <tr key={e._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                  <td className="py-1.5 px-2.5 font-semibold text-slate-800 dark:text-slate-200">
+                                    {formatIndianDate(e.createdAt || e.date)}
+                                  </td>
+                                  <td className="py-1.5 px-2 capitalize">
+                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${e.shift === "morning" ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" : "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300"}`}>
+                                      {e.shift}
+                                    </span>
+                                  </td>
+                                  <td className="py-1.5 px-2">
+                                    <span className="text-[10px] font-bold">
+                                      {e.category === "cow" ? "🐄 Cow" : "🐃 Buffalo"}
+                                    </span>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-black text-slate-900 dark:text-white">
+                                    {Number(e.litter || 0).toFixed(2)} L
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono">{Number(e.fat || 0).toFixed(1)}%</td>
+                                  <td className="py-1.5 px-2 text-right font-mono">{Number(e.snf || 0).toFixed(1)}%</td>
+                                  <td className="py-1.5 px-2 text-right font-mono">₹{Number(e.rate || 0).toFixed(1)}</td>
+                                  <td className="py-1.5 px-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
+                                    {formatRupees(e.calculatedAmount || 0)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="max-h-[280px] overflow-y-auto space-y-2 pr-1 scrollbar-thin">
-                      {settlementHistory.map((p) => (
-                        <div
-                          key={p._id}
-                          className="p-2.5 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/70 dark:border-slate-700 shadow-sm text-xs flex items-center justify-between"
-                        >
-                          <div className="space-y-0.5">
-                            <div className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                              <span>{formatRupees((p.amount || 0) / 100)}</span>
-                              <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold">
-                                ({p.notes?.referenceId || "Cash"})
+                  )}
+
+                  {/* Tab 2: Past Clearance History */}
+                  {activeRightTab === "history" && (
+                    <div>
+                      {historyLoading ? (
+                        <div className="flex items-center justify-center py-16 text-slate-400">
+                          <Loader2 className="h-6 w-6 animate-spin text-purple-600 mb-2" />
+                        </div>
+                      ) : settlementHistory.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-14 text-slate-400 text-center space-y-1.5">
+                          <ReceiptIndianRupee className="h-8 w-8 opacity-25" />
+                          <p className="text-xs font-bold text-slate-500">No prior settlements found</p>
+                          <p className="text-[10px] text-slate-400">First time cycle settlement for this farmer.</p>
+                        </div>
+                      ) : (
+                        <div className="max-h-[320px] overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+                          {settlementHistory.map((p) => (
+                            <div
+                              key={p._id}
+                              className="p-2.5 rounded-xl bg-white dark:bg-slate-850 border border-slate-200/70 dark:border-slate-700 shadow-sm text-xs flex items-center justify-between"
+                            >
+                              <div className="space-y-0.5">
+                                <div className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                  <span>{formatRupees((p.amount || 0) / 100)}</span>
+                                  <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold">
+                                    ({p.notes?.referenceId || "Cash"})
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-slate-400">
+                                  {formatIndianDate(p.billingStartDate || p.notes?.cycleStart || "")} → {formatIndianDate(p.billingEndDate || p.notes?.cycleEnd || "")}
+                                </p>
+                              </div>
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10px] font-black uppercase tracking-wide">
+                                Paid
                               </span>
                             </div>
-                            <p className="text-[10px] text-slate-400">
-                              {p.billingStartDate || p.notes?.cycleStart || "-"} → {p.billingEndDate || p.notes?.cycleEnd || "-"}
-                            </p>
-                          </div>
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10px] font-black uppercase tracking-wide">
-                            Paid
-                          </span>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
                 </div>
 
                 <div className="pt-2 text-[10px] text-slate-400 text-center font-medium border-t border-slate-200/50 dark:border-slate-700/50 mt-3">
-                  100% digital audit sync with MongoDB Decimal128 precision.
+                  Verified Cooperative Dairy Clearance · Precision Decimal128 Audit
                 </div>
               </div>
 

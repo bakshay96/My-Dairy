@@ -1,9 +1,23 @@
 const { MilkModel } = require("./milk.model");
-const { getBillingCycleDate, getBillingCycleEnd } = require("../utils/milkCalculator");
+const {
+  getBillingCycleDate,
+  getBillingCycleEnd,
+  getSprintsForMonth,
+  getCurrentSprint,
+  getRecentSprints,
+  getRecentSprintsGrouped,
+} = require("../utils/milkCalculator");
 const mongoose = require("mongoose");
 const { farmerModel } = require("../Farmer/farmer.model");
+const { AdminModel } = require("../Admin/admin.model");
+const { SprintBillingModel } = require("./sprintBilling.model");
 const { generateBillingPdf, generateBillingPdfBuffer } = require("../utils/pdfGenerator");
-const { billingEmailHtml, billingEmailText } = require("../utils/billingEmailTemplate");
+const {
+  billingEmailHtml,
+  billingEmailText,
+  zeroCollectionEmailHtml,
+  zeroCollectionEmailText,
+} = require("../utils/billingEmailTemplate");
 const { transporter } = require("../connection/mailConnection");
 
 function getDefaultLastTenDayRange() {
@@ -279,6 +293,18 @@ exports.getTenDayBilling = async (req, res) => {
           totalEntries: { $sum: 1 },
           lastEntry:    { $max: "$createdAt" },
           categories:   { $addToSet: "$category" },
+          cowLiters: {
+            $sum: { $cond: [{ $eq: ["$category", "cow"] }, "$litter", 0] },
+          },
+          cowAmount: {
+            $sum: { $cond: [{ $eq: ["$category", "cow"] }, "$calculatedAmount", 0] },
+          },
+          buffaloLiters: {
+            $sum: { $cond: [{ $eq: ["$category", "buffalo"] }, "$litter", 0] },
+          },
+          buffaloAmount: {
+            $sum: { $cond: [{ $eq: ["$category", "buffalo"] }, "$calculatedAmount", 0] },
+          },
         },
       },
       // ── Stage 3: Join Farmer model ────────────────────────────────────────
@@ -302,6 +328,7 @@ exports.getTenDayBilling = async (req, res) => {
         $project: {
           _id:          0,
           farmerId:     "$_id",
+          farmerMemberId: { $ifNull: ["$farmerInfo.farmerMemberId", { $ifNull: ["$farmerInfo.memberId", ""] }] },
           farmerName:   { $ifNull: ["$farmerInfo.name",   "Unknown Farmer"] },
           farmerMobile: { $ifNull: ["$farmerInfo.mobile", ""] },
           village:      { $ifNull: ["$farmerInfo.village",""] },
@@ -312,6 +339,24 @@ exports.getTenDayBilling = async (req, res) => {
           totalEntries: 1,
           lastEntry:    1,
           categories:   1,
+          cowLiters:    { $round: [{ $ifNull: ["$cowLiters", 0] }, 2] },
+          cowAmount:    { $round: [{ $ifNull: ["$cowAmount", 0] }, 2] },
+          cowRate: {
+            $cond: [
+              { $gt: ["$cowLiters", 0] },
+              { $round: [{ $divide: ["$cowAmount", "$cowLiters"] }, 2] },
+              0,
+            ],
+          },
+          buffaloLiters: { $round: [{ $ifNull: ["$buffaloLiters", 0] }, 2] },
+          buffaloAmount: { $round: [{ $ifNull: ["$buffaloAmount", 0] }, 2] },
+          buffaloRate: {
+            $cond: [
+              { $gt: ["$buffaloLiters", 0] },
+              { $round: [{ $divide: ["$buffaloAmount", "$buffaloLiters"] }, 2] },
+              0,
+            ],
+          },
         },
       },
       // ── Stage 6: Sort — highest earners first ────────────────────────────
@@ -321,7 +366,7 @@ exports.getTenDayBilling = async (req, res) => {
     const farmersWithEntries = await MilkModel.aggregate(pipeline);
     const activeFarmers = await farmerModel
       .find({ adminId, status: "active" })
-      .select("_id name mobile village status")
+      .select("_id name mobile village farmerMemberId memberId status")
       .lean();
 
     const billingMap = new Map(
@@ -333,6 +378,7 @@ exports.getTenDayBilling = async (req, res) => {
       if (existing) return existing;
       return {
         farmerId: farmer._id,
+        farmerMemberId: farmer.farmerMemberId || farmer.memberId || "",
         farmerName: farmer.name,
         farmerMobile: farmer.mobile || "",
         village: farmer.village || "",
@@ -343,6 +389,12 @@ exports.getTenDayBilling = async (req, res) => {
         totalEntries: 0,
         lastEntry: null,
         categories: [],
+        cowLiters: 0,
+        cowAmount: 0,
+        cowRate: 0,
+        buffaloLiters: 0,
+        buffaloAmount: 0,
+        buffaloRate: 0,
       };
     });
     farmers.sort((a, b) => (b.totalAmount || 0) - (a.totalAmount || 0));
@@ -828,7 +880,9 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid farmer ID" });
     }
 
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, paymentStatus, paymentId } = req.query;
+
+    const farmer = await farmerModel.findById(farmerId).select("name mobile village farmerMemberId memberId").lean();
 
     let windowStart, windowEnd;
     const now = new Date();
@@ -847,11 +901,31 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
       windowEnd = now;
     }
 
-    const entries = await MilkModel.find({
+    // Build precise query to avoid mixing settled and unsettled records
+    const query = {
       adminId,
       farmerId: new mongoose.Types.ObjectId(farmerId),
-      createdAt: { $gte: windowStart, $lte: windowEnd }
-    }).sort({ createdAt: -1 });
+    };
+
+    if (paymentId && mongoose.Types.ObjectId.isValid(paymentId)) {
+      // If linked to a specific payment, match by paymentId or (paymentStatus: 'paid' within date window)
+      query.$or = [
+        { paymentId: new mongoose.Types.ObjectId(paymentId) },
+        { paymentStatus: "paid", createdAt: { $gte: windowStart, $lte: windowEnd } }
+      ];
+    } else {
+      if (startDate && endDate) {
+        query.createdAt = { $gte: windowStart, $lte: windowEnd };
+      }
+      if (paymentStatus === "paid") {
+        query.paymentStatus = "paid";
+      } else if (paymentStatus === "unpaid") {
+        query.paymentStatus = { $ne: "paid" };
+        query.isActive = { $ne: false };
+      }
+    }
+
+    const entries = await MilkModel.find(query).sort({ createdAt: -1 });
 
     const totals = entries.reduce(
       (acc, entry) => {
@@ -864,6 +938,17 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
         acc.totalAmount += amount;
         acc.totalFat += fat;
         acc.totalSnf += snf;
+
+        if (entry.category === "cow") {
+          acc.cowLiters += liters;
+          acc.cowAmount += amount;
+          acc.cowEntries += 1;
+        } else if (entry.category === "buffalo") {
+          acc.buffaloLiters += liters;
+          acc.buffaloAmount += amount;
+          acc.buffaloEntries += 1;
+        }
+
         if (entry.paymentStatus === "paid") {
           acc.paidEntries += 1;
           acc.paidAmount += amount;
@@ -887,6 +972,12 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
         unpaidLiters: 0,
         totalFat: 0,
         totalSnf: 0,
+        cowLiters: 0,
+        cowAmount: 0,
+        cowEntries: 0,
+        buffaloLiters: 0,
+        buffaloAmount: 0,
+        buffaloEntries: 0,
       }
     );
 
@@ -894,10 +985,21 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
     const avgFat = totals.totalFat / count;
     const avgSnf = totals.totalSnf / count;
     const ratePerLiter = totals.totalLiters > 0 ? totals.totalAmount / totals.totalLiters : 0;
+    const cowRate = totals.cowLiters > 0 ? totals.cowAmount / totals.cowLiters : 0;
+    const buffaloRate = totals.buffaloLiters > 0 ? totals.buffaloAmount / totals.buffaloLiters : 0;
+
+    const farmerMemberId = farmer?.farmerMemberId || farmer?.memberId || "#" + String(farmerId).slice(-6).toUpperCase();
 
     return res.status(200).json({
       success: true,
       data: {
+        farmerId,
+        farmerMemberId,
+        farmerName: farmer?.name || "Farmer",
+        farmerMobile: farmer?.mobile || "",
+        village: farmer?.village || "",
+        windowStart: startDate || windowStart.toISOString().split("T")[0],
+        windowEnd: endDate || windowEnd.toISOString().split("T")[0],
         entries,
         summary: {
           totalEntries: totals.totalEntries,
@@ -912,6 +1014,14 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
           avgFat: Number(avgFat.toFixed(2)),
           avgSnf: Number(avgSnf.toFixed(2)),
           ratePerLiter: Number(ratePerLiter.toFixed(2)),
+          cowLiters: Number(totals.cowLiters.toFixed(2)),
+          cowAmount: Number(totals.cowAmount.toFixed(2)),
+          cowRate: Number(cowRate.toFixed(2)),
+          cowEntries: totals.cowEntries,
+          buffaloLiters: Number(totals.buffaloLiters.toFixed(2)),
+          buffaloAmount: Number(totals.buffaloAmount.toFixed(2)),
+          buffaloRate: Number(buffaloRate.toFixed(2)),
+          buffaloEntries: totals.buffaloEntries,
         },
       }
     });
@@ -923,5 +1033,520 @@ exports.getFarmerBillingBreakdown = async (req, res) => {
       message: "Server error getting billing breakdown",
       error: error.message,
     });
+  }
+};
+
+// ─── SPRINT BILLING & CONFIGURATION ──────────────────────────────────────────
+
+/**
+ * GET /api/billing/sprint/config
+ * Retrieves Admin's billing cycle configuration, active sprint, and available sprints.
+ */
+exports.getSprintConfig = async (req, res) => {
+  try {
+    const adminId = req.admin._id || req.admin.id;
+    const admin = await AdminModel.findById(adminId).lean();
+
+    const cycleDays = admin?.billingCycleDays || 10;
+    const sprintMode = admin?.sprintMode || "auto";
+    const customSprintDurationDays = admin?.customSprintDurationDays || 10;
+    const autoCloseOnSprintEnd = admin?.autoCloseOnSprintEnd || false;
+    const autoEmailOnSprintClose = admin?.autoEmailOnSprintClose !== false;
+    const notifyZeroCollectionFarmers = admin?.notifyZeroCollectionFarmers !== false;
+
+    const currentSprint = getCurrentSprint(cycleDays);
+    const availableSprints = getRecentSprints(cycleDays, 3);
+    const availableSprintsGrouped = getRecentSprintsGrouped(cycleDays, 3);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        cycleDays,
+        sprintMode,
+        customSprintDurationDays,
+        autoCloseOnSprintEnd,
+        autoEmailOnSprintClose,
+        notifyZeroCollectionFarmers,
+        currentSprint,
+        availableSprints,
+        availableSprintsGrouped,
+      },
+    });
+  } catch (error) {
+    console.error("[SprintBilling] getSprintConfig error:", error);
+    return res.status(500).json({ success: false, message: "Error fetching sprint config", error: error.message });
+  }
+};
+
+/**
+ * PUT /api/billing/sprint/config
+ * Updates Admin's billing cycle preferences (auto vs custom, cycle days, auto-close toggle).
+ */
+exports.updateSprintConfig = async (req, res) => {
+  try {
+    const adminId = req.admin._id || req.admin.id;
+    const {
+      billingCycleDays,
+      sprintMode,
+      customSprintDurationDays,
+      autoCloseOnSprintEnd,
+      autoEmailOnSprintClose,
+      notifyZeroCollectionFarmers,
+    } = req.body;
+
+    const update = {};
+    if (billingCycleDays !== undefined) {
+      const parsedDays = Number(billingCycleDays);
+      if (![5, 7, 10, 15, 20, 30].includes(parsedDays)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid billingCycleDays. Allowed values are 5, 7, 10, 15, 20, or 30 days.",
+        });
+      }
+      update.billingCycleDays = parsedDays;
+    }
+
+    if (sprintMode !== undefined) {
+      if (!["auto", "custom"].includes(sprintMode)) {
+        return res.status(400).json({ success: false, message: "Invalid sprintMode. Must be 'auto' or 'custom'." });
+      }
+      update.sprintMode = sprintMode;
+    }
+
+    if (customSprintDurationDays !== undefined) {
+      const d = Number(customSprintDurationDays);
+      if (d > 0 && d <= 90) {
+        update.customSprintDurationDays = d;
+      }
+    }
+
+    if (autoCloseOnSprintEnd !== undefined) {
+      update.autoCloseOnSprintEnd = Boolean(autoCloseOnSprintEnd);
+    }
+    if (autoEmailOnSprintClose !== undefined) {
+      update.autoEmailOnSprintClose = Boolean(autoEmailOnSprintClose);
+    }
+    if (notifyZeroCollectionFarmers !== undefined) {
+      update.notifyZeroCollectionFarmers = Boolean(notifyZeroCollectionFarmers);
+    }
+
+    const updatedAdmin = await AdminModel.findByIdAndUpdate(
+      adminId,
+      { $set: update },
+      { new: true }
+    ).lean();
+
+    const cycleDays = updatedAdmin.billingCycleDays || 10;
+    const currentSprint = getCurrentSprint(cycleDays);
+    const availableSprints = getRecentSprints(cycleDays, 3);
+    const availableSprintsGrouped = getRecentSprintsGrouped(cycleDays, 3);
+
+    return res.status(200).json({
+      success: true,
+      message: "Billing cycle configuration updated successfully",
+      data: {
+        cycleDays,
+        sprintMode: updatedAdmin.sprintMode || "auto",
+        customSprintDurationDays: updatedAdmin.customSprintDurationDays || 10,
+        autoCloseOnSprintEnd: updatedAdmin.autoCloseOnSprintEnd || false,
+        autoEmailOnSprintClose: updatedAdmin.autoEmailOnSprintClose,
+        notifyZeroCollectionFarmers: updatedAdmin.notifyZeroCollectionFarmers,
+        currentSprint,
+        availableSprints,
+        availableSprintsGrouped,
+      },
+    });
+  } catch (error) {
+    console.error("[SprintBilling] updateSprintConfig error:", error);
+    return res.status(500).json({ success: false, message: "Error updating sprint config", error: error.message });
+  }
+};
+
+/**
+ * GET /api/billing/sprint/history
+ * Lists all completed or processing sprint billing runs for this admin.
+ */
+exports.getSprintHistory = async (req, res) => {
+  try {
+    const adminId = new mongoose.Types.ObjectId(req.admin._id || req.admin.id);
+    const sprints = await SprintBillingModel.find({ adminId })
+      .sort({ createdAt: -1 })
+      .select("-farmerSummaries.entries")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: { sprints },
+    });
+  } catch (error) {
+    console.error("[SprintBilling] getSprintHistory error:", error);
+    return res.status(500).json({ success: false, message: "Error fetching sprint history", error: error.message });
+  }
+};
+
+/**
+ * GET /api/billing/sprint/details/:sprintId
+ * Detailed breakdown of a specific sprint run, including farmer-by-farmer ledger.
+ */
+exports.getSprintDetails = async (req, res) => {
+  try {
+    const adminId = new mongoose.Types.ObjectId(req.admin._id || req.admin.id);
+    const { sprintId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(sprintId)) {
+      return res.status(400).json({ success: false, message: "Invalid sprint ID" });
+    }
+
+    const sprint = await SprintBillingModel.findOne({ _id: sprintId, adminId }).lean();
+    if (!sprint) {
+      return res.status(404).json({ success: false, message: "Sprint billing record not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: { sprint },
+    });
+  } catch (error) {
+    console.error("[SprintBilling] getSprintDetails error:", error);
+    return res.status(500).json({ success: false, message: "Error fetching sprint details", error: error.message });
+  }
+};
+
+/**
+ * POST /api/billing/sprint/close-and-dispatch
+ * Completes a sprint, calculates billing for all farmers, records historical snapshot,
+ * and asynchronously delivers 80mm thermal PDF statements (or zero-collection notices)
+ * with robust load management and email rate throttling.
+ */
+exports.processSprintBilling = async (req, res) => {
+  try {
+    const adminId = new mongoose.Types.ObjectId(req.admin._id || req.admin.id);
+    const admin = await AdminModel.findById(adminId).lean();
+
+    if (!admin) {
+      return res.status(404).json({ success: false, message: "Admin account not found" });
+    }
+
+    const cycleDays = Number(req.body.cycleDays) || admin.billingCycleDays || 10;
+    const defaultSprint = getCurrentSprint(cycleDays);
+
+    const startDate = req.body.startDate || defaultSprint.startDate;
+    const endDate   = req.body.endDate   || defaultSprint.endDate;
+    const sprintName = req.body.sprintName || `Sprint (${startDate} to ${endDate})`;
+
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    // Business Rule: Settlement / Closing cannot proceed before sprint has completed
+    const now = new Date();
+    if (now < end && !req.body.forceEarlySettle) {
+      const endFormatted = `${String(end.getDate()).padStart(2, "0")}-${String(end.getMonth() + 1).padStart(2, "0")}-${end.getFullYear()}`;
+      return res.status(400).json({
+        success: false,
+        message: `Settlement cannot proceed before the sprint has completed. This sprint span ends on ${endFormatted}. You can close and settle once the sprint duration completes.`,
+      });
+    }
+
+    // Multi-tenant safe: Only query farmers and milk entries belonging to this admin
+    const [activeFarmers, milkEntries] = await Promise.all([
+      farmerModel.find({ adminId, status: { $ne: "pause" } }).lean(),
+      MilkModel.find({
+        adminId,
+        createdAt: { $gte: start, $lte: end },
+        isActive: { $ne: false },
+      })
+        .select("farmerId createdAt shift category litter fat snf calculatedAmount paymentStatus rate")
+        .sort({ createdAt: 1 })
+        .lean(),
+    ]);
+
+    if (!activeFarmers.length) {
+      return res.status(400).json({
+        success: false,
+        message: "No active farmers found in your dairy cooperative.",
+      });
+    }
+
+    // Group entries by farmerId
+    const entriesByFarmer = new Map();
+    milkEntries.forEach((entry) => {
+      const fId = String(entry.farmerId);
+      if (!entriesByFarmer.has(fId)) {
+        entriesByFarmer.set(fId, []);
+      }
+      entriesByFarmer.get(fId).push(entry);
+    });
+
+    let sprintTotalLiters = 0;
+    let sprintTotalAmount = 0;
+    let sprintTotalFat = 0;
+    let sprintTotalSnf = 0;
+    let activeFarmerCount = 0;
+    let zeroFarmerCount = 0;
+
+    const farmerSummaries = activeFarmers.map((farmer) => {
+      const fId = String(farmer._id);
+      const entries = entriesByFarmer.get(fId) || [];
+      const hasCollection = entries.length > 0;
+
+      let totalLiters = 0;
+      let totalAmount = 0;
+      let paidAmount = 0;
+      let unpaidAmount = 0;
+      let totalFat = 0;
+      let totalSnf = 0;
+
+      entries.forEach((e) => {
+        const l = Number(e.litter || 0);
+        const a = Number(e.calculatedAmount || 0);
+        totalLiters += l;
+        totalAmount += a;
+        totalFat += Number(e.fat || 0);
+        totalSnf += Number(e.snf || 0);
+
+        if (e.paymentStatus === "paid") {
+          paidAmount += a;
+        } else {
+          unpaidAmount += a;
+        }
+      });
+
+      const count = entries.length || 1;
+      const avgFat = hasCollection ? parseFloat((totalFat / count).toFixed(2)) : 0;
+      const avgSnf = hasCollection ? parseFloat((totalSnf / count).toFixed(2)) : 0;
+
+      if (hasCollection) {
+        activeFarmerCount++;
+        sprintTotalLiters += totalLiters;
+        sprintTotalAmount += totalAmount;
+        sprintTotalFat += avgFat;
+        sprintTotalSnf += avgSnf;
+      } else {
+        zeroFarmerCount++;
+      }
+
+      return {
+        farmerId: farmer._id,
+        farmerName: farmer.name,
+        farmerMobile: farmer.mobile || "",
+        farmerEmail: farmer.email || "",
+        memberId: farmer.memberId || "",
+        village: farmer.village || admin.village || "",
+        totalEntries: entries.length,
+        totalLiters: parseFloat(totalLiters.toFixed(3)),
+        totalAmount: parseFloat(totalAmount.toFixed(2)),
+        paidAmount: parseFloat(paidAmount.toFixed(2)),
+        unpaidAmount: parseFloat(unpaidAmount.toFixed(2)),
+        avgFat,
+        avgSnf,
+        hasCollection,
+        emailStatus: "pending",
+        emailError: "",
+        entries, // used in worker; stripped from final saved record
+      };
+    });
+
+    // Create persistent Sprint Billing record
+    const sprintRecord = await SprintBillingModel.create({
+      adminId,
+      sprintName,
+      cycleDays,
+      startDate,
+      endDate,
+      status: "processing",
+      totalFarmers: activeFarmers.length,
+      activeFarmers: activeFarmerCount,
+      zeroCollectionFarmers: zeroFarmerCount,
+      totalLiters: parseFloat(sprintTotalLiters.toFixed(3)),
+      totalAmount: parseFloat(sprintTotalAmount.toFixed(2)),
+      avgFat: activeFarmerCount > 0 ? parseFloat((sprintTotalFat / activeFarmerCount).toFixed(2)) : 0,
+      avgSnf: activeFarmerCount > 0 ? parseFloat((sprintTotalSnf / activeFarmerCount).toFixed(2)) : 0,
+      emailsSent: 0,
+      emailsFailed: 0,
+      farmerSummaries: farmerSummaries.map(({ entries, ...cleanSummary }) => cleanSummary),
+    });
+
+    // Respond immediately to UI — avoid HTTP timeout
+    res.status(200).json({
+      success: true,
+      message: `Sprint "${sprintName}" billing generated. Email dispatch queued for ${activeFarmers.length} farmers.`,
+      data: {
+        sprintId: sprintRecord._id,
+        sprintName,
+        totalFarmers: activeFarmers.length,
+        activeFarmers: activeFarmerCount,
+        zeroCollectionFarmers: zeroFarmerCount,
+        totalLiters: sprintRecord.totalLiters,
+        totalAmount: sprintRecord.totalAmount,
+      },
+    });
+
+    // ── Asynchronous Background Dispatch Worker with Load Management ─────────
+    (async () => {
+      const BATCH_SIZE = 4;
+      const DELAY_BETWEEN_BATCHES_MS = 600;
+      let emailsSent = 0;
+      let emailsFailed = 0;
+
+      // Copy summaries for mutation
+      const finalSummaries = sprintRecord.farmerSummaries.map((s) => s.toObject());
+
+      for (let i = 0; i < farmerSummaries.length; i += BATCH_SIZE) {
+        const batch = farmerSummaries.slice(i, i + BATCH_SIZE);
+
+        await Promise.allSettled(
+          batch.map(async (farmerItem, batchIdx) => {
+            const summaryIdx = i + batchIdx;
+            const targetSummary = finalSummaries[summaryIdx];
+
+            try {
+              const email = (farmerItem.farmerEmail || "").trim();
+              if (!email || !email.includes("@")) {
+                targetSummary.emailStatus = "no_email";
+                return;
+              }
+
+              if (farmerItem.hasCollection) {
+                // Active farmer with collection: generate 80mm thermal PDF receipt
+                const paidEntriesCount = farmerItem.entries.filter((e) => e.paymentStatus === "paid").length;
+                const unpaidEntriesCount = farmerItem.entries.length - paidEntriesCount;
+
+                const pdfData = {
+                  adminShopName: admin.shopName || "Milkify Dairy",
+                  dateRange: { startDate, endDate },
+                  filterStatus: "all",
+                  farmer: {
+                    id: farmerItem.farmerId,
+                    memberId: farmerItem.memberId,
+                    name: farmerItem.farmerName,
+                    mobile: farmerItem.farmerMobile,
+                    village: farmerItem.village,
+                  },
+                  summary: {
+                    totalEntries: farmerItem.totalEntries,
+                    totalLiters: farmerItem.totalLiters,
+                    totalAmount: farmerItem.totalAmount,
+                    paidEntries: paidEntriesCount,
+                    paidAmount: farmerItem.paidAmount,
+                    unpaidEntries: unpaidEntriesCount,
+                    unpaidAmount: farmerItem.unpaidAmount,
+                    avgFat: farmerItem.avgFat,
+                    avgSnf: farmerItem.avgSnf,
+                    avgRate: farmerItem.totalLiters > 0 ? parseFloat((farmerItem.totalAmount / farmerItem.totalLiters).toFixed(2)) : 0,
+                  },
+                  payment: {
+                    status: unpaidEntriesCount === 0 ? "paid" : paidEntriesCount > 0 ? "partial" : "unpaid",
+                    paidAmount: farmerItem.paidAmount,
+                    unpaidAmount: farmerItem.unpaidAmount,
+                  },
+                  entries: farmerItem.entries,
+                };
+
+                const pdfBuffer = await generateBillingPdfBuffer(pdfData, "en");
+
+                await transporter.sendMail({
+                  from: `"${admin.shopName || "Milkify Dairy"}" <${process.env.SMTP_EMAIL}>`,
+                  to: email,
+                  subject: `📄 Sprint Billing Slip: ${startDate} to ${endDate} | ${admin.shopName || "Milkify Dairy"}`,
+                  html: billingEmailHtml({
+                    farmerName: farmerItem.farmerName,
+                    shopName: admin.shopName || "Milkify Dairy",
+                    startDate,
+                    endDate,
+                    totalLiters: farmerItem.totalLiters,
+                    avgFat: farmerItem.avgFat,
+                    avgSnf: farmerItem.avgSnf,
+                    totalAmount: farmerItem.totalAmount,
+                    totalEntries: farmerItem.totalEntries,
+                  }),
+                  text: billingEmailText({
+                    farmerName: farmerItem.farmerName,
+                    shopName: admin.shopName || "Milkify Dairy",
+                    startDate,
+                    endDate,
+                    totalLiters: farmerItem.totalLiters,
+                    totalAmount: farmerItem.totalAmount,
+                  }),
+                  attachments: [
+                    {
+                      filename: `Thermal_Bill_${farmerItem.farmerName.replace(/\s+/g, "_")}_${startDate}.pdf`,
+                      content: pdfBuffer,
+                      contentType: "application/pdf",
+                    },
+                  ],
+                });
+
+                targetSummary.emailStatus = "sent";
+                emailsSent++;
+              } else {
+                // Zero-collection farmer: courteous inactivity notice
+                if (admin.notifyZeroCollectionFarmers !== false) {
+                  await transporter.sendMail({
+                    from: `"${admin.shopName || "Milkify Dairy"}" <${process.env.SMTP_EMAIL}>`,
+                    to: email,
+                    subject: `📋 Cycle Billing Notice: ${startDate} to ${endDate} | ${admin.shopName || "Milkify Dairy"}`,
+                    html: zeroCollectionEmailHtml({
+                      farmerName: farmerItem.farmerName,
+                      shopName: admin.shopName || "Milkify Dairy",
+                      startDate,
+                      endDate,
+                      memberId: farmerItem.memberId,
+                      village: admin.village || "",
+                      adminMobile: admin.mobile || "",
+                    }),
+                    text: zeroCollectionEmailText({
+                      farmerName: farmerItem.farmerName,
+                      shopName: admin.shopName || "Milkify Dairy",
+                      startDate,
+                      endDate,
+                      adminMobile: admin.mobile || "",
+                    }),
+                  });
+
+                  targetSummary.emailStatus = "sent";
+                  emailsSent++;
+                } else {
+                  targetSummary.emailStatus = "skipped";
+                }
+              }
+            } catch (mailErr) {
+              console.error(`[SprintBilling] Failed to email farmer ${farmerItem.farmerName} (${farmerItem.farmerEmail}):`, mailErr.message);
+              targetSummary.emailStatus = "failed";
+              targetSummary.emailError = mailErr.message;
+              emailsFailed++;
+            }
+          })
+        );
+
+        // Throttle between batches to prevent SMTP server overload
+        if (i + BATCH_SIZE < farmerSummaries.length) {
+          await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+        }
+      }
+
+      // Mark sprint as completed and record final delivery metrics
+      await SprintBillingModel.findByIdAndUpdate(sprintRecord._id, {
+        $set: {
+          status: "completed",
+          emailsSent,
+          emailsFailed,
+          farmerSummaries: finalSummaries,
+          processedAt: new Date(),
+        },
+      });
+
+      console.log(`[SprintBilling] Completed sprint ${sprintRecord._id} ("${sprintName}"): ${emailsSent} sent, ${emailsFailed} failed.`);
+    })().catch((err) => {
+      console.error("[SprintBilling] Background worker failed:", err);
+    });
+
+  } catch (error) {
+    console.error("[SprintBilling] processSprintBilling error:", error);
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, message: "Server error processing sprint billing", error: error.message });
+    }
   }
 };
