@@ -225,11 +225,12 @@ server.listen(PORT, async () => {
     console.log(`✓ Environment: ${NODE_ENV}`);
 
     // Pre-download Devanagari fonts so Hindi/Marathi PDFs are instant
-    preloadDevanagariFonts().catch(() => { });
+    await preloadDevanagariFonts().catch(() => { });
 
     transporter.verify((error) => {
       if (error) console.log("⚠ Email service error:", error.message);
       else console.log("✓ Email service is ready");
+      console.log("✓ Milkify backend is ready to serve data");
     });
   } catch (error) {
     console.error("✗ Server startup error:", error);

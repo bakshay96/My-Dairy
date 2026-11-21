@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import BillingTable from "@/components/billing/BillingTable";
+import SprintBillingManager from "@/components/billing/SprintBillingManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Download, Search, CheckCircle2, User, CreditCard, CalendarDays, ReceiptIndianRupee } from "lucide-react";
+import { Download, Search, CheckCircle2, User, CreditCard, CalendarDays, ReceiptIndianRupee, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, formatIndianDate, formatRupees } from "@/lib/utils";
 import MilkifyLoader from "@/components/ui/Loader";
@@ -215,6 +216,19 @@ export default function BillingPage() {
               <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
               <span>Settlement History</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("sprints")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                activeTab === "sprints"
+                  ? "bg-purple-600 text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-200"
+              )}
+            >
+              <Layers className="h-3.5 w-3.5 shrink-0" />
+              <span>Sprint Cycles & History</span>
+            </button>
           </div>
 
           {/* Right Block: Quick Search & Inline Filters */}
@@ -286,7 +300,16 @@ export default function BillingPage() {
       </div>
 
       {/* Dynamic Tab Panels */}
-      {activeTab === "pending" ? (
+      {activeTab === "sprints" ? (
+        <SprintBillingManager
+          onApplySprintDates={(s, e) => {
+            setStartDate(s);
+            setEndDate(e);
+            setActiveTab("pending");
+            fetchBillingData(s, e);
+          }}
+        />
+      ) : activeTab === "pending" ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
           
           {/* LEFT COLUMN: Billing Summary Deck & active table */}

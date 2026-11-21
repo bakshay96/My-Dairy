@@ -152,3 +152,109 @@ exports.billingEmailText = (opts) => {
   const { farmerName, shopName, startDate, endDate, totalLiters, totalAmount } = opts;
   return `Dear ${farmerName},\n\nPlease find attached your Milk Collection Bill from ${shopName} for the period ${fmtDate(startDate)} to ${fmtDate(endDate)}.\n\nTotal Liters: ${Number(totalLiters).toFixed(2)} L\nNet Payable: ${formatINR(totalAmount)}\n\nThank you for your contribution.\n\nRegards,\n${shopName}\nPowered by Milkify`;
 };
+
+/**
+ * Generates an email notification for farmers with zero milk collections during a sprint.
+ */
+exports.zeroCollectionEmailHtml = (opts) => {
+  const {
+    farmerName = "Valued Farmer",
+    shopName   = "Milkify Dairy",
+    startDate,
+    endDate,
+    memberId   = "",
+    village    = "",
+    adminMobile = "",
+  } = opts;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sprint Billing Notice - ${shopName}</title>
+</head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);border:1px solid #e2e8f0;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1e293b 0%,#334155 100%);padding:28px 40px;text-align:center;">
+              <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:50%;width:56px;height:56px;line-height:56px;margin-bottom:10px;font-size:24px;">📋</div>
+              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:1px;">${shopName.toUpperCase()}</h1>
+              <p style="margin:4px 0 0;color:rgba(255,255,255,0.75);font-size:11px;letter-spacing:2px;">CYCLE RECONCILIATION NOTICE</p>
+            </td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td style="padding:28px 40px 0;">
+              <p style="margin:0;font-size:15px;color:#1e293b;">Dear <strong>${farmerName}</strong> ${memberId ? `(ID: ${memberId})` : ""},</p>
+              <p style="margin:10px 0 0;font-size:14px;color:#475569;line-height:1.6;">
+                This is an automated notification from <strong>${shopName}</strong> regarding the recent billing sprint covering
+                <strong>${fmtDate(startDate)}</strong> to <strong>${fmtDate(endDate)}</strong>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Zero Notice Card -->
+          <tr>
+            <td style="padding:20px 40px;">
+              <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:20px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="vertical-align:top;width:36px;">
+                      <span style="font-size:24px;">ℹ️</span>
+                    </td>
+                    <td style="vertical-align:top;padding-left:12px;">
+                      <h4 style="margin:0 0 4px;font-size:14px;font-weight:700;color:#92400e;">No Milk Collections Recorded</h4>
+                      <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;">
+                        According to our digital ledger, zero milk entries were recorded under your farmer profile during this ${fmtDate(startDate)} – ${fmtDate(endDate)} cycle.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Action / Contact Notice -->
+          <tr>
+            <td style="padding:0 40px 24px;">
+              <div style="background:#f1f5f9;border-radius:12px;padding:16px;border:1px solid #e2e8f0;">
+                <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.5px;">Did you supply milk during this period?</p>
+                <p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;">
+                  If you delivered milk that has not been logged or requires verification, please reach out to the dairy collection desk promptly:
+                </p>
+                <p style="margin:8px 0 0;font-size:13px;color:#1e293b;font-weight:600;">
+                  📞 Contact: ${adminMobile || "Dairy Desk"} ${village ? `· Village: ${village}` : ""}
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:20px 40px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;">This is a system-generated notice to ensure transparency and accountability.</p>
+              <p style="margin:6px 0 0;font-size:11px;color:#cbd5e1;">
+                Powered by <strong style="color:#1e3a5f;">Milkify</strong> · Digital Cooperative Management
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+};
+
+exports.zeroCollectionEmailText = (opts) => {
+  const { farmerName, shopName, startDate, endDate, adminMobile } = opts;
+  return `Dear ${farmerName},\n\nThis is an automated notification regarding the billing sprint from ${fmtDate(startDate)} to ${fmtDate(endDate)} at ${shopName}.\n\nOur records indicate no milk collections were logged for your profile during this period.\n\nIf you supplied milk or have questions, please contact the dairy desk at ${adminMobile || "the collection center"}.\n\nThank you,\n${shopName}\nPowered by Milkify`;
+};

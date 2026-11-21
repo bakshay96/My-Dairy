@@ -226,11 +226,112 @@ function calculateMilkRatePerKg(fat, snf, ratePerKgFat, ratePerKgSnf) {
   return Math.max(0, parseFloat(rate.toFixed(4)));
 }
 
+/**
+ * Get all sprints for a given month based on cycle length (e.g. 10, 15, 20 days).
+ * Sprint slices always start from day 1:
+ * - 10-day cycle: 1-10, 11-20, 21-end
+ * - 15-day cycle: 1-15, 16-end
+ * - 20-day cycle: 1-20, 21-end
+ *
+ * @param {number} year - full year e.g. 2026
+ * @param {number} monthIndex - 0-based month (0 = Jan, 10 = Nov)
+ * @param {number} [cycleDays=10]
+ * @returns {Array<Object>}
+ */
+function getSprintsForMonth(year, monthIndex, cycleDays = 10) {
+  const cDays = Number(cycleDays) || 10;
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const sprints = [];
+  let startDay = 1;
+  let sprintIndex = 1;
+
+  while (startDay <= daysInMonth) {
+    let endDay = startDay + cDays - 1;
+    // If remainder days after this sprint are fewer than half of cycleDays, merge into this sprint
+    const remainingAfter = daysInMonth - endDay;
+    if (endDay >= daysInMonth || remainingAfter < Math.max(3, Math.floor(cDays / 2))) {
+      endDay = daysInMonth;
+    }
+
+    const startStr = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(startDay).padStart(2, "0")}`;
+    const endStr = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthName = monthNames[monthIndex];
+
+    sprints.push({
+      sprintIndex,
+      sprintName: `Sprint ${sprintIndex} (${startDay} ${monthName} - ${endDay} ${monthName})`,
+      startDate: startStr,
+      endDate: endStr,
+      startDay,
+      endDay,
+      cycleDays: cDays,
+      daysCount: endDay - startDay + 1,
+    });
+
+    sprintIndex++;
+    startDay = endDay + 1;
+  }
+
+  return sprints;
+}
+
+/**
+ * Returns the current active sprint for the specified date and cycle days.
+ *
+ * @param {number} [cycleDays=10]
+ * @param {Date} [date=new Date()]
+ * @returns {Object}
+ */
+function getCurrentSprint(cycleDays = 10, date = new Date()) {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const monthIndex = d.getMonth();
+  const day = d.getDate();
+
+  const sprints = getSprintsForMonth(year, monthIndex, cycleDays);
+  const found = sprints.find((s) => day >= s.startDay && day <= s.endDay);
+  return found || sprints[sprints.length - 1];
+}
+
+/**
+ * Get recent sprints across current and previous months for dropdown/pill selectors.
+ *
+ * @param {number} [cycleDays=10]
+ * @param {number} [monthsBack=2]
+ * @returns {Array<Object>}
+ */
+function getRecentSprints(cycleDays = 10, monthsBack = 2) {
+  const now = new Date();
+  const currentSprint = getCurrentSprint(cycleDays, now);
+  const result = [];
+
+  for (let m = 0; m <= monthsBack; m++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const sprints = getSprintsForMonth(d.getFullYear(), d.getMonth(), cycleDays);
+    // Reverse sprints within the month so latest sprint is first
+    for (let i = sprints.length - 1; i >= 0; i--) {
+      const s = sprints[i];
+      const isCurrent = s.startDate === currentSprint.startDate && s.endDate === currentSprint.endDate;
+      result.push({
+        ...s,
+        isCurrent,
+      });
+    }
+  }
+
+  return result;
+}
+
 module.exports = {
   calculateMilkAmount,
   getBillingCycleDate,
   getBillingCycleEnd,
+  getSprintsForMonth,
+  getCurrentSprint,
+  getRecentSprints,
   calculateSnfFromDegree,
   calculateMilkRate,
-  calculateMilkRatePerKg
+  calculateMilkRatePerKg,
 };

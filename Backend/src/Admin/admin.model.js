@@ -62,6 +62,19 @@ const adminSchema = new mongoose.Schema(
       index: true,
     },
     key: { type: String },
+    billingCycleDays: {
+      type: Number,
+      default: 10,
+      enum: [5, 7, 10, 15, 20, 30],
+    },
+    autoEmailOnSprintClose: {
+      type: Boolean,
+      default: true,
+    },
+    notifyZeroCollectionFarmers: {
+      type: Boolean,
+      default: true,
+    },
     modifiedBy: { type: String, default: null },
     modifiedAt: { type: Date, default: null },
   },
