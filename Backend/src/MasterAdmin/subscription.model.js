@@ -50,6 +50,8 @@ const subscriptionSchema = new mongoose.Schema(
         paidAt:       { type: Date, default: Date.now },
         promoCode:    String,
         discountAmt:  Number,
+        method:       { type: String, default: "online" },
+        instrument:   { type: String, default: "" },
       },
     ],
 

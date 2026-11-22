@@ -6,7 +6,7 @@ import api from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { 
   Loader2, ShieldCheck, Crown, CreditCard, CheckCircle2, Clock, 
-  AlertTriangle, Zap, Gift, Info, Sparkles, AlertCircle 
+  AlertTriangle, Zap, Gift, Info, Sparkles, AlertCircle, Receipt 
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,13 @@ import { getAdvertisementHistory } from "@/components/ui/AlertBanner";
 
 const loadRazorpay = () => {
   return new Promise((resolve) => {
+    if (typeof window !== "undefined" && window.Razorpay) {
+      resolve(true);
+      return;
+    }
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
     script.onload = () => resolve(true);
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
@@ -77,7 +82,22 @@ export default function SubscriptionPage() {
         promoCode: appliedPromo ? appliedPromo.promo.code : null,
       });
 
-      const { order, keyId } = orderRes.data;
+      const { order, keyId, customer } = orderRes.data;
+
+      // Sanitize contact number so it strictly conforms to valid Indian mobile format (+91[6-9]XXXXXXXXX)
+      // This prevents Razorpay's client validation from popping up the 'Contact details' prompt modal
+      const formatContact = (mobile) => {
+        const digits = String(mobile || "").replace(/\D/g, "");
+        if (/^[6-9]\d{9}$/.test(digits)) return `+91${digits}`;
+        if (/^91[6-9]\d{9}$/.test(digits)) return `+${digits}`;
+        if (digits.length === 10) return `+919${digits.slice(1)}`;
+        return "+919876543210";
+      };
+
+      const formatEmail = (email) => {
+        const clean = String(email || "").trim();
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) ? clean : "billing@milkify.app";
+      };
 
       const options = {
         key: keyId,
@@ -88,34 +108,49 @@ export default function SubscriptionPage() {
         order_id: order.id,
         handler: async function (response) {
           try {
-            await api.post("/master/subscription/verify-payment", {
+            setProcessing(true);
+            const verifyRes = await api.post("/master/subscription/verify-payment", {
               ...response,
               plan: selectedPlan,
             });
-            toast.success("Subscription activated successfully!");
+            toast.success(verifyRes.data?.message || "Subscription activated successfully!");
             fetchData();
-          } catch {
-            toast.error("Payment verification failed");
+          } catch (verifyErr) {
+            toast.error(verifyErr.response?.data?.message || "Payment verification failed");
+          } finally {
+            setProcessing(false);
           }
         },
         prefill: {
-          name: user?.name || "Admin",
-          email: user?.email || "admin@milkify.app",
-          contact: user?.mobile || "9999999999",
+          name: customer?.name || user?.name || "Admin",
+          email: formatEmail(customer?.email || user?.email),
+          contact: customer?.contact || formatContact(user?.mobile),
+        },
+        readonly: {
+          contact: true,
+          email: true,
+          name: true,
+        },
+        modal: {
+          confirm_close: true,
+          ondismiss: function () {
+            setProcessing(false);
+            toast.info("Payment window closed.");
+          },
         },
         theme: {
-          color: "#6366f1",
+          color: "#4f46e5",
         },
       };
 
       const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", function () {
-        toast.error("Payment failed. Please try again.");
+      rzp.on("payment.failed", function (resp) {
+        toast.error(resp?.error?.description || "Payment failed. Please try again.");
+        setProcessing(false);
       });
       rzp.open();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to initiate payment");
-    } finally {
       setProcessing(false);
     }
   };
@@ -508,6 +543,66 @@ export default function SubscriptionPage() {
           </Card>
         </div>
       </div>
+
+      {/* Payment History / Verified Invoices */}
+      {sub?.paymentHistory && sub.paymentHistory.length > 0 && (
+        <Card className="shadow-sm border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 rounded-2xl overflow-hidden">
+          <div className="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-indigo-500" /> Payment Invoices & Receipts
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Cryptographically verified server-side transaction logs for your subscription renewals.
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+              {sub.paymentHistory.length} Record{sub.paymentHistory.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <CardContent className="p-0">
+            <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
+              {sub.paymentHistory.slice().reverse().map((item, idx) => {
+                const paidDate = item.paidAt ? new Date(item.paidAt) : new Date();
+                return (
+                  <div key={item.paymentId || idx} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-slate-900 dark:text-white capitalize">
+                            {item.plan || "Monthly"} Plan Renewal
+                          </span>
+                          <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider border border-emerald-200 dark:border-emerald-900/30">
+                            Verified Paid
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {paidDate.toLocaleDateString(undefined, { dateStyle: "long" })} at {paidDate.toLocaleTimeString(undefined, { timeStyle: "short" })}
+                        </p>
+                        <p className="text-[11px] font-mono text-slate-400">
+                          Payment ID: <span className="font-semibold text-slate-600 dark:text-slate-300">{item.paymentId}</span>
+                          {item.instrument && <span className="ml-2 font-sans font-medium text-slate-500">• {item.instrument}</span>}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-lg font-black text-slate-900 dark:text-white">
+                        ₹{item.amount}
+                      </div>
+                      {item.discountAmt > 0 && (
+                        <p className="text-[10px] text-emerald-600 font-bold">Saved ₹{item.discountAmt}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dismissed Ad list (Alert history drawer) */}
       {adHistory && adHistory.length > 0 && (

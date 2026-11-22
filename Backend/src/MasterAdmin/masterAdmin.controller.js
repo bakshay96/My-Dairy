@@ -1204,6 +1204,7 @@ const createSubscriptionOrder = async (req, res) => {
   try {
     const { plan, promoCode } = req.body;
     const adminId = req.admin._id;
+    const admin = req.admin;
 
     const config = await PlanConfigModel.findOne() || {};
     const planPrices = {
@@ -1234,13 +1235,32 @@ const createSubscriptionOrder = async (req, res) => {
     const finalPrice = parseFloat((basePrice - discountAmount).toFixed(2));
     const amountPaise = Math.round(finalPrice * 100); // Razorpay uses smallest currency unit
 
+    // Format clean, valid E.164 phone number compliant with Indian telecom & Razorpay validation
+    let cleanMobile = String(admin?.mobile || "").replace(/\D/g, "");
+    if (/^[6-9]\d{9}$/.test(cleanMobile)) {
+      cleanMobile = `+91${cleanMobile}`;
+    } else if (/^91[6-9]\d{9}$/.test(cleanMobile)) {
+      cleanMobile = `+${cleanMobile}`;
+    } else if (cleanMobile.length === 10) {
+      cleanMobile = `+919${cleanMobile.slice(1)}`;
+    } else {
+      cleanMobile = "+919876543210";
+    }
+
+    const cleanEmail = admin?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.email)
+      ? admin.email
+      : "billing@milkify.app";
+
     const order = await getRazorpay().orders.create({
       amount: amountPaise,
       currency: config.currency || "INR",
+      receipt: `sub_${adminId.toString().slice(-6)}_${Date.now()}`,
       notes: {
         adminId: String(adminId),
         plan,
         promoCode: promoCode || "",
+        adminName: admin?.name || "",
+        adminEmail: cleanEmail,
       },
     });
 
@@ -1261,6 +1281,11 @@ const createSubscriptionOrder = async (req, res) => {
       data: {
         order,
         keyId: process.env.RAZORPAY_KEY_ID,
+        customer: {
+          name: admin?.name || "Admin",
+          email: cleanEmail,
+          contact: cleanMobile,
+        },
         basePrice,
         discountAmount,
         finalPrice,
@@ -1285,7 +1310,7 @@ const verifySubscriptionPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing Razorpay verification parameters" });
     }
 
-    // Cryptographic Signature verification (HMAC SHA-256)
+    // 1. Cryptographic Signature verification (HMAC SHA-256)
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expected = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -1296,12 +1321,68 @@ const verifySubscriptionPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: "Payment verification failed: invalid signature" });
     }
 
+    // 2. Replay attack prevention: verify payment ID hasn't been redeemed already
+    const existingPayment = await SubscriptionModel.findOne({
+      "paymentHistory.paymentId": razorpay_payment_id,
+    });
+    if (existingPayment) {
+      return res.status(400).json({
+        success: false,
+        message: "Security violation: This payment has already been verified and processed.",
+      });
+    }
+
     let sub = await SubscriptionModel.findOne({ adminId });
     if (!sub) sub = await _createTrialSubscription(adminId);
 
-    // Tamper protection: ensure order ID matches pending order if recorded
+    // 3. Tamper protection: ensure order ID matches pending order if recorded
     if (sub.razorpayOrderId && sub.razorpayOrderId !== razorpay_order_id) {
       return res.status(400).json({ success: false, message: "Order ID does not match active subscription checkout" });
+    }
+
+    // 4. Direct Server-to-Server Razorpay API Verification & Capture
+    let razorpayPayment = null;
+    try {
+      const razorpay = getRazorpay();
+      razorpayPayment = await razorpay.payments.fetch(razorpay_payment_id);
+
+      if (!razorpayPayment) {
+        return res.status(400).json({ success: false, message: "Unable to verify payment with Razorpay gateway" });
+      }
+
+      // Check payment order ID
+      if (razorpayPayment.order_id && razorpayPayment.order_id !== razorpay_order_id) {
+        return res.status(400).json({ success: false, message: "Security error: Payment order mismatch detected" });
+      }
+
+      // Check payment amount against subscription finalPrice (in paise)
+      const expectedAmountPaise = Math.round(sub.finalPrice * 100);
+      if (Number(razorpayPayment.amount) !== expectedAmountPaise) {
+        return res.status(400).json({
+          success: false,
+          message: `Payment amount mismatch: expected ₹${sub.finalPrice} (${expectedAmountPaise} paise), received ${razorpayPayment.amount} paise`,
+        });
+      }
+
+      // Server-side Capture: If payment is authorized, capture it on the server
+      if (razorpayPayment.status === "authorized") {
+        razorpayPayment = await razorpay.payments.capture(
+          razorpay_payment_id,
+          razorpayPayment.amount,
+          razorpayPayment.currency || "INR"
+        );
+      } else if (razorpayPayment.status !== "captured") {
+        return res.status(400).json({
+          success: false,
+          message: `Payment status is '${razorpayPayment.status}'. Cannot activate subscription.`,
+        });
+      }
+    } catch (apiErr) {
+      console.error("[MasterAdmin] Razorpay API verification error:", apiErr);
+      return res.status(400).json({
+        success: false,
+        message: `Razorpay verification error: ${apiErr.message || "Gateway communication error"}`,
+      });
     }
 
     // Secure plan resolution: use invoiced plan from subscription session
@@ -1331,6 +1412,19 @@ const verifySubscriptionPayment = async (req, res) => {
       );
     }
 
+    // Determine payment instrument for rich audit log
+    const method = razorpayPayment?.method || "online";
+    let instrument = "";
+    if (method === "upi") {
+      instrument = razorpayPayment?.vpa ? `UPI (${razorpayPayment.vpa})` : "UPI";
+    } else if (method === "card") {
+      instrument = razorpayPayment?.card ? `${razorpayPayment.card.network || "Card"} •••• ${razorpayPayment.card.last4 || ""}` : "Card";
+    } else if (method === "netbanking") {
+      instrument = razorpayPayment?.bank ? `Netbanking (${razorpayPayment.bank})` : "Netbanking";
+    } else if (method === "wallet") {
+      instrument = razorpayPayment?.wallet ? `Wallet (${razorpayPayment.wallet})` : "Wallet";
+    }
+
     sub.paymentHistory.push({
       paymentId: razorpay_payment_id,
       orderId: razorpay_order_id,
@@ -1339,6 +1433,8 @@ const verifySubscriptionPayment = async (req, res) => {
       paidAt: now,
       promoCode: sub.promoCode,
       discountAmt: sub.discountAmount,
+      method,
+      instrument,
     });
 
     await sub.save();

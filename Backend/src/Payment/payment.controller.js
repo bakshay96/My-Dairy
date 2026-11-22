@@ -628,6 +628,23 @@ exports.verifyPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: "Payment verification failed — invalid signature" });
     }
 
+    // Authoritative Server-to-Server Razorpay API Verification
+    try {
+      const razorpay = getRazorpay();
+      const rzpPayment = await razorpay.payments.fetch(razorpay_payment_id);
+      if (rzpPayment) {
+        if (rzpPayment.order_id && rzpPayment.order_id !== razorpay_order_id) {
+          if (paymentDbId) await PaymentModel.findByIdAndUpdate(paymentDbId, { status: "failed" });
+          return res.status(400).json({ success: false, message: "Payment order mismatch on gateway" });
+        }
+        if (rzpPayment.status === "authorized") {
+          await razorpay.payments.capture(razorpay_payment_id, rzpPayment.amount, rzpPayment.currency || "INR");
+        }
+      }
+    } catch (apiErr) {
+      console.warn("[PaymentController] Razorpay payments.fetch check:", apiErr.message);
+    }
+
     const query   = paymentDbId ? { _id: paymentDbId } : { razorpayOrderId: razorpay_order_id };
     const updated = await PaymentModel.findOneAndUpdate(
       query,
