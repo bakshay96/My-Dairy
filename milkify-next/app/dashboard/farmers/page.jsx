@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -8,7 +9,7 @@ import { formatRupees, formatIndianDate } from "@/lib/utils";
 import MilkifyLoader from "@/components/ui/Loader";
 import { 
   Search, Eye, Pencil, X, Loader2, CheckCircle2, 
-  AlertCircle, Users, Phone, Calendar, MessageCircle 
+  AlertCircle, Users, Phone, Calendar, MessageCircle, Camera, Trash2
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 
@@ -24,6 +25,8 @@ const sendWhatsApp = (mobile, message = "") => {
 // ─── Farmer Detail / Edit Drawer ──────────────────────────────────────────────
 function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
   const [editing, setEditing] = useState(mode === "edit");
+  const [photo, setPhoto] = useState(farmer?.profilePhoto || "");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [form, setForm] = useState({
     name: farmer?.name || "",
     mobile: farmer?.mobile || "",
@@ -35,6 +38,42 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
   const [milkHistory, setMilkHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [deleteLoadingId, setDeleteLoadingId] = useState("");
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("photo", file);
+    setUploadingPhoto(true);
+    try {
+      const res = await api.post(`/farmer/${farmer._id}/photo`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const newUrl = res.data?.profilePhoto;
+      setPhoto(newUrl);
+      toast.success("Profile photo uploaded to AWS S3!");
+      onSaved();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to upload photo");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!window.confirm("Remove farmer's profile photo?")) return;
+    setUploadingPhoto(true);
+    try {
+      await api.delete(`/farmer/${farmer._id}/photo`);
+      setPhoto("");
+      toast.success("Profile photo removed");
+      onSaved();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete photo");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   useEffect(() => {
     if (!editing && farmer?._id) {
@@ -167,12 +206,46 @@ function FarmerDrawer({ farmer, mode, onClose, onSaved }) {
           ) : (
             /* ── View Details ──────────────────────────────────────────── */
             <div className="space-y-5">
-              {/* Profile card */}
+              {/* Profile card with S3 Avatar Upload */}
               <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50/70 to-cyan-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 border border-blue-100/80 dark:border-slate-700 shadow-sm">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl mb-3">
-                  {farmer?.name?.[0]?.toUpperCase()}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="relative inline-block">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-primary/10 border-2 border-white dark:border-slate-800 shadow-md flex items-center justify-center text-primary font-bold text-2xl">
+                      {photo ? (
+                        <img src={photo} alt={farmer?.name} className="w-full h-full object-cover" />
+                      ) : (
+                        farmer?.name?.[0]?.toUpperCase()
+                      )}
+                    </div>
+                    <label
+                      htmlFor={`farmer-photo-${farmer?._id}`}
+                      className={`absolute -bottom-1 -right-1 p-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md cursor-pointer transition-transform hover:scale-105 ${uploadingPhoto ? "opacity-50 pointer-events-none" : ""}`}
+                      title="Upload profile photo to AWS S3"
+                    >
+                      {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                    </label>
+                    <input
+                      id={`farmer-photo-${farmer?._id}`}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                    />
+                  </div>
+
+                  {photo && (
+                    <button
+                      onClick={handlePhotoDelete}
+                      disabled={uploadingPhoto}
+                      className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-1 font-medium"
+                      title="Delete profile photo from S3"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Remove Photo
+                    </button>
+                  )}
                 </div>
-                <h3 className="font-bold text-gray-900">{farmer?.name}</h3>
+
+                <h3 className="font-bold text-gray-900 dark:text-gray-100">{farmer?.name}</h3>
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center gap-1.5 text-sm text-gray-600">
                     <Phone className="h-3.5 w-3.5" />{farmer?.mobile}
@@ -488,8 +561,12 @@ export default function FarmersPage() {
                       <td className="px-4 py-3.5 text-gray-400">{i + 1}</td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
-                            {f.name?.[0]?.toUpperCase()}
+                          <div className="w-8 h-8 rounded-full bg-primary/10 overflow-hidden flex items-center justify-center text-primary text-xs font-bold shrink-0 border border-slate-200 dark:border-slate-700">
+                            {f.profilePhoto ? (
+                              <img src={f.profilePhoto} alt={f.name} className="w-full h-full object-cover" />
+                            ) : (
+                              f.name?.[0]?.toUpperCase()
+                            )}
                           </div>
                           <span className="font-medium text-gray-900 dark:text-gray-100">{f.name}</span>
                         </div>
@@ -549,8 +626,12 @@ export default function FarmersPage() {
                 <div key={f._id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm select-none">
-                        {f.name ? f.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "F"}
+                      <div className="w-10 h-10 rounded-full bg-primary/10 overflow-hidden text-primary flex items-center justify-center font-bold text-sm select-none border border-slate-200 dark:border-slate-700 shrink-0">
+                        {f.profilePhoto ? (
+                          <img src={f.profilePhoto} alt={f.name} className="w-full h-full object-cover" />
+                        ) : (
+                          f.name ? f.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "F"
+                        )}
                       </div>
                       <div>
                         <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug">{f.name}</h3>

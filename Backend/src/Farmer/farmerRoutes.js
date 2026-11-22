@@ -1,9 +1,19 @@
-const express=require("express");
+const express = require("express");
 
 const authMiddleware = require("../middleware/authMiddleware");
-const { createFarmer, getAllFarmer, getSingleFarmer, updateFarmer, deleteFarmer, farmerLogin } = require("./farmer.controller");
+const { upload } = require("../middleware/upload.middleware");
+const {
+  createFarmer,
+  getAllFarmer,
+  getSingleFarmer,
+  updateFarmer,
+  deleteFarmer,
+  farmerLogin,
+  uploadFarmerPhoto,
+  deleteFarmerPhoto,
+} = require("./farmer.controller");
 
-const farmerRouter=express.Router();
+const farmerRouter = express.Router();
 
 farmerRouter.post("/login", farmerLogin);
 farmerRouter.post("/register", authMiddleware, createFarmer);  // legacy
@@ -14,7 +24,10 @@ farmerRouter.put("/:id",      authMiddleware, updateFarmer);   // new
 farmerRouter.patch("/:id",    authMiddleware, updateFarmer);   // legacy
 farmerRouter.delete("/:id",   authMiddleware, deleteFarmer);
 
+// Photo upload & deletion via S3
+farmerRouter.post("/:id/photo",   authMiddleware, upload.single("photo"), uploadFarmerPhoto);
+farmerRouter.delete("/:id/photo", authMiddleware, deleteFarmerPhoto);
 
-module.exports={
+module.exports = {
   farmerRouter
-}
+};

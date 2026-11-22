@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Droplet, Calculator, Settings, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, ChevronRight, Eye, EyeOff, TicketIcon, Grid } from "lucide-react";
+import { LayoutDashboard, Users, Droplet, Calculator, Settings, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, ChevronRight, Eye, EyeOff, TicketIcon, Grid, Image as ImageIcon } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import SessionTimer from "@/components/ui/SessionTimer";
 import AlertBanner, { useLiveAlertCount, useLiveTicketCount, AlertDot } from "@/components/ui/AlertBanner";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { useEffect } from "react";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
@@ -19,6 +20,7 @@ const navItems = [
   { name: "Farmers", href: "/dashboard/farmers", icon: Users },
   { name: "Add Milk", href: "/dashboard/add-milk", icon: Droplet },
   { name: "Billing", href: "/dashboard/billing", icon: FileText },
+  { name: "Media Gallery", href: "/dashboard/media", icon: ImageIcon },
   { name: "Pricing Engine", href: "/dashboard/rates", icon: Grid },
   { name: "Analytics", href: "/dashboard/analytics", icon: Calculator },
   { name: "Subscription", href: "/dashboard/subscription", icon: ShieldCheck },
@@ -509,8 +511,10 @@ export default function DashboardLayout({ children }) {
             <SessionTimer />
           </div>
           <div className="mx-auto max-w-6xl">
-            {/* Alert Banner — hidden on add-milk page to avoid distraction */}
-            <AlertBanner suppress={isAddMilk} />
+            {/* Alert Banner — wrapped in ErrorBoundary to protect dashboard from any notification runtime error */}
+            <ErrorBoundary fallback={null}>
+              <AlertBanner suppress={isAddMilk} />
+            </ErrorBoundary>
             <div className="animate-fade-in">
               {children}
             </div>

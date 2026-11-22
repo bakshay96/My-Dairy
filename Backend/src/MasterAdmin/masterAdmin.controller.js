@@ -972,6 +972,71 @@ const deleteFarmerForMaster = async (req, res) => {
   }
 };
 
+const uploadFarmerPhotoForMaster = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Please provide an image file" });
+    }
+    const { farmerId } = req.params;
+    const { farmerModel } = require("../Farmer/farmer.model");
+    const farmer = await farmerModel.findById(farmerId);
+    if (!farmer) {
+      return res.status(404).json({ success: false, message: "Farmer not found" });
+    }
+
+    const { uploadToS3, deleteFromS3 } = require("../services/s3.service");
+    if (farmer.profilePhoto && farmer.profilePhoto.includes(".amazonaws.com/")) {
+      await deleteFromS3(farmer.profilePhoto).catch((err) => console.warn("[S3] old photo cleanup failed:", err.message));
+    }
+
+    const s3Url = await uploadToS3(req.file.buffer, req.file.originalname, "farmers/profiles");
+    const masterAdminId = req.master?._id || req.masterId || req.masterAdmin?._id || "root";
+    farmer.profilePhoto = s3Url;
+    farmer.modifiedBy = `MasterAdmin:${masterAdminId}`;
+    farmer.modifiedAt = new Date();
+    await farmer.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Farmer photo updated successfully",
+      profilePhoto: s3Url,
+      farmer,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const deleteFarmerPhotoForMaster = async (req, res) => {
+  try {
+    const { farmerId } = req.params;
+    const { farmerModel } = require("../Farmer/farmer.model");
+    const farmer = await farmerModel.findById(farmerId);
+    if (!farmer) {
+      return res.status(404).json({ success: false, message: "Farmer not found" });
+    }
+
+    if (farmer.profilePhoto && farmer.profilePhoto.includes(".amazonaws.com/")) {
+      const { deleteFromS3 } = require("../services/s3.service");
+      await deleteFromS3(farmer.profilePhoto).catch((err) => console.warn("[S3] delete failed:", err.message));
+    }
+
+    const masterAdminId = req.master?._id || req.masterId || req.masterAdmin?._id || "root";
+    farmer.profilePhoto = "";
+    farmer.modifiedBy = `MasterAdmin:${masterAdminId}`;
+    farmer.modifiedAt = new Date();
+    await farmer.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Farmer photo removed successfully",
+      farmer,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ────────────────────────────────────────────────────────────
 // 6. EXTEND / MODIFY SUBSCRIPTION
 // ────────────────────────────────────────────────────────────
@@ -1216,33 +1281,47 @@ const verifySubscriptionPayment = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan } = req.body;
     const adminId = req.admin._id;
 
-    // Signature verification
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ success: false, message: "Missing Razorpay verification parameters" });
+    }
+
+    // Cryptographic Signature verification (HMAC SHA-256)
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expected = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body)
       .digest("hex");
 
-    if (expected !== razorpay_signature)
-      return res.status(400).json({ success: false, message: "Payment verification failed" });
+    if (expected !== razorpay_signature) {
+      return res.status(400).json({ success: false, message: "Payment verification failed: invalid signature" });
+    }
 
     let sub = await SubscriptionModel.findOne({ adminId });
     if (!sub) sub = await _createTrialSubscription(adminId);
 
-    // Calculate subscription end date based on plan
+    // Tamper protection: ensure order ID matches pending order if recorded
+    if (sub.razorpayOrderId && sub.razorpayOrderId !== razorpay_order_id) {
+      return res.status(400).json({ success: false, message: "Order ID does not match active subscription checkout" });
+    }
+
+    // Secure plan resolution: use invoiced plan from subscription session
+    const verifiedPlan = sub.plan || plan || "monthly";
+
+    // Calculate subscription end date based on verified plan
     const planDays = { monthly: 30, quarterly: 90, yearly: 365 };
-    const days = planDays[plan] || 30;
+    const days = planDays[verifiedPlan] || 30;
     const now = new Date();
     const end = new Date(now);
     end.setDate(end.getDate() + days);
 
+    sub.razorpayOrderId = razorpay_order_id;
     sub.razorpayPaymentId = razorpay_payment_id;
     sub.razorpaySignature = razorpay_signature;
     sub.paymentStatus = "paid";
     sub.status = "active";
     sub.startDate = now;
     sub.endDate = end;
-    sub.plan = plan;
+    sub.plan = verifiedPlan;
 
     // Increment promo usage
     if (sub.promoCode) {
@@ -1256,7 +1335,7 @@ const verifySubscriptionPayment = async (req, res) => {
       paymentId: razorpay_payment_id,
       orderId: razorpay_order_id,
       amount: sub.finalPrice,
-      plan,
+      plan: verifiedPlan,
       paidAt: now,
       promoCode: sub.promoCode,
       discountAmt: sub.discountAmount,
@@ -1266,10 +1345,11 @@ const verifySubscriptionPayment = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Payment verified. Subscription activated!",
+      message: "Payment verified successfully. Subscription activated!",
       data: { subscription: sub },
     });
   } catch (err) {
+    console.error("[MasterAdmin] verifySubscriptionPayment error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -1955,6 +2035,8 @@ module.exports = {
   updateFarmerCredentialsForMaster,
   updateFarmerStatusForMaster,
   deleteFarmerForMaster,
+  uploadFarmerPhotoForMaster,
+  deleteFarmerPhotoForMaster,
   getDatabaseSchemaStats,
   getUserLoginHistory,
   getCountryUserLogins,

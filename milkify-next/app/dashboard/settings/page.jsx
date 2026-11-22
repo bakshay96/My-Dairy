@@ -10,8 +10,16 @@ import {
   Settings, Loader2, AlertCircle,
   User, Lock, Bell,
   Volume2, Calendar, ShieldAlert, Check, Eye, EyeOff,
-  ArrowRight
+  ArrowRight, Play
 } from "lucide-react";
+import {
+  SOUND_PRESETS,
+  getStoredSoundPreset,
+  setStoredSoundPreset,
+  previewSound,
+  isSoundDisabled,
+  setSoundDisabled as persistSoundDisabled,
+} from "@/lib/soundEffects";
 
 // ─── Main Settings Page ───────────────────────────────────────────────────────
 export default function SettingsPage() {
@@ -76,9 +84,19 @@ export default function SettingsPage() {
   }, [authUser]);
 
   // Sync sound setting
+  const [selectedSound, setSelectedSound] = useState("milky-chime");
+
   useEffect(() => {
-    setSoundDisabled(localStorage.getItem("milkify-sound-disabled") === "true");
+    setSoundDisabled(isSoundDisabled());
+    setSelectedSound(getStoredSoundPreset());
   }, []);
+
+  const handleSelectSound = (presetId) => {
+    setSelectedSound(presetId);
+    setStoredSoundPreset(presetId);
+    previewSound(presetId);
+    toast.success(`Notification tone changed to ${SOUND_PRESETS.find(p => p.id === presetId)?.name || presetId}!`);
+  };
 
 
 
@@ -189,36 +207,9 @@ export default function SettingsPage() {
 
   const toggleSoundChime = () => {
     const disabled = !soundDisabled;
-    localStorage.setItem("milkify-sound-disabled", disabled ? "true" : "false");
+    persistSoundDisabled(disabled);
     setSoundDisabled(disabled);
     toast.success(`Synthesized live notifications chime ${disabled ? "disabled" : "enabled"}!`);
-  };
-
-  const playTestChime = () => {
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
-      const playTone = (freq, startTime, duration) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(0.15, startTime + 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(startTime);
-        osc.stop(startTime + duration);
-      };
-      const now = ctx.currentTime;
-      playTone(784, now, 0.12);
-      playTone(1046.5, now + 0.08, 0.15);
-      playTone(1318.5, now + 0.16, 0.25);
-    } catch (e) {
-      console.warn("Audio Context blocked:", e);
-    }
   };
 
   const handlePausePreset = (days) => {
@@ -630,23 +621,20 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Section C: Sound Notification (Moved from Rate Configs Settings tab) */}
+                {/* Section C: Sound Notification & Multi-Tone Synthesizer */}
                 <div className="border-t border-slate-200 dark:border-slate-800 pt-5 space-y-4">
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Volume2 className="h-4.5 w-4.5 text-purple-600" /> Audio &amp; Synthesizer Settings
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Control browser-side audio bells playing on incoming live ticket replies.</p>
-                  </div>
-                  
-                  <div className="bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 rounded-2xl p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
-                      <p className="font-bold text-xs text-slate-900 dark:text-white">Synthesize Live Activity Sound</p>
-                      <p className="text-[10px] text-slate-450 mt-1">
-                        Generates a sleek triple-tone sine-wave synthesized chime instantaneously inside your browser when replies arrive.
-                      </p>
+                      <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Volume2 className="h-4.5 w-4.5 text-purple-600" /> Audio &amp; Notification Chime Settings
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Select your preferred synthesized notification tone for live tickets, billing alerts, and chat updates.</p>
                     </div>
-                    <div className="flex items-center gap-3 self-start sm:self-center shrink-0">
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        {soundDisabled ? "Sound Muted" : "Sound Enabled"}
+                      </span>
                       <button
                         type="button"
                         onClick={toggleSoundChime}
@@ -660,15 +648,64 @@ export default function SettingsPage() {
                           !soundDisabled ? "translate-x-5" : "translate-x-0"
                         )} />
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={playTestChime}
-                        className="px-3 h-8 text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 rounded-xl transition-all"
-                      >
-                        Test Chime
-                      </button>
                     </div>
+                  </div>
+
+                  {/* Multiple Audio Notification Tone Options */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {SOUND_PRESETS.map((preset) => {
+                      const isSelected = selectedSound === preset.id;
+                      return (
+                        <div
+                          key={preset.id}
+                          onClick={() => handleSelectSound(preset.id)}
+                          className={cn(
+                            "cursor-pointer p-3.5 rounded-2xl border transition-all duration-200 relative flex flex-col justify-between",
+                            isSelected
+                              ? "bg-purple-50/80 dark:bg-purple-950/40 border-purple-400 dark:border-purple-600 shadow-md ring-1 ring-purple-400/40"
+                              : "bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs text-slate-900 dark:text-white">
+                                  {preset.name}
+                                </span>
+                                <span className={cn(
+                                  "text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider",
+                                  isSelected
+                                    ? "bg-purple-600 text-white"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                                )}>
+                                  {preset.tag}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                                {preset.desc}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                            <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400">
+                              {isSelected ? "Active Sound" : "Click to select"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                previewSound(preset.id);
+                              }}
+                              className="px-2.5 py-1 text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+                              title="Play preview"
+                            >
+                              <Play className="w-3 h-3 fill-current" /> Preview
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 

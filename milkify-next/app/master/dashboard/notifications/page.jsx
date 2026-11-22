@@ -6,10 +6,18 @@ import { Button } from "@/components/ui/button";
 import {
   Bell, BellOff, Clock, Play, Pause, Search, ChevronDown, ChevronUp,
   Users, CheckCircle2, AlertTriangle, CreditCard, Tractor, ShieldAlert,
-  TicketIcon, Zap, X,
+  TicketIcon, Zap, X, Volume2
 } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
+import {
+  SOUND_PRESETS,
+  getStoredSoundPreset,
+  setStoredSoundPreset,
+  previewSound,
+  isSoundDisabled,
+  setSoundDisabled as persistSoundDisabled,
+} from "@/lib/soundEffects";
 
 // ── Notification type config ─────────────────────────────────────────────────
 const NOTIFICATION_TYPES = [
@@ -100,7 +108,27 @@ export default function NotificationManagement() {
   const [pauseDate, setPauseDate]       = useState("");
   const [pauseTime, setPauseTime]       = useState("09:00");
   const [saving, setSaving]             = useState(false);
-  const [soundTrigger, setSoundTrigger] = useState(0);
+  const [soundDisabled, setSoundDisabledState] = useState(false);
+  const [selectedSound, setSelectedSound] = useState("milky-chime");
+
+  useEffect(() => {
+    setSoundDisabledState(isSoundDisabled());
+    setSelectedSound(getStoredSoundPreset());
+  }, []);
+
+  const handleToggleSound = () => {
+    const d = !soundDisabled;
+    persistSoundDisabled(d);
+    setSoundDisabledState(d);
+    toast.success(`Master audio alerts ${d ? "muted" : "enabled"}`);
+  };
+
+  const handleSelectSound = (id) => {
+    setSelectedSound(id);
+    setStoredSoundPreset(id);
+    previewSound(id);
+    toast.success(`Notification chime updated to ${SOUND_PRESETS.find(p => p.id === id)?.name || id}!`);
+  };
 
   // ── Fetch settings ─────────────────────────────────────────────────────
   const fetchSettings = useCallback(async () => {
@@ -235,6 +263,92 @@ export default function NotificationManagement() {
           </div>
         ))}
       </div>
+
+      {/* ── Master Audio & Chime Notification Preferences ──────────────── */}
+      <Card className="p-5 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-950/20 border-slate-200/80 dark:border-purple-900/40 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-700/60">
+          <div>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              Master Audio Alerts &amp; Notification Tones
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Select your real-time synthesized chime when tickets, payments, or tenant alerts arrive on Master Admin.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+              {soundDisabled ? "Sound Muted" : "Sound Enabled"}
+            </span>
+            <button
+              onClick={handleToggleSound}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none ${
+                !soundDisabled ? "bg-purple-600" : "bg-slate-300 dark:bg-slate-600"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+                  !soundDisabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Chime Preset Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-4">
+          {SOUND_PRESETS.map((preset) => {
+            const isSelected = selectedSound === preset.id;
+            return (
+              <div
+                key={preset.id}
+                onClick={() => handleSelectSound(preset.id)}
+                className={`cursor-pointer p-3.5 rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
+                  isSelected
+                    ? "bg-purple-50/80 dark:bg-purple-950/40 border-purple-400 dark:border-purple-600 shadow-md ring-1 ring-purple-400/40"
+                    : "bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-purple-200 dark:hover:border-purple-800"
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white">
+                      {preset.name}
+                    </span>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
+                      isSelected
+                        ? "bg-purple-600 text-white"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                    }`}>
+                      {preset.tag}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                    {preset.desc}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400">
+                    {isSelected ? "Active Sound" : "Click to select"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      previewSound(preset.id);
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg transition-colors flex items-center gap-1 shadow-xs"
+                    title="Play preview"
+                  >
+                    <Play className="w-3 h-3 fill-current" /> Preview
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
 
       {/* ── Search + Filter ─────────────────────────────────────────────── */}
       <Card className="p-4 sm:p-5 bg-white dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/60">
@@ -383,79 +497,6 @@ export default function NotificationManagement() {
           </p>
         </Card>
       )}
-
-      {/* ── Sound & Audio Notifications ─────────────────────────────────── */}
-      <Card className="shadow-lg border-none bg-white dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/60 overflow-hidden">
-        <div className="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/50">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-            </svg>
-            Sound &amp; Audio Notifications
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Control live activity audio chimes for incoming desk tickets</p>
-        </div>
-        <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <p className="font-semibold text-sm text-slate-900 dark:text-white">Synthesize Live Activity Sound</p>
-            <p className="text-xs text-slate-500 mt-1 leading-normal">
-              Plays a sleek triple-tone sound synthesizer chime immediately on incoming support desk tickets and replies.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                const disabled = localStorage.getItem("milkify-sound-disabled") === "true";
-                localStorage.setItem("milkify-sound-disabled", disabled ? "false" : "true");
-                setSoundTrigger(p => p + 1);
-                toast.success(`Notification chime ${disabled ? "enabled" : "disabled"} successfully!`);
-              }}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                localStorage.getItem("milkify-sound-disabled") !== "true" ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-700"
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  localStorage.getItem("milkify-sound-disabled") !== "true" ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-
-            <button
-              onClick={() => {
-                try {
-                  const AudioContext = window.AudioContext || window.webkitAudioContext;
-                  if (!AudioContext) return;
-                  const ctx = new AudioContext();
-                  const playTone = (freq, startTime, duration) => {
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = "sine";
-                    osc.frequency.value = freq;
-                    gain.gain.setValueAtTime(0, startTime);
-                    gain.gain.linearRampToValueAtTime(0.15, startTime + 0.03);
-                    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start(startTime);
-                    osc.stop(startTime + duration);
-                  };
-                  const now = ctx.currentTime;
-                  playTone(784, now, 0.12);
-                  playTone(1046.5, now + 0.08, 0.15);
-                  playTone(1318.5, now + 0.16, 0.25);
-                } catch {}
-              }}
-              className="px-4 h-9 text-xs font-extrabold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl transition-all border border-slate-200/60 dark:border-slate-600 shadow-sm"
-            >
-              Test Chime
-            </button>
-          </div>
-        </div>
-      </Card>
-      {soundTrigger >= 0 && null}
-      {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-
 
       {/* ── Pause Modal ─────────────────────────────────────────────────── */}
       {showPauseModal && (

@@ -34,6 +34,8 @@ const {
   updateFarmerCredentialsForMaster,
   updateFarmerStatusForMaster,
   deleteFarmerForMaster,
+  uploadFarmerPhotoForMaster,
+  deleteFarmerPhotoForMaster,
   getDatabaseSchemaStats,
   getUserLoginHistory,
   getCountryUserLogins,
@@ -56,6 +58,7 @@ const {
 } = require("./notificationSettings.controller");
 
 const masterAuthMiddleware = require("../middleware/masterAuthMiddleware");
+const { upload } = require("../middleware/upload.middleware");
 const authMiddleware = require("../middleware/authMiddleware");
 
 const masterRouter = express.Router();
@@ -99,6 +102,8 @@ masterRouter.patch("/farmers/:farmerId/credentials", masterAuthMiddleware, updat
 masterRouter.patch("/farmers/:farmerId/status", masterAuthMiddleware, updateFarmerStatusForMaster);
 masterRouter.put("/farmers/:farmerId/credentials", masterAuthMiddleware, updateFarmerCredentialsForMaster);
 masterRouter.delete("/farmers/:farmerId", masterAuthMiddleware, deleteFarmerForMaster);
+masterRouter.post("/farmers/:farmerId/photo", masterAuthMiddleware, upload.single("photo"), uploadFarmerPhotoForMaster);
+masterRouter.delete("/farmers/:farmerId/photo", masterAuthMiddleware, deleteFarmerPhotoForMaster);
 
 // Plan config
 masterRouter.get("/plan-config", masterAuthMiddleware, getPlanConfig);
