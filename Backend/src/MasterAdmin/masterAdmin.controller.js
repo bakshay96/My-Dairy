@@ -1079,13 +1079,71 @@ const extendSubscription = async (req, res) => {
 };
 
 // ────────────────────────────────────────────────────────────
-// 7. PLAN PRICING CONFIG (GET / SET)
+// 7. PLAN PRICING CONFIG (GET / SET / CUSTOM PLANS)
 // ────────────────────────────────────────────────────────────
+const _getDefaultPlans = (config) => [
+  {
+    planId: "monthly",
+    name: "Monthly Plan",
+    price: config?.monthlyPrice || 499,
+    durationDays: 30,
+    billingCycle: "monthly",
+    description: "Pay as you go. Standard features.",
+    badge: "",
+    features: [
+      "Cancel anytime",
+      "Standard Support",
+      "Full client & farmer access",
+      "Thermal printing & daily records",
+    ],
+    isActive: true,
+    sortOrder: 1,
+  },
+  {
+    planId: "quarterly",
+    name: "Quarterly Plan",
+    price: config?.quarterlyPrice || 1299,
+    durationDays: 90,
+    billingCycle: "quarterly",
+    description: "Popular & cost-effective billing buffer.",
+    badge: "Save 13%",
+    features: [
+      "90 days uninterrupted access",
+      "Full milk ledger & thermal printing",
+      "Priority phone & email support",
+      "Automated backup sync",
+    ],
+    isActive: true,
+    sortOrder: 2,
+  },
+  {
+    planId: "yearly",
+    name: "Annual Plan",
+    price: config?.yearlyPrice || 4499,
+    durationDays: 365,
+    billingCycle: "yearly",
+    description: "Ultimate peace of mind with maximum value.",
+    badge: "Best Value",
+    features: [
+      "365 days full enterprise access",
+      "Zero price hike guarantee",
+      "VIP cloud bandwidth & storage",
+      "Dedicated account assistance",
+    ],
+    isActive: true,
+    sortOrder: 3,
+  },
+];
+
 const getPlanConfig = async (req, res) => {
   try {
     let config = await PlanConfigModel.findOne();
     if (!config) config = await PlanConfigModel.create({});
-    return res.status(200).json({ success: true, data: { config } });
+    if (!config.plans || config.plans.length === 0) {
+      config.plans = _getDefaultPlans(config);
+      await config.save();
+    }
+    return res.status(200).json({ success: true, data: { config }, config, plans: config.plans });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -1093,13 +1151,137 @@ const getPlanConfig = async (req, res) => {
 
 const updatePlanConfig = async (req, res) => {
   try {
-    const fields = ["monthlyPrice", "quarterlyPrice", "yearlyPrice", "trialDays", "currency"];
+    const fields = ["monthlyPrice", "quarterlyPrice", "yearlyPrice", "trialDays", "currency", "plans"];
     const update = {};
     fields.forEach((f) => { if (req.body[f] !== undefined) update[f] = req.body[f]; });
     update.updatedBy = req.masterId;
 
+    if (Array.isArray(update.plans)) {
+      const m = update.plans.find((p) => p.planId === "monthly");
+      const q = update.plans.find((p) => p.planId === "quarterly");
+      const y = update.plans.find((p) => p.planId === "yearly");
+      if (m) update.monthlyPrice = m.price;
+      if (q) update.quarterlyPrice = q.price;
+      if (y) update.yearlyPrice = y.price;
+    }
+
     let config = await PlanConfigModel.findOneAndUpdate({}, { $set: update }, { new: true, upsert: true });
-    return res.status(200).json({ success: true, message: "Plan config updated", data: { config } });
+    return res.status(200).json({ success: true, message: "Pricing configuration updated successfully", data: { config }, config, plans: config.plans });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const createCustomPlan = async (req, res) => {
+  try {
+    const { planId, name, price, durationDays, billingCycle, description, badge, features, isActive } = req.body;
+    if (!name || price === undefined || !durationDays) {
+      return res.status(400).json({ success: false, message: "Plan name, price, and duration in days are required" });
+    }
+    let config = await PlanConfigModel.findOne();
+    if (!config) config = await PlanConfigModel.create({});
+    if (!config.plans || config.plans.length === 0) {
+      config.plans = _getDefaultPlans(config);
+    }
+    const cleanId = (planId || name).toLowerCase().trim().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-");
+    if (config.plans.some((p) => p.planId === cleanId)) {
+      return res.status(400).json({ success: false, message: `A plan with key '${cleanId}' already exists` });
+    }
+
+    const newPlan = {
+      planId: cleanId,
+      name: name.trim(),
+      price: Number(price),
+      durationDays: Number(durationDays),
+      billingCycle: billingCycle || (durationDays >= 365 ? "yearly" : durationDays >= 90 ? "quarterly" : "monthly"),
+      description: description || "",
+      badge: badge || "",
+      features: Array.isArray(features) ? features.filter(Boolean) : [],
+      isActive: isActive !== false,
+      sortOrder: config.plans.length + 1,
+    };
+
+    config.plans.push(newPlan);
+    await config.save();
+    return res.status(201).json({ success: true, message: "New subscription plan created successfully", plan: newPlan, config });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const updateCustomPlan = async (req, res) => {
+  try {
+    const { planId } = req.params;
+    const { name, price, durationDays, billingCycle, description, badge, features, isActive } = req.body;
+
+    let config = await PlanConfigModel.findOne();
+    if (!config) config = await PlanConfigModel.create({});
+    if (!config.plans || config.plans.length === 0) {
+      config.plans = _getDefaultPlans(config);
+    }
+
+    const planIndex = config.plans.findIndex((p) => p.planId === planId);
+    if (planIndex === -1) {
+      return res.status(404).json({ success: false, message: `Plan with key '${planId}' not found` });
+    }
+
+    if (name) config.plans[planIndex].name = name.trim();
+    if (price !== undefined) config.plans[planIndex].price = Number(price);
+    if (durationDays !== undefined) config.plans[planIndex].durationDays = Number(durationDays);
+    if (billingCycle) config.plans[planIndex].billingCycle = billingCycle;
+    if (description !== undefined) config.plans[planIndex].description = description;
+    if (badge !== undefined) config.plans[planIndex].badge = badge;
+    if (features !== undefined) config.plans[planIndex].features = Array.isArray(features) ? features.filter(Boolean) : [];
+    if (isActive !== undefined) config.plans[planIndex].isActive = isActive;
+
+    if (planId === "monthly" && price !== undefined) config.monthlyPrice = Number(price);
+    if (planId === "quarterly" && price !== undefined) config.quarterlyPrice = Number(price);
+    if (planId === "yearly" && price !== undefined) config.yearlyPrice = Number(price);
+
+    await config.save();
+    return res.status(200).json({ success: true, message: "Plan updated successfully", plan: config.plans[planIndex], config });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const deleteCustomPlan = async (req, res) => {
+  try {
+    const { planId } = req.params;
+    let config = await PlanConfigModel.findOne();
+    if (!config || !config.plans) {
+      return res.status(404).json({ success: false, message: "No plans found" });
+    }
+
+    const initialLength = config.plans.length;
+    config.plans = config.plans.filter((p) => p.planId !== planId);
+    if (config.plans.length === initialLength) {
+      return res.status(404).json({ success: false, message: `Plan '${planId}' not found` });
+    }
+
+    await config.save();
+    return res.status(200).json({ success: true, message: "Plan deleted successfully", config });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const toggleCustomPlan = async (req, res) => {
+  try {
+    const { planId } = req.params;
+    let config = await PlanConfigModel.findOne();
+    if (!config || !config.plans) {
+      return res.status(404).json({ success: false, message: "No plans found" });
+    }
+
+    const plan = config.plans.find((p) => p.planId === planId);
+    if (!plan) {
+      return res.status(404).json({ success: false, message: `Plan '${planId}' not found` });
+    }
+
+    plan.isActive = !plan.isActive;
+    await config.save();
+    return res.status(200).json({ success: true, message: `Plan '${plan.name}' is now ${plan.isActive ? 'active' : 'inactive'}`, plan, config });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -1206,29 +1388,78 @@ const createSubscriptionOrder = async (req, res) => {
     const adminId = req.admin._id;
     const admin = req.admin;
 
-    const config = await PlanConfigModel.findOne() || {};
-    const planPrices = {
-      monthly: config.monthlyPrice || 499,
-      quarterly: config.quarterlyPrice || 1299,
-      yearly: config.yearlyPrice || 4499,
-    };
+    if (!plan) {
+      return res.status(400).json({ success: false, message: "Plan selection is required" });
+    }
 
-    if (!planPrices[plan])
-      return res.status(400).json({ success: false, message: "Invalid plan" });
+    // 1. LOCK ALREADY ACTIVE PLAN
+    // Disallow re-purchasing the exact plan if the user is already actively subscribed to it
+    let sub = await SubscriptionModel.findOne({ adminId });
+    if (!sub) sub = await _createTrialSubscription(adminId);
 
-    let basePrice = planPrices[plan];
+    const now = new Date();
+    const isAlreadyActiveOnThisPlan =
+      sub.status === "active" &&
+      sub.plan === plan &&
+      sub.endDate &&
+      new Date(sub.endDate) > now;
+
+    if (isAlreadyActiveOnThisPlan) {
+      const formattedEndDate = new Date(sub.endDate).toLocaleDateString(undefined, { dateStyle: "long" });
+      return res.status(400).json({
+        success: false,
+        message: `You are already actively subscribed to the ${plan.toUpperCase()} plan (valid until ${formattedEndDate}). You cannot purchase the same plan while it is actively running. Please choose another tier to upgrade.`,
+      });
+    }
+
+    // 2. Fetch plan config and resolve selected plan
+    let config = await PlanConfigModel.findOne();
+    if (!config) config = await PlanConfigModel.create({});
+    if (!config.plans || config.plans.length === 0) {
+      config.plans = _getDefaultPlans(config);
+      await config.save();
+    }
+
+    const planObj = config.plans.find((p) => p.planId === plan && p.isActive !== false);
+
+    let basePrice = 0;
+    let durationDays = 30;
+    let planDisplayName = plan;
+
+    if (planObj) {
+      basePrice = planObj.price;
+      durationDays = planObj.durationDays || 30;
+      planDisplayName = planObj.name;
+    } else {
+      const legacyPrices = {
+        monthly: config.monthlyPrice || 499,
+        quarterly: config.quarterlyPrice || 1299,
+        yearly: config.yearlyPrice || 4499,
+      };
+      const legacyDays = { monthly: 30, quarterly: 90, yearly: 365 };
+      if (!legacyPrices[plan]) {
+        return res.status(400).json({ success: false, message: `Plan '${plan}' not found or is currently inactive` });
+      }
+      basePrice = legacyPrices[plan];
+      durationDays = legacyDays[plan] || 30;
+      planDisplayName = plan.charAt(0).toUpperCase() + plan.slice(1) + " Plan";
+    }
+
     let discountAmount = 0;
     let appliedPromo = null;
 
     if (promoCode) {
       const promo = await PromoCodeModel.findOne({ code: promoCode.toUpperCase(), isActive: true });
       if (promo) {
-        if (promo.discountType === "percentage") {
-          discountAmount = parseFloat(((basePrice * promo.discountValue) / 100).toFixed(2));
-        } else {
-          discountAmount = Math.min(promo.discountValue, basePrice);
+        const isApplicable = !promo.applicablePlans || promo.applicablePlans.length === 0 || promo.applicablePlans.includes(plan);
+        if (isApplicable) {
+          if (promo.discountType === "percentage") {
+            discountAmount = parseFloat(((basePrice * promo.discountValue) / 100).toFixed(2));
+          } else {
+            discountAmount = Math.min(promo.discountValue, basePrice);
+          }
+          appliedPromo = promo;
         }
-        appliedPromo = promo;
       }
     }
 
@@ -1258,6 +1489,8 @@ const createSubscriptionOrder = async (req, res) => {
       notes: {
         adminId: String(adminId),
         plan,
+        planName: planDisplayName,
+        durationDays: String(durationDays),
         promoCode: promoCode || "",
         adminName: admin?.name || "",
         adminEmail: cleanEmail,
@@ -1265,8 +1498,6 @@ const createSubscriptionOrder = async (req, res) => {
     });
 
     // Update subscription record
-    let sub = await SubscriptionModel.findOne({ adminId });
-    if (!sub) sub = await _createTrialSubscription(adminId);
     sub.razorpayOrderId = order.id;
     sub.basePrice = basePrice;
     sub.discountAmount = discountAmount;
@@ -1274,6 +1505,7 @@ const createSubscriptionOrder = async (req, res) => {
     sub.promoCode = promoCode || null;
     sub.plan = plan;
     sub.paymentStatus = "pending";
+    sub.notes = `durationDays:${durationDays};planName:${planDisplayName};`;
     await sub.save();
 
     return res.status(200).json({
@@ -1290,6 +1522,8 @@ const createSubscriptionOrder = async (req, res) => {
         discountAmount,
         finalPrice,
         plan,
+        planName: planDisplayName,
+        durationDays,
         promoApplied: appliedPromo ? { code: appliedPromo.code, discountType: appliedPromo.discountType, discountValue: appliedPromo.discountValue } : null,
       },
     });
@@ -1385,12 +1619,30 @@ const verifySubscriptionPayment = async (req, res) => {
       });
     }
 
-    // Secure plan resolution: use invoiced plan from subscription session
+    // Secure plan resolution & duration calculation
     const verifiedPlan = sub.plan || plan || "monthly";
 
-    // Calculate subscription end date based on verified plan
-    const planDays = { monthly: 30, quarterly: 90, yearly: 365 };
-    const days = planDays[verifiedPlan] || 30;
+    let config = await PlanConfigModel.findOne() || {};
+    let days = 30;
+    let planDisplayName = verifiedPlan;
+
+    if (sub.notes && sub.notes.includes("durationDays:")) {
+      const matchDays = sub.notes.match(/durationDays:(\d+)/);
+      if (matchDays) days = parseInt(matchDays[1], 10);
+      const matchName = sub.notes.match(/planName:([^;]+);/);
+      if (matchName) planDisplayName = matchName[1];
+    } else {
+      const planObj = config.plans?.find((p) => p.planId === verifiedPlan);
+      if (planObj) {
+        days = planObj.durationDays;
+        planDisplayName = planObj.name;
+      } else {
+        const planDays = { monthly: 30, quarterly: 90, yearly: 365 };
+        days = planDays[verifiedPlan] || 30;
+        planDisplayName = verifiedPlan.charAt(0).toUpperCase() + verifiedPlan.slice(1) + " Plan";
+      }
+    }
+
     const now = new Date();
     const end = new Date(now);
     end.setDate(end.getDate() + days);
@@ -1425,24 +1677,39 @@ const verifySubscriptionPayment = async (req, res) => {
       instrument = razorpayPayment?.wallet ? `Wallet (${razorpayPayment.wallet})` : "Wallet";
     }
 
-    sub.paymentHistory.push({
+    const historyRecord = {
       paymentId: razorpay_payment_id,
       orderId: razorpay_order_id,
       amount: sub.finalPrice,
       plan: verifiedPlan,
+      planName: planDisplayName,
+      durationDays: days,
+      startDate: now,
+      endDate: end,
       paidAt: now,
       promoCode: sub.promoCode,
       discountAmt: sub.discountAmount,
       method,
       instrument,
-    });
+    };
 
+    sub.paymentHistory.push(historyRecord);
     await sub.save();
 
     return res.status(200).json({
       success: true,
       message: "Payment verified successfully. Subscription activated!",
-      data: { subscription: sub },
+      data: {
+        subscription: sub,
+        receipt: {
+          ...historyRecord,
+          adminName: req.admin?.name || "Admin",
+          adminShopName: req.admin?.shopName || "Milkify Dairy",
+          adminEmail: req.admin?.email || "billing@milkify.app",
+          adminMobile: req.admin?.mobile || "",
+          currency: config.currency || "INR",
+        },
+      },
     });
   } catch (err) {
     console.error("[MasterAdmin] verifySubscriptionPayment error:", err);
@@ -1458,9 +1725,22 @@ const getMySubscription = async (req, res) => {
     const adminId = req.admin._id;
     let sub = await SubscriptionModel.findOne({ adminId });
     if (!sub) sub = await _createTrialSubscription(adminId);
-    const config = await PlanConfigModel.findOne() || {};
+    let config = await PlanConfigModel.findOne();
+    if (!config) config = await PlanConfigModel.create({});
+    if (!config.plans || config.plans.length === 0) {
+      config.plans = _getDefaultPlans(config);
+      await config.save();
+    }
     const promos = await PromoCodeModel.find({ isActive: true }).select("code discountType discountValue description validUntil applicablePlans").lean();
-    return res.status(200).json({ success: true, data: { subscription: sub, config, activePromos: promos } });
+    return res.status(200).json({
+      success: true,
+      data: {
+        subscription: sub,
+        config,
+        plans: config.plans.filter((p) => p.isActive !== false),
+        activePromos: promos,
+      },
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -2105,6 +2385,10 @@ module.exports = {
   extendSubscription,
   getPlanConfig,
   updatePlanConfig,
+  createCustomPlan,
+  updateCustomPlan,
+  deleteCustomPlan,
+  toggleCustomPlan,
   createPromoCode,
   getAllPromoCodes,
   updatePromoCode,

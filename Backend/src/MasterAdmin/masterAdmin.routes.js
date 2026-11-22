@@ -8,6 +8,10 @@ const {
   extendSubscription,
   getPlanConfig,
   updatePlanConfig,
+  createCustomPlan,
+  updateCustomPlan,
+  deleteCustomPlan,
+  toggleCustomPlan,
   createPromoCode,
   getAllPromoCodes,
   updatePromoCode,
@@ -105,9 +109,13 @@ masterRouter.delete("/farmers/:farmerId", masterAuthMiddleware, deleteFarmerForM
 masterRouter.post("/farmers/:farmerId/photo", masterAuthMiddleware, upload.single("photo"), uploadFarmerPhotoForMaster);
 masterRouter.delete("/farmers/:farmerId/photo", masterAuthMiddleware, deleteFarmerPhotoForMaster);
 
-// Plan config
+// Plan config & dynamic multi-plans
 masterRouter.get("/plan-config", masterAuthMiddleware, getPlanConfig);
 masterRouter.put("/plan-config", masterAuthMiddleware, updatePlanConfig);
+masterRouter.post("/plans", masterAuthMiddleware, createCustomPlan);
+masterRouter.put("/plans/:planId", masterAuthMiddleware, updateCustomPlan);
+masterRouter.delete("/plans/:planId", masterAuthMiddleware, deleteCustomPlan);
+masterRouter.patch("/plans/:planId/toggle", masterAuthMiddleware, toggleCustomPlan);
 
 // Promo codes
 masterRouter.get("/promo-codes", masterAuthMiddleware, getAllPromoCodes);

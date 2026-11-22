@@ -1,13 +1,30 @@
 const mongoose = require("mongoose");
 
+const planItemSchema = new mongoose.Schema(
+  {
+    planId:       { type: String, required: true }, // unique plan key e.g. "monthly", "quarterly", "yearly", "half-yearly"
+    name:         { type: String, required: true }, // e.g. "Monthly Plan", "6-Month Growth Plan"
+    price:        { type: Number, required: true, min: 0 },
+    durationDays: { type: Number, required: true, min: 1 }, // e.g. 30, 90, 180, 365
+    billingCycle: { type: String, default: "monthly" }, // e.g. "monthly", "quarterly", "yearly", "custom"
+    description:  { type: String, default: "" },
+    badge:        { type: String, default: "" }, // e.g. "Most Popular", "Save 20%", "Best Value"
+    features:     [{ type: String }],
+    isActive:     { type: Boolean, default: true },
+    sortOrder:    { type: Number, default: 0 },
+  },
+  { _id: true, timestamps: true }
+);
+
 const promoPlanSchema = new mongoose.Schema(
   {
-    // Global pricing set by master admin
+    // Global pricing legacy fields (for backwards compatibility)
     monthlyPrice:    { type: Number, default: 499 },
     quarterlyPrice:  { type: Number, default: 1299 },
     yearlyPrice:     { type: Number, default: 4499 },
     trialDays:       { type: Number, default: 10 },
     currency:        { type: String, default: "INR" },
+    plans:           [planItemSchema], // Multiple dynamic plans managed by Master Admin
     updatedBy:       { type: mongoose.Schema.Types.ObjectId, ref: "master" },
   },
   { timestamps: true }

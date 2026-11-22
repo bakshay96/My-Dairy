@@ -11,7 +11,6 @@ const subscriptionSchema = new mongoose.Schema(
     },
     plan: {
       type: String,
-      enum: ["trial", "monthly", "quarterly", "yearly"],
       default: "trial",
     },
     status: {
@@ -47,6 +46,10 @@ const subscriptionSchema = new mongoose.Schema(
         orderId:      String,
         amount:       Number,
         plan:         String,
+        planName:     String,
+        durationDays: Number,
+        startDate:    Date,
+        endDate:      Date,
         paidAt:       { type: Date, default: Date.now },
         promoCode:    String,
         discountAmt:  Number,
