@@ -17,6 +17,7 @@ const ratesRouter = require("./src/Milk/RateSetting/rateChartConfigRoutes");
 const { paymentRouter } = require("./src/Payment/paymentRoutes");
 const { masterRouter } = require("./src/MasterAdmin/masterAdmin.routes");
 const ticketRouter = require("./src/Ticket/ticket.routes");
+const { adminMediaRouter, masterMediaRouter } = require("./src/Media/media.routes");
 const authMiddleware = require("./src/middleware/authMiddleware");
 const subscriptionGuard = require("./src/middleware/subscriptionGuard");
 const { analyticsRouter } = require("./src/Analytics/analyticsRoutes");
@@ -178,6 +179,7 @@ app.get("/health", (req, res) =>
 // ============================================================
 app.use("/api/admin", AdminRouter);
 app.use("/api/master", masterRouter);             // ← Master admin APIs
+app.use("/api/master/media", masterMediaRouter);       // ← Centralized Master media storage
 app.use("/api/tickets", ticketRouter);             // ← Ticket/Support system
 
 // Core dairy routes — guarded by subscription after authMiddleware
@@ -188,6 +190,7 @@ app.use("/api/rate", authMiddleware, subscriptionGuard, rateRouter);
 app.use("/api/rates", authMiddleware, subscriptionGuard, ratesRouter);
 app.use("/api/payment", authMiddleware, subscriptionGuard, paymentRouter);
 app.use("/api/analytics", authMiddleware, subscriptionGuard, analyticsRouter);
+app.use("/api/media", authMiddleware, subscriptionGuard, adminMediaRouter);
 
 // ============================================================
 // 404 HANDLER

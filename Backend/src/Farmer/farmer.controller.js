@@ -154,7 +154,7 @@ exports.getSingleFarmer = async (req, res) => {
 exports.updateFarmer = async (req, res) => {
   try {
     // Whitelist only safe, editable fields — never allow adminId override
-    const allowedFields = ["name", "mobile", "email", "village", "address", "gender", "status"];
+    const allowedFields = ["name", "mobile", "email", "village", "address", "gender", "status", "profilePhoto"];
     const updateData = {};
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) {
@@ -172,8 +172,9 @@ exports.updateFarmer = async (req, res) => {
       return res.status(400).json({ message: "No valid fields to update." });
     }
 
+    const adminId = req.admin?._id || req.admin?.id;
     const farmer = await farmerModel.findOneAndUpdate(
-      { _id: req.params.id, adminId: req.admin._id },
+      { _id: req.params.id, adminId },
       { $set: updateData },
       { new: true, runValidators: true }
     );
@@ -281,10 +282,79 @@ exports.farmerLogin = async (req, res) => {
           role: farmer.role,
           status: farmer.status,
           dairy: farmer.adminId,
+          profilePhoto: farmer.profilePhoto || "",
         }
       }
     });
   } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ─── Upload Farmer Photo to S3 ────────────────────────────────────────────────
+exports.uploadFarmerPhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Please provide an image file" });
+    }
+
+    const adminId = req.admin?._id || req.admin?.id;
+    const farmer = await farmerModel.findOne({ _id: req.params.id, adminId });
+    if (!farmer) {
+      return res.status(404).json({ success: false, message: "Farmer not found or unauthorized" });
+    }
+
+    const { uploadToS3, deleteFromS3 } = require("../services/s3.service");
+
+    // If farmer already has an S3 photo, delete the old one
+    if (farmer.profilePhoto && farmer.profilePhoto.includes(".amazonaws.com/")) {
+      await deleteFromS3(farmer.profilePhoto).catch((err) => console.warn("[S3] old photo cleanup failed:", err.message));
+    }
+
+    const s3Url = await uploadToS3(req.file.buffer, req.file.originalname, "farmers/profiles");
+    farmer.profilePhoto = s3Url;
+    farmer.modifiedBy = `Admin:${adminId}`;
+    farmer.modifiedAt = new Date();
+    await farmer.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Farmer profile photo uploaded successfully",
+      profilePhoto: s3Url,
+      farmer,
+    });
+  } catch (error) {
+    console.error("[Farmer] uploadFarmerPhoto error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ─── Delete Farmer Photo from S3 ──────────────────────────────────────────────
+exports.deleteFarmerPhoto = async (req, res) => {
+  try {
+    const adminId = req.admin?._id || req.admin?.id;
+    const farmer = await farmerModel.findOne({ _id: req.params.id, adminId });
+    if (!farmer) {
+      return res.status(404).json({ success: false, message: "Farmer not found or unauthorized" });
+    }
+
+    if (farmer.profilePhoto && farmer.profilePhoto.includes(".amazonaws.com/")) {
+      const { deleteFromS3 } = require("../services/s3.service");
+      await deleteFromS3(farmer.profilePhoto).catch((err) => console.warn("[S3] delete failed:", err.message));
+    }
+
+    farmer.profilePhoto = "";
+    farmer.modifiedBy = `Admin:${adminId}`;
+    farmer.modifiedAt = new Date();
+    await farmer.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Farmer profile photo removed successfully",
+      farmer,
+    });
+  } catch (error) {
+    console.error("[Farmer] deleteFarmerPhoto error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

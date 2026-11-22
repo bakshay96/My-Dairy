@@ -10,6 +10,7 @@ import {
   ChevronRight, Clock, CheckCircle2, Zap,
   Bold, Italic, Code, Search,
 } from "lucide-react";
+import { playNotificationSound } from "@/lib/soundEffects";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -80,36 +81,6 @@ function TicketRow({ ticket, onClick }) {
     </button>
   );
 }
-
-// Synthesized chime via HTML5 Web Audio API
-const playNotificationSound = () => {
-  if (typeof window === "undefined") return;
-  if (localStorage.getItem("milkify-sound-disabled") === "true") return;
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    const playTone = (freq, startTime, duration) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.15, startTime + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-    const now = ctx.currentTime;
-    playTone(784, now, 0.12);        // G5
-    playTone(1046.5, now + 0.08, 0.15); // C6
-    playTone(1318.5, now + 0.16, 0.25); // E6
-  } catch (e) {
-    console.warn("Could not play synthesized sound:", e);
-  }
-};
 
 export default function MasterTicketsPage() {
   const user = useAuthStore((s) => s.user);

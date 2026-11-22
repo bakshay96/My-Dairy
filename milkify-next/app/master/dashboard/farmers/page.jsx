@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,7 +8,7 @@ import {
   Loader2, Users, Search, ArrowUpDown, 
   Trash2, Eye, EyeOff, AlertTriangle, X, KeyRound, Lock, Phone, 
   Copy, Check, Sparkles, Save, ShieldAlert, Building, 
-  MapPin, CheckCircle2, PauseCircle, RefreshCw, UserCheck
+  MapPin, CheckCircle2, PauseCircle, RefreshCw, UserCheck, Camera
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,44 @@ export default function MasterFarmersDirectory() {
 
   // View details modal state
   const [viewFarmer, setViewFarmer] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const handleMasterPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !viewFarmer?._id) return;
+    const formData = new FormData();
+    formData.append("photo", file);
+    setUploadingPhoto(true);
+    try {
+      const res = await api.post(`/master/farmers/${viewFarmer._id}/photo`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const newUrl = res.data?.profilePhoto;
+      setViewFarmer((prev) => ({ ...prev, profilePhoto: newUrl }));
+      setFarmers((prev) => prev.map((f) => (f._id === viewFarmer._id ? { ...f, profilePhoto: newUrl } : f)));
+      toast.success("Farmer photo uploaded to AWS S3!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to upload photo");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleMasterPhotoDelete = async () => {
+    if (!window.confirm("Remove farmer's profile photo?")) return;
+    if (!viewFarmer?._id) return;
+    setUploadingPhoto(true);
+    try {
+      await api.delete(`/master/farmers/${viewFarmer._id}/photo`);
+      setViewFarmer((prev) => ({ ...prev, profilePhoto: "" }));
+      setFarmers((prev) => prev.map((f) => (f._id === viewFarmer._id ? { ...f, profilePhoto: "" } : f)));
+      toast.success("Farmer photo removed from AWS S3");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to delete photo");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   // Delete modal state
   const [deleteFarmerId, setDeleteFarmerId] = useState(null);
@@ -335,15 +374,26 @@ export default function MasterFarmersDirectory() {
                   <tr key={f._id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                     {/* Farmer Info */}
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-slate-200 dark:border-slate-700">
-                          {f.memberId || "MI-000"}
-                        </span>
-                        <p className="font-bold text-slate-900 dark:text-white text-sm">{f.name}</p>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/40 overflow-hidden flex items-center justify-center text-purple-700 dark:text-purple-300 font-bold text-xs shrink-0 border border-purple-200 dark:border-purple-800">
+                          {f.profilePhoto ? (
+                            <img src={f.profilePhoto} alt={f.name} className="w-full h-full object-cover" />
+                          ) : (
+                            f.name?.[0]?.toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-slate-200 dark:border-slate-700">
+                              {f.memberId || "MI-000"}
+                            </span>
+                            <p className="font-bold text-slate-900 dark:text-white text-sm">{f.name}</p>
+                          </div>
+                          <p className="text-slate-500 text-[11px] mt-0.5 flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-slate-400" /> {f.village} &bull; {f.gender || "Male"}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-slate-500 text-[11px] mt-0.5 flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-slate-400" /> {f.village} &bull; {f.gender || "Male"}
-                      </p>
                     </td>
 
                     {/* Dairy Tenant */}
@@ -495,12 +545,48 @@ export default function MasterFarmersDirectory() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-950 border dark:border-slate-800 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 text-white flex justify-between items-start">
-              <div>
-                <span className="text-[10px] font-mono uppercase bg-white/20 px-2 py-0.5 rounded tracking-wider">
-                  {viewFarmer.memberId || "MI-000"}
-                </span>
-                <h2 className="text-xl font-black mt-1">{viewFarmer.name}</h2>
-                <p className="text-xs text-white/80">{viewFarmer.village} &bull; Dairy: {viewFarmer.adminId?.shopName}</p>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-2xl bg-white/20 border-2 border-white/40 overflow-hidden flex items-center justify-center font-bold text-2xl text-white shadow-lg">
+                    {viewFarmer.profilePhoto ? (
+                      <img src={viewFarmer.profilePhoto} alt={viewFarmer.name} className="w-full h-full object-cover" />
+                    ) : (
+                      viewFarmer.name?.[0]?.toUpperCase()
+                    )}
+                  </div>
+                  <label
+                    htmlFor={`master-farmer-photo-${viewFarmer._id}`}
+                    className={`absolute -bottom-1 -right-1 p-1.5 rounded-xl bg-purple-900 hover:bg-black text-white shadow-md cursor-pointer transition-transform hover:scale-105 ${uploadingPhoto ? "opacity-50 pointer-events-none" : ""}`}
+                    title="Upload photo to S3"
+                  >
+                    {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                  </label>
+                  <input
+                    id={`master-farmer-photo-${viewFarmer._id}`}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleMasterPhotoUpload}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono uppercase bg-white/20 px-2 py-0.5 rounded tracking-wider">
+                      {viewFarmer.memberId || "MI-000"}
+                    </span>
+                    {viewFarmer.profilePhoto && (
+                      <button
+                        onClick={handleMasterPhotoDelete}
+                        disabled={uploadingPhoto}
+                        className="text-[10px] text-red-200 hover:text-white bg-red-900/40 px-2 py-0.5 rounded border border-red-400/30"
+                      >
+                        Remove Photo
+                      </button>
+                    )}
+                  </div>
+                  <h2 className="text-xl font-black mt-1">{viewFarmer.name}</h2>
+                  <p className="text-xs text-white/80">{viewFarmer.village} &bull; Dairy: {viewFarmer.adminId?.shopName}</p>
+                </div>
               </div>
               <button onClick={() => setViewFarmer(null)} className="text-white/80 hover:text-white bg-white/10 p-2 rounded-full">
                 <X className="h-5 w-5" />

@@ -61,6 +61,10 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			default: "",
 		},
+		profilePhoto: {
+			type: String,
+			default: "",
+		},
 		milks: [],
 		modifiedBy: { type: String, default: null },
 		modifiedAt: { type: Date, default: null },

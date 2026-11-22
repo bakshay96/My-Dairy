@@ -43,8 +43,9 @@ const masterAuthMiddleware = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Master admin account inactive" });
     }
 
-    req.master   = master;
-    req.masterId = master._id;
+    req.master      = master;
+    req.masterId    = master._id;
+    req.masterAdmin = master;
     next();
   } catch (err) {
     if (err.name === "TokenExpiredError") {

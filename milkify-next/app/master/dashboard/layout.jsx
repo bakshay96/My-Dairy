@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Tag, IndianRupee, LogOut, Loader2, ArrowLeftRight,
   Settings, Menu, X, PanelLeftClose, PanelLeftOpen, Shield,
-  Megaphone, TicketIcon, Eye, Bell, Users, Cpu,
+  Megaphone, TicketIcon, Eye, Bell, Users, Cpu, ChevronRight, Image as ImageIcon,
 } from "lucide-react";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -25,6 +25,7 @@ const navItems = [
   { name: "Promo Codes",       href: "/master/dashboard/promos",           icon: IndianRupee },
   { name: "Advertisements",    href: "/master/dashboard/advertisements",   icon: Megaphone },
   { name: "Support Desk",      href: "/master/dashboard/tickets",          icon: TicketIcon },
+  { name: "Media Gallery",     href: "/master/dashboard/media",            icon: ImageIcon },
   { name: "Settings",          href: "/master/dashboard/settings",         icon: Settings },
   { name: "My Application",     href: "/master/dashboard/application",      icon: Cpu }
 ];
@@ -129,14 +130,17 @@ export default function MasterDashboardLayout({ children }) {
     return (
       <Link
         href={item.href}
+        onClick={() => {
+          if (mobile) setIsMobileOpen(false);
+        }}
         title={isCollapsed && !mobile ? item.name : ""}
         className={cn(
           "flex items-center rounded-xl text-sm font-semibold transition-all duration-200",
           mobile
-            ? "px-3 py-3 text-base"
+            ? "px-3 py-3 text-base hover:translate-x-1.5 active:scale-95"
             : cn("px-3 py-2.5", isCollapsed && "justify-center px-2"),
           active
-            ? "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 shadow-sm"
+            ? "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 shadow-sm font-bold"
             : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
         )}
       >
@@ -145,7 +149,7 @@ export default function MasterDashboardLayout({ children }) {
             "h-5 w-5 shrink-0",
             active ? "text-purple-600 dark:text-purple-400" : "text-slate-400 dark:text-slate-500",
             !isCollapsed && !mobile && "mr-3",
-            mobile && "mr-3"
+            mobile && "mr-3 h-5.5 w-5.5"
           )}
         />
         {(!isCollapsed || mobile) && (
@@ -165,6 +169,40 @@ export default function MasterDashboardLayout({ children }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
+      {/* Dynamic Keyframes for Mobile Menu Handle Animations */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes customChevronWave {
+          0%, 100% {
+            transform: translateX(0);
+            opacity: 0.5;
+          }
+          50% {
+            transform: translateX(4px);
+            opacity: 1;
+          }
+        }
+        .animate-chevron-wave-1 {
+          animation: customChevronWave 1.4s ease-in-out infinite;
+        }
+        .animate-chevron-wave-2 {
+          animation: customChevronWave 1.4s ease-in-out infinite;
+          animation-delay: 0.2s;
+        }
+        @keyframes radialGlowPurple {
+          0% {
+            box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4);
+          }
+          70% {
+            box-shadow: 0 0 0 8px rgba(168, 85, 247, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+          }
+        }
+        .animate-radial-glow-purple {
+          animation: radialGlowPurple 2s infinite;
+        }
+      ` }} />
 
       {/* ── DESKTOP SIDEBAR ─────────────────────────────────────────────── */}
       <aside
@@ -273,8 +311,8 @@ export default function MasterDashboardLayout({ children }) {
       <div className="flex flex-1 flex-col overflow-hidden">
 
         {/* Mobile header */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 md:hidden">
-          <Link href="/master/dashboard" className="transition-transform hover:scale-95">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 md:hidden">
+          <Link href="/master/dashboard" className="transition-transform hover:scale-95 active:scale-90">
             <Brand />
           </Link>
           <div className="flex items-center gap-2">
@@ -284,7 +322,7 @@ export default function MasterDashboardLayout({ children }) {
             <ThemeToggle />
             <button
               onClick={() => setIsMobileOpen(!isMobileOpen)}
-              className="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               aria-label="Toggle menu"
             >
               {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -292,32 +330,117 @@ export default function MasterDashboardLayout({ children }) {
           </div>
         </header>
 
-        {/* Mobile menu overlay */}
-        {isMobileOpen && (
-          <div className="absolute inset-0 z-50 mt-16 bg-white dark:bg-slate-900 md:hidden overflow-y-auto">
-            <nav className="p-4 space-y-1">
-              {navItems.map((item) => <NavLink key={item.name} item={item} mobile />)}
-              <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 space-y-1">
-                <Link
-                  href="/dashboard"
-                  className="flex items-center rounded-xl px-3 py-3 text-base font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  <ArrowLeftRight className="mr-3 h-5 w-5 text-slate-400" />
-                  Admin Dashboard
-                </Link>
-              </div>
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center rounded-xl px-3 py-3 text-base font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                >
-                  <LogOut className="mr-3 h-5 w-5" />
-                  Logout
-                </button>
-              </div>
-            </nav>
+        {/* Animated Left-Edge Pull Tab (Mobile only) */}
+        <button
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className={cn(
+            "fixed top-[45%] -translate-y-1/2 z-[60] flex flex-col items-center justify-center w-8 h-20 rounded-r-2xl transition-all duration-300 ease-in-out md:hidden shadow-[4px_0_20px_rgba(147,51,234,0.25)] border-y border-r border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/50",
+            isMobileOpen 
+              ? "left-[288px] bg-slate-900/90 dark:bg-slate-800/90 text-white" 
+              : "left-0 bg-purple-600 text-white animate-radial-glow-purple"
+          )}
+          aria-label="Toggle Navigation Drawer"
+        >
+          {/* Subtle vertical accent line inside the tab handle */}
+          <div className="absolute left-1 w-0.5 h-10 rounded-full bg-white/20" />
+
+          {/* Sequential Double Chevron Arrows */}
+          <div className="flex flex-col items-center gap-1">
+            <ChevronRight 
+              className={cn(
+                "h-4 w-4 transition-all duration-300", 
+                isMobileOpen 
+                  ? "rotate-180 text-white/70" 
+                  : "animate-chevron-wave-1 text-white"
+              )} 
+            />
+            <ChevronRight 
+              className={cn(
+                "h-4 w-4 transition-all duration-300 -mt-1", 
+                isMobileOpen 
+                  ? "rotate-180 text-white/40" 
+                  : "animate-chevron-wave-2 text-white/80"
+              )} 
+            />
           </div>
+        </button>
+
+        {/* Mobile Side Drawer Backdrop */}
+        {isMobileOpen && (
+          <div 
+            className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 md:hidden"
+            onClick={() => setIsMobileOpen(false)}
+          />
         )}
+
+        {/* Mobile Side Drawer Content */}
+        <div 
+          className={cn(
+            "fixed top-0 left-0 bottom-0 z-50 w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl flex flex-col transition-transform duration-300 ease-in-out md:hidden border-r border-slate-200/50 dark:border-slate-800/80",
+            isMobileOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          {/* Drawer Header */}
+          <div className="flex h-16 items-center justify-between px-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
+            <div className="flex items-center gap-2">
+              <Link href="/master/dashboard" onClick={() => setIsMobileOpen(false)} className="transition-transform hover:scale-95 active:scale-90">
+                <Brand />
+              </Link>
+              <span className="text-[10px] font-black text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-1.5 py-0.5 rounded tracking-wider uppercase">
+                MASTER
+              </span>
+            </div>
+            <button
+              onClick={() => setIsMobileOpen(false)}
+              className="relative flex items-center justify-center p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all duration-200"
+              aria-label="Close Navigation Drawer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Scrollable Navigation Area */}
+          <div className="flex-1 overflow-y-auto py-4 px-4 space-y-1">
+            {navItems.map((item) => (
+              <NavLink key={item.name} item={item} mobile />
+            ))}
+
+            {/* Back to Admin link */}
+            <div className="pt-3 mt-3 border-t border-slate-200 dark:border-slate-800">
+              <Link
+                href="/dashboard"
+                onClick={() => setIsMobileOpen(false)}
+                className="flex items-center rounded-xl px-3 py-3 text-base font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all hover:translate-x-1.5 active:scale-95"
+              >
+                <ArrowLeftRight className="mr-3 h-5 w-5 text-slate-400" />
+                Admin Dashboard
+              </Link>
+            </div>
+          </div>
+
+          {/* Drawer Footer Actions */}
+          <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
+              <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-700 dark:text-purple-300 font-black text-sm shrink-0">
+                <Shield className="h-4.5 w-4.5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                  {master?.username || "Master Admin"}
+                </p>
+                <p className="text-xs text-purple-600 dark:text-purple-400 font-semibold truncate">Super Administrator</p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center justify-center rounded-xl px-3 py-2.5 text-sm font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/40 transition-colors border border-red-200/40 dark:border-red-900/40 gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
+        </div>
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950">

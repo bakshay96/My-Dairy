@@ -17,36 +17,67 @@ const SNOOZE_HOURS  = 1; // re-show after 1 hour
 const AUTO_DISMISS_SECONDS = 8; // auto-close after 8 seconds
 
 function getSnoozed() {
-  try { return JSON.parse(localStorage.getItem(SNOOZE_KEY) || "{}"); } catch { return {}; }
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(SNOOZE_KEY) || "{}");
+  } catch {
+    return {};
+  }
 }
+
 function snoozeAd(adId) {
-  const map = getSnoozed();
-  map[adId] = Date.now();
-  // Clean up expired snoozes
-  const cutoff = Date.now() - SNOOZE_HOURS * 3600 * 1000;
-  Object.keys(map).forEach((k) => { if (map[k] < cutoff) delete map[k]; });
-  localStorage.setItem(SNOOZE_KEY, JSON.stringify(map));
+  if (!adId || typeof window === "undefined") return;
+  try {
+    const map = getSnoozed();
+    map[adId] = Date.now();
+    // Clean up expired snoozes
+    const cutoff = Date.now() - SNOOZE_HOURS * 3600 * 1000;
+    Object.keys(map).forEach((k) => {
+      if (map[k] < cutoff) delete map[k];
+    });
+    localStorage.setItem(SNOOZE_KEY, JSON.stringify(map));
+  } catch (err) {
+    console.warn("[AlertBanner] snoozeAd error:", err);
+  }
 }
+
 function isSnoozed(adId) {
-  const map = getSnoozed();
-  if (!map[adId]) return false;
-  return Date.now() - map[adId] < SNOOZE_HOURS * 3600 * 1000;
+  if (!adId || typeof window === "undefined") return false;
+  try {
+    const map = getSnoozed();
+    if (!map[adId]) return false;
+    return Date.now() - map[adId] < SNOOZE_HOURS * 3600 * 1000;
+  } catch {
+    return false;
+  }
 }
 
 // ── Ad History: track all dismissed ads ──────────────────────────────────────
 function getAdHistory() {
-  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
-}
-function addToHistory(ad) {
-  const history = getAdHistory();
-  const exists = history.find((h) => h._id === ad._id);
-  if (!exists) {
-    history.push({ ...ad, dismissedAt: new Date().toISOString() });
-    // Keep only last 50 dismissed ads
-    if (history.length > 50) history.shift();
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+  } catch {
+    return [];
   }
 }
+
+function addToHistory(ad) {
+  if (!ad || !ad._id || typeof window === "undefined") return;
+  try {
+    const history = getAdHistory();
+    const exists = history.find((h) => h._id === ad._id);
+    if (!exists) {
+      history.push({ ...ad, dismissedAt: new Date().toISOString() });
+      // Keep only last 50 dismissed ads
+      if (history.length > 50) history.shift();
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+  } catch (err) {
+    console.warn("[AlertBanner] addToHistory error:", err);
+  }
+}
+
 export function getAdvertisementHistory() {
   return getAdHistory();
 }
@@ -132,10 +163,10 @@ const getCfg = (type) => TYPE_CONFIG[type] || TYPE_CONFIG.info;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function isAdEligible(ad, adminId) {
+  if (!ad || !ad.isActive) return false;
   const now = new Date();
-  if (!ad.isActive) return false;
-  if (new Date(ad.expiresAt) < now) return false;
-  if (new Date(ad.visibleFrom) > now) return false;
+  if (ad.expiresAt && new Date(ad.expiresAt) < now) return false;
+  if (ad.visibleFrom && new Date(ad.visibleFrom) > now) return false;
   if (ad.dismissedBy?.includes(adminId)) return false;
   const targets = ad.targetAdmins || [];
   if (targets.length > 0 && !targets.some((t) => String(t._id || t) === String(adminId))) return false;
@@ -153,16 +184,29 @@ export default function AlertBanner({ suppress = false }) {
   const [ads, setAds]  = useState([]);
   const [expanded, setExpanded] = useState(null);
 
+  // ── Carousel state ──────────────────────────────────────────────────────────
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [autoRotate, setAutoRotate]     = useState(true);
+  const [autoDismissCountdown, setAutoDismissCountdown] = useState(AUTO_DISMISS_SECONDS);
+
+  // Safe index calculation to prevent out-of-bounds access
+  const safeIndex = ads.length > 0 ? Math.min(Math.max(0, currentIndex), ads.length - 1) : 0;
+  const currentAd = ads.length > 0 && ads[safeIndex] ? ads[safeIndex] : null;
+
   // ── Initial HTTP fetch ────────────────────────────────────────────────────
   const fetchAds = useCallback(async () => {
     if (!adminId) return;
     try {
       const res = await api.get("/master/advertisements/my");
       const incoming = res.data?.data?.advertisements || res.data?.advertisements || [];
-      // Filter out snoozed ads on the client side
-      setAds(incoming.filter((a) => !isSnoozed(a._id)));
-    } catch {
-      // Silent — non-critical feature
+      const eligible = (Array.isArray(incoming) ? incoming : []).filter(
+        (a) => a && a._id && !isSnoozed(a._id)
+      );
+      setAds(eligible);
+      setCurrentIndex(0);
+      setAutoDismissCountdown(AUTO_DISMISS_SECONDS);
+    } catch (err) {
+      console.warn("[AlertBanner] fetch failed:", err);
     }
   }, [adminId]);
 
@@ -170,48 +214,53 @@ export default function AlertBanner({ suppress = false }) {
   useEffect(() => {
     if (suppress || !adminId) return;
 
-    // Connect socket if not already connected
     if (!socket.connected) socket.connect();
 
     const onConnect = () => {
-      // Join both rooms: admin-specific and the global 'ads' broadcast room
       socket.emit("join_room", `admin:${adminId}`);
       socket.emit("join_room", "ads");
     };
 
     const onAdPush = ({ action, advertisement: ad }) => {
-      if (!ad) return;
+      if (!ad || !ad._id) return;
 
       if (action === "removed") {
-        setAds((prev) => prev.filter((a) => a._id !== ad._id));
+        setAds((prev) => {
+          const next = prev.filter((a) => a._id !== ad._id);
+          setCurrentIndex((idx) => (next.length === 0 ? 0 : Math.min(idx, next.length - 1)));
+          return next;
+        });
         return;
       }
 
       if (action === "updated") {
         setAds((prev) => {
-          const exists = prev.find((a) => a._id === ad._id);
           if (!isAdEligible(ad, adminId) || isSnoozed(ad._id)) {
-            return prev.filter((a) => a._id !== ad._id);
+            const next = prev.filter((a) => a._id !== ad._id);
+            setCurrentIndex((idx) => (next.length === 0 ? 0 : Math.min(idx, next.length - 1)));
+            return next;
           }
+          const exists = prev.find((a) => a._id === ad._id);
           if (exists) return prev.map((a) => (a._id === ad._id ? ad : a));
           return [ad, ...prev];
         });
         return;
       }
 
-      // action === "new"
-      if (!isAdEligible(ad, adminId) || isSnoozed(ad._id)) return;
-      setAds((prev) => {
-        if (prev.find((a) => a._id === ad._id)) return prev;
-        return [ad, ...prev].sort((a, b) => (b.priority || 0) - (a.priority || 0));
-      });
+      if (action === "new") {
+        if (!isAdEligible(ad, adminId) || isSnoozed(ad._id)) return;
+        setAds((prev) => {
+          if (prev.find((a) => a._id === ad._id)) return prev;
+          return [ad, ...prev].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+        });
+      }
     };
 
     socket.on("connect", onConnect);
     socket.on("advertisement_push", onAdPush);
-    if (socket.connected) onConnect(); // already connected
+    if (socket.connected) onConnect();
 
-    fetchAds(); // initial load
+    fetchAds();
 
     return () => {
       socket.off("connect", onConnect);
@@ -219,43 +268,55 @@ export default function AlertBanner({ suppress = false }) {
     };
   }, [suppress, adminId, fetchAds]);
 
-  // ── Carousel state: auto-rotate through ads ─────────────────────────────────
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [autoRotate, setAutoRotate] = useState(true);
-  const [autoDismissCountdown, setAutoDismissCountdown] = useState(AUTO_DISMISS_SECONDS);
+  // ── Dismiss = 1-hour snooze (re-appears after snooze period) ─────────────
+  const dismiss = useCallback((adId) => {
+    if (!adId) return;
+    snoozeAd(adId);
+    setAds((prevAds) => {
+      const adToDismiss = prevAds.find((a) => a._id === adId);
+      if (adToDismiss) {
+        addToHistory(adToDismiss);
+      }
+      const remaining = prevAds.filter((a) => a._id !== adId);
+      setCurrentIndex((prevIdx) => (remaining.length === 0 ? 0 : Math.min(prevIdx, remaining.length - 1)));
+      return remaining;
+    });
+    setAutoRotate(true);
+    setAutoDismissCountdown(AUTO_DISMISS_SECONDS);
+  }, []);
 
-  // Get current ad early so it can be used in useEffect
-  const currentAd = ads.length > 0 ? ads[currentIndex] : null;
-
-  // ── Auto-dismiss timer (8 seconds) ────────────────────────────────────────
+  // ── Auto-dismiss countdown interval (pure decrement, does not call foreign setState) ──
   useEffect(() => {
     if (suppress || ads.length === 0 || !currentAd) return;
-    
+
     const timer = setInterval(() => {
       setAutoDismissCountdown((prev) => {
-        if (prev <= 1) {
-          // Auto-dismiss current ad
-          const adToDismiss = currentAd;
-          addToHistory(adToDismiss);
-          snoozeAd(adToDismiss._id);
-          setAds((prevAds) => prevAds.filter((a) => a._id !== adToDismiss._id));
-          setAutoDismissCountdown(AUTO_DISMISS_SECONDS);
-          setAutoRotate(true);
-          return AUTO_DISMISS_SECONDS;
-        }
+        if (prev <= 1) return 0;
         return prev - 1;
       });
     }, 1000);
-    
+
     return () => clearInterval(timer);
   }, [suppress, currentAd, ads.length]);
 
-  // ── Auto-rotate every 5 seconds ───────────────────────────────────────────
+  // ── Clean auto-dismiss execution when countdown reaches 0 ──────────────────
+  useEffect(() => {
+    if (autoDismissCountdown === 0 && currentAd?._id) {
+      dismiss(currentAd._id);
+    }
+  }, [autoDismissCountdown, currentAd, dismiss]);
+
+  // ── Reset countdown when active ad changes ─────────────────────────────────
+  useEffect(() => {
+    setAutoDismissCountdown(AUTO_DISMISS_SECONDS);
+  }, [currentAd]);
+
+  // ── Auto-rotate every 5 seconds (only if multiple ads) ─────────────────────
   useEffect(() => {
     if (suppress || ads.length <= 1 || !autoRotate) return;
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % ads.length);
-    }, 5000); // 5 second rotation
+    }, 5000);
     return () => clearInterval(interval);
   }, [suppress, ads.length, autoRotate]);
 
@@ -263,35 +324,23 @@ export default function AlertBanner({ suppress = false }) {
   const handlePrev = () => {
     setAutoRotate(false);
     setCurrentIndex((prev) => (prev - 1 + ads.length) % ads.length);
+    setAutoDismissCountdown(AUTO_DISMISS_SECONDS);
   };
 
   const handleNext = () => {
     setAutoRotate(false);
     setCurrentIndex((prev) => (prev + 1) % ads.length);
+    setAutoDismissCountdown(AUTO_DISMISS_SECONDS);
   };
 
   const goToSlide = (index) => {
     setAutoRotate(false);
     setCurrentIndex(index);
+    setAutoDismissCountdown(AUTO_DISMISS_SECONDS);
   };
 
-  // ── Dismiss = 1-hour snooze (re-appears after snooze period) ─────────────
-  const dismiss = useCallback((adId) => {
-    const adToDismiss = ads.find((a) => a._id === adId);
-    if (adToDismiss) {
-      addToHistory(adToDismiss); // Save to permanent history
-    }
-    snoozeAd(adId); // localStorage snooze for 1 hour
-    const newAds = ads.filter((a) => a._id !== adId);
-    setAds(newAds);
-    if (newAds.length > 0) {
-      setCurrentIndex(Math.min(currentIndex, newAds.length - 1));
-      setAutoRotate(true); // resume auto-rotation after dismiss
-      setAutoDismissCountdown(AUTO_DISMISS_SECONDS); // reset countdown
-    }
-  }, [ads, currentIndex]);
-
-  if (suppress || ads.length === 0) return null;
+  // Safe early return guard: return null if suppressed, no ads, or no valid currentAd
+  if (suppress || ads.length === 0 || !currentAd) return null;
 
   const cfg = getCfg(currentAd.type);
   const isExpand = expanded === currentAd._id;
