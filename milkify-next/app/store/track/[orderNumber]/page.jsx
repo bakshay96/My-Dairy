@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   PackageCheck,
@@ -14,7 +14,7 @@ import {
   AlertCircle,
   Share2,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import axios from "axios";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
@@ -28,8 +28,7 @@ const STATUS_STEPS = [
 ];
 
 export default function OrderTrackingPage({ params }) {
-  const resolvedParams = typeof params?.then === "function" ? use(params) : params;
-  const orderNumber = resolvedParams?.orderNumber;
+  const orderNumber = params?.orderNumber;
 
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState(null);

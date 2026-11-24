@@ -1,6 +1,6 @@
 {
-  "name": "DMS",
-  "version": "1.0.0",
+  "name": "milkify-backend",
+  "version": "2.5.0",
   "description": "Backend of Dairy Managment System",
   "main": "app.js",
   "scripts": {

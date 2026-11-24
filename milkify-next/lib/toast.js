@@ -23,6 +23,20 @@ show.error = (message, options = {}) =>
     ...options,
   });
 
+show.info = (message, options = {}) =>
+  hotToast(message, {
+    icon: "ℹ️",
+    ...defaultOptions,
+    ...options,
+  });
+
+show.warning = (message, options = {}) =>
+  hotToast(message, {
+    icon: "⚠️",
+    ...defaultOptions,
+    ...options,
+  });
+
 show.loading = (message, options = {}) =>
   hotToast.loading(message, {
     ...defaultOptions,

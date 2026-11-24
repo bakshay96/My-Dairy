@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, use } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,7 +26,7 @@ import {
   LocateFixed,
   PackageCheck,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import axios from "axios";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
@@ -46,9 +46,7 @@ const loadRazorpay = () => {
 };
 
 export default function PublicStorePage({ params }) {
-  // In Next.js 15+ params is a Promise
-  const resolvedParams = typeof params?.then === "function" ? use(params) : params;
-  const slug = resolvedParams?.slug;
+  const slug = params?.slug;
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
