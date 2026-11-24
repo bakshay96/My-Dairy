@@ -21,7 +21,7 @@ const navItems = [
   { name: "Add Milk", href: "/dashboard/add-milk", icon: Droplet },
   { name: "Billing", href: "/dashboard/billing", icon: FileText },
   { name: "Media Gallery", href: "/dashboard/media", icon: ImageIcon },
-  { name: "Dairy Store & Feed", href: "/dashboard/store", icon: ShoppingBag },
+  { name: "Dairy Store & Feed", href: "/dashboard/store", icon: ShoppingBag, newTab: true },
   { name: "Pricing Engine", href: "/dashboard/rates", icon: Grid },
   { name: "Analytics", href: "/dashboard/analytics", icon: Calculator },
   { name: "Subscription", href: "/dashboard/subscription", icon: ShieldCheck },
@@ -169,6 +169,11 @@ export default function DashboardLayout({ children }) {
     );
   }
 
+  // Stand-alone dedicated UI for Milki Store in a separate tab without outer dashboard sidebar
+  if (pathname === "/dashboard/store") {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-transparent">
       {/* Dynamic Keyframes for Mobile Menu Handle Animations */}
@@ -237,6 +242,8 @@ export default function DashboardLayout({ children }) {
               <Link
                 key={item.name}
                 href={item.href}
+                target={item.newTab ? "_blank" : undefined}
+                rel={item.newTab ? "noopener noreferrer" : undefined}
                 className={cn(
                   "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   pathname === item.href
@@ -451,6 +458,8 @@ export default function DashboardLayout({ children }) {
               <Link
                 key={item.name}
                 href={item.href}
+                target={item.newTab ? "_blank" : undefined}
+                rel={item.newTab ? "noopener noreferrer" : undefined}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
                   "flex items-center rounded-xl px-3 py-3 text-base font-medium transition-all duration-200 hover:translate-x-1.5 active:scale-95",

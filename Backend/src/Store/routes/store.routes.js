@@ -22,6 +22,16 @@ const {
   getAdminOrders,
   updateOrderStatus,
   trackPublicOrder,
+  getStoreAnalytics,
+  getAdminBills,
+  getPrintableBillHtml,
+
+  // Coupons
+  getAdminCoupons,
+  createAdminCoupon,
+  updateAdminCoupon,
+  deleteAdminCoupon,
+  validateCouponCode,
 
   // Master Admin
   getMasterStoreNetworkStats,
@@ -39,6 +49,8 @@ storeRouter.post("/public/outlet/:slug/validate-delivery", validateDeliveryEligi
 storeRouter.post("/public/outlet/:slug/order", placeCustomerOnlineOrder);
 storeRouter.post("/public/order/verify-payment", verifyOnlineOrderPayment);
 storeRouter.get("/public/order/track/:orderNumber", trackPublicOrder);
+storeRouter.post("/public/coupon/validate", validateCouponCode);
+storeRouter.get("/public/bill/:orderNumber/print", getPrintableBillHtml);
 
 // ─── PROTECTED DAIRY ADMIN STORE ENDPOINTS (Requires Active SaaS Plan) ────────
 storeRouter.get("/admin/profile", authMiddleware, subscriptionGuard, getMyStoreProfile);
@@ -52,6 +64,13 @@ storeRouter.delete("/admin/products/:id", authMiddleware, subscriptionGuard, del
 storeRouter.post("/admin/pos-sale", authMiddleware, subscriptionGuard, createPosCounterSale);
 storeRouter.get("/admin/orders", authMiddleware, subscriptionGuard, getAdminOrders);
 storeRouter.patch("/admin/orders/:id/status", authMiddleware, subscriptionGuard, updateOrderStatus);
+storeRouter.get("/admin/analytics", authMiddleware, subscriptionGuard, getStoreAnalytics);
+storeRouter.get("/admin/bills", authMiddleware, subscriptionGuard, getAdminBills);
+
+storeRouter.get("/admin/coupons", authMiddleware, subscriptionGuard, getAdminCoupons);
+storeRouter.post("/admin/coupons", authMiddleware, subscriptionGuard, createAdminCoupon);
+storeRouter.patch("/admin/coupons/:id", authMiddleware, subscriptionGuard, updateAdminCoupon);
+storeRouter.delete("/admin/coupons/:id", authMiddleware, subscriptionGuard, deleteAdminCoupon);
 
 // ─── PROTECTED MASTER ADMIN ENDPOINTS (Central Franchise Control) ─────────────
 storeRouter.get("/master/network-stats", masterAuthMiddleware, getMasterStoreNetworkStats);

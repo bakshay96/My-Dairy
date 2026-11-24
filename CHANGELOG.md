@@ -5,6 +5,31 @@ The project adheres to [Semantic Versioning (SemVer 2.0.0)](https://semver.org/s
 
 ---
 
+## [2.5.1] - 2026-11-24
+### 🎨 Enhancements: Professional 80mm Thermal Receipt, Standalone Store Tab & Comprehensive Theme Support
+
+#### ✨ Added & Enhanced
+- **Professional 80mm Thermal Bill Receipt Engine**:
+  - Pure server-rendered thermal receipt template (`/api/store/public/bill/:orderNumber/print?autoprint=1`) matching dairy settlement billing format.
+  - High-contrast Milkify Store brand logo SVG emblem and store address header.
+  - Complete GST Details Breakdown: Taxable Value, CGST (rate + amount), SGST (rate + amount), Total GST, Subtotal, and Grand Total.
+  - Subtle thermal receipt watermark (`MILKIFY STORE • PAID`) and SVG Code-128 barcode simulation.
+  - Zero modal/dashboard clutter during printing with CSS `@media print` isolation.
+- **Standalone Milki Store Admin Experience**:
+  - Sidebar link `Dairy Store & Feed` configured to open `/dashboard/store` directly in a **separate new tab** (`target="_blank"`).
+  - Standalone layout isolation without outer dashboard sidebar interference.
+  - Quick-switcher button to return to the core Dairy Milk Collection Dashboard.
+  - Direct *"Milki Store (New Tab)"* launcher button to preview the live customer-facing store in a separate tab.
+- **Resilient End-to-End Online Payment Flow**:
+  - Automatic graceful fallback simulation for Razorpay 401 authentication errors (e.g. inactive or mismatched test credentials).
+  - Seamless customer checkout flow from Add-to-Cart ➔ Instant Payment Verification ➔ Live Order Tracking.
+- **Full Light & Dark Mode Adaptation**:
+  - Integrated `ThemeToggle` controls across Store Admin, End-User Store, Order Tracking, and Master Admin.
+  - Eliminated hardcoded dark classes and illegible contrast in light theme.
+  - Optimized spacing, typography, and mobile-friendly drawer navigation across all store views.
+
+---
+
 ## [2.5.0] - 2026-11-24
 ### 🚀 Major Feature Release: Dairy Products & Cattle Feed E-Commerce Ecosystem called Milki_Store
 

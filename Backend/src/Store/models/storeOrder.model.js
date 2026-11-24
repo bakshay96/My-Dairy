@@ -67,6 +67,21 @@ const storeOrderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    // Tax & GST Breakdown
+    taxDetails: {
+      isTaxApplied: { type: Boolean, default: false },
+      taxRate: { type: Number, default: 0 }, // e.g. 5%
+      taxAmount: { type: Number, default: 0 },
+      cgst: { type: Number, default: 0 },
+      sgst: { type: Number, default: 0 },
+      gstNumber: { type: String, default: "" },
+    },
+    // Formatted date string for fast day-wise collection aggregation (e.g. "2026-11-24")
+    billDateStr: {
+      type: String,
+      default: () => new Date().toISOString().slice(0, 10),
+      index: true,
+    },
     fulfillmentType: {
       type: String,
       enum: ["village_delivery", "counter_pickup"],
@@ -85,7 +100,7 @@ const storeOrderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["cod", "razorpay", "cash_counter", "farmer_milk_bill", "upi_qr"],
+      enum: ["cod", "razorpay", "cash_counter", "farmer_milk_bill", "upi_qr", "card", "credit"],
       default: "cod",
     },
     paymentStatus: {
