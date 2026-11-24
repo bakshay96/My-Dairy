@@ -100,6 +100,27 @@ function emitAdDismissed(adminId, adId) {
   io.to(`admin:${adminId}`).emit("advertisement_dismissed", { adId });
 }
 
+/** Emit real-time notification to store admin when new online order is placed */
+function emitStoreOrderCreated(adminId, orderData) {
+  const io = getIo();
+  if (!io) return;
+  io.to(`admin:${adminId}`).emit("store:new_order", {
+    order: orderData,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/** Emit real-time update when an order status changes */
+function emitStoreOrderStatusUpdated(adminId, orderNumber, newStatus) {
+  const io = getIo();
+  if (!io) return;
+  io.to(`admin:${adminId}`).emit("store:order_status_updated", {
+    orderNumber,
+    newStatus,
+    timestamp: new Date().toISOString(),
+  });
+}
+
 module.exports = {
   initSocketService,
   getIo,
@@ -108,4 +129,6 @@ module.exports = {
   emitPaymentCaptured,
   emitNewAdvertisement,
   emitAdDismissed,
+  emitStoreOrderCreated,
+  emitStoreOrderStatusUpdated,
 };

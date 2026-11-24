@@ -36,8 +36,11 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import { socket } from "@/lib/socket";
+import { useAuthStore } from "@/lib/store";
 
 export default function DairyAdminStorePage() {
+  const { user } = useAuthStore();
   // Navigation tabs: 'analytics' | 'pos' | 'inventory' | 'bills' | 'coupons' | 'settings'
   const [activeTab, setActiveTab] = useState("analytics");
   const [loading, setLoading] = useState(true);
@@ -207,6 +210,31 @@ export default function DairyAdminStorePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Real-time socket updates for incoming store orders & status updates
+  useEffect(() => {
+    if (!user?._id) return;
+    if (!socket.connected) socket.connect();
+    socket.emit("join_room", `admin:${user._id}`);
+
+    const handleNewStoreOrder = (data) => {
+      const ordNum = data.order?.orderNumber || "New Order";
+      const totalAmt = data.order?.grandTotal || 0;
+      toast.success(`🔔 New Store Order Received: #${ordNum} (₹${totalAmt})`);
+      fetchAnalytics(selectedDate);
+      fetchBills();
+      fetchAllStoreData();
+    };
+
+    socket.on("store:new_order", handleNewStoreOrder);
+    socket.on("store:order_status_updated", handleNewStoreOrder);
+
+    return () => {
+      socket.off("store:new_order", handleNewStoreOrder);
+      socket.off("store:order_status_updated", handleNewStoreOrder);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, selectedDate]);
+
   // POS Calculations
   const posSubtotal = useMemo(() => {
     return posCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -346,9 +374,13 @@ export default function DairyAdminStorePage() {
       };
 
       const res = await api.post("/store/admin/pos-sale", payload);
-      if (res.data?.success) {
-        toast.success(`Bill #${res.data.bill.orderNumber} created successfully!`);
-        setPosGeneratedBill(res.data.bill);
+      const resData = res.data;
+      const createdBill = resData?.bill || resData?.order || resData?.data?.bill || resData?.data?.order || resData;
+
+      if (createdBill && (createdBill.orderNumber || resData?.success)) {
+        const orderNum = createdBill.orderNumber || "NEW";
+        toast.success(`Bill #${orderNum} created successfully!`);
+        setPosGeneratedBill(createdBill);
         setPosCart([]);
         setPosCustomerName("Walk-in Customer");
         setPosCustomerPhone("");
@@ -364,11 +396,13 @@ export default function DairyAdminStorePage() {
     }
   };
 
-  // Clean Server-side HTML Receipt Print
-  const handlePrintReceiptClean = (orderNumber) => {
+  // Clean Server-side HTML Receipt Print & Direct PDF Download
+  const handlePrintReceiptClean = (orderNumber, mode = "print") => {
     if (!orderNumber) return;
-    const printUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/store/public/bill/${orderNumber}/print?autoprint=1`;
-    window.open(printUrl, "_blank", "width=450,height=650,menubar=no,toolbar=no,location=no,status=no");
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3030/api";
+    const param = mode === "download" ? "download=1" : "autoprint=1";
+    const printUrl = `${baseUrl}/store/public/bill/${orderNumber}/print?${param}`;
+    window.open(printUrl, "_blank", "width=460,height=680,menubar=no,toolbar=no,location=no,status=no");
   };
 
   // Add / Edit Product Submit
@@ -1031,10 +1065,16 @@ export default function DairyAdminStorePage() {
                       <span>Subtotal:</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">₹{posSubtotal}</span>
                     </div>
+                    {posDiscountAmount > 0 && (
+                      <div className="flex justify-between text-rose-600 dark:text-rose-400 font-bold text-xs">
+                        <span>Discount Applied:</span>
+                        <span>-₹{posDiscountAmount}</span>
+                      </div>
+                    )}
                     {posApplyTax && (
-                      <div className="flex justify-between text-slate-500 dark:text-slate-400 text-[11px]">
-                        <span>CGST + SGST:</span>
-                        <span>₹{posTaxDetails.cgst} + ₹{posTaxDetails.sgst}</span>
+                      <div className="flex justify-between text-slate-600 dark:text-slate-300 text-xs">
+                        <span>GST Tax ({posTaxRate}%):</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">+₹{posTaxDetails.taxAmount}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-base font-black text-slate-900 dark:text-white pt-1 border-t border-slate-200 dark:border-slate-800">
@@ -1357,11 +1397,18 @@ export default function DairyAdminStorePage() {
                                   <Eye className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => handlePrintReceiptClean(b.orderNumber)}
+                                  onClick={() => handlePrintReceiptClean(b.orderNumber, "print")}
                                   className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition"
                                   title="Print Clean Thermal Slip"
                                 >
                                   <Printer className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handlePrintReceiptClean(b.orderNumber, "download")}
+                                  className="p-1.5 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 transition"
+                                  title="Download PDF Slip"
+                                >
+                                  <FileText className="w-4 h-4" />
                                 </button>
                               </div>
                             </td>
@@ -1911,10 +1958,16 @@ export default function DairyAdminStorePage() {
                   <span>Subtotal:</span>
                   <span>₹{posGeneratedBill?.subtotal || viewingBill?.subtotal}</span>
                 </div>
+                {Number(posGeneratedBill?.discountAmount || viewingBill?.discountAmount || 0) > 0 && (
+                  <div className="flex justify-between text-rose-600 dark:text-rose-400 font-bold text-[11px]">
+                    <span>Discount:</span>
+                    <span>-₹{posGeneratedBill?.discountAmount || viewingBill?.discountAmount}</span>
+                  </div>
+                )}
                 {(posGeneratedBill?.taxDetails?.isTaxApplied || viewingBill?.taxDetails?.isTaxApplied) && (
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 text-[11px]">
-                    <span>GST Tax:</span>
-                    <span>₹{posGeneratedBill?.taxDetails?.taxAmount || viewingBill?.taxDetails?.taxAmount}</span>
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
+                    <span>GST Tax ({posGeneratedBill?.taxDetails?.taxRate || viewingBill?.taxDetails?.taxRate || 5}%):</span>
+                    <span>+₹{posGeneratedBill?.taxDetails?.taxAmount || viewingBill?.taxDetails?.taxAmount}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white pt-1 border-t border-slate-200 dark:border-slate-800">
@@ -1924,14 +1977,22 @@ export default function DairyAdminStorePage() {
               </div>
             </div>
 
-            {/* Action Buttons: Clean Print & WhatsApp Share */}
-            <div className="flex items-center gap-2 pt-2">
+            {/* Action Buttons: Clean Print, Direct PDF Download & WhatsApp Share */}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
               <Button
-                onClick={() => handlePrintReceiptClean(posGeneratedBill?.orderNumber || viewingBill?.orderNumber)}
+                onClick={() => handlePrintReceiptClean(posGeneratedBill?.orderNumber || viewingBill?.orderNumber, "print")}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20"
               >
                 <Printer className="w-3.5 h-3.5 mr-1.5" />
-                Print Clean Thermal Slip
+                Print 80mm Slip
+              </Button>
+
+              <Button
+                onClick={() => handlePrintReceiptClean(posGeneratedBill?.orderNumber || viewingBill?.orderNumber, "download")}
+                className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl shadow-md shadow-sky-600/20"
+              >
+                <FileText className="w-3.5 h-3.5 mr-1.5" />
+                Download PDF Slip
               </Button>
 
               {(posGeneratedBill?.whatsappUrl || (viewingBill && viewingBill.deliveryAddress?.recipientPhone)) && (

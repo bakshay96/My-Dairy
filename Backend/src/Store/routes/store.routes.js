@@ -33,6 +33,13 @@ const {
   deleteAdminCoupon,
   validateCouponCode,
 
+  // Customers
+  registerCustomer,
+  loginCustomer,
+  getCustomerProfile,
+  getCustomerOrders,
+  updateCustomerProfile,
+
   // Master Admin
   getMasterStoreNetworkStats,
   toggleMasterOutletStatus,
@@ -51,6 +58,13 @@ storeRouter.post("/public/order/verify-payment", verifyOnlineOrderPayment);
 storeRouter.get("/public/order/track/:orderNumber", trackPublicOrder);
 storeRouter.post("/public/coupon/validate", validateCouponCode);
 storeRouter.get("/public/bill/:orderNumber/print", getPrintableBillHtml);
+
+// ─── PUBLIC STORE CUSTOMER AUTH & PROFILE (Saved Addresses & Purchase History) ─
+storeRouter.post("/public/customer/register", registerCustomer);
+storeRouter.post("/public/customer/login", loginCustomer);
+storeRouter.get("/public/customer/profile", getCustomerProfile);
+storeRouter.put("/public/customer/profile", updateCustomerProfile);
+storeRouter.get("/public/customer/orders", getCustomerOrders);
 
 // ─── PROTECTED DAIRY ADMIN STORE ENDPOINTS (Requires Active SaaS Plan) ────────
 storeRouter.get("/admin/profile", authMiddleware, subscriptionGuard, getMyStoreProfile);

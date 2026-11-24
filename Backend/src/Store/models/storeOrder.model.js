@@ -100,7 +100,7 @@ const storeOrderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["cod", "razorpay", "cash_counter", "farmer_milk_bill", "upi_qr", "card", "credit"],
+      enum: ["cod", "online", "razorpay", "cash_counter", "farmer_milk_bill", "upi_qr", "card", "credit"],
       default: "cod",
     },
     paymentStatus: {
