@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Droplet, Calculator, Settings, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, ChevronRight, Eye, EyeOff, TicketIcon, Grid, Image as ImageIcon } from "lucide-react";
+import { LayoutDashboard, Users, Droplet, Calculator, Settings, X, LogOut, FileText, PanelLeftClose, PanelLeftOpen, Loader2, ShieldCheck, Shield, UserCircle, User, KeyRound, Save, ChevronDown, ChevronRight, Eye, EyeOff, TicketIcon, Grid, Image as ImageIcon, ShoppingBag } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import Brand from "@/components/ui/Brand";
@@ -21,6 +21,7 @@ const navItems = [
   { name: "Add Milk", href: "/dashboard/add-milk", icon: Droplet },
   { name: "Billing", href: "/dashboard/billing", icon: FileText },
   { name: "Media Gallery", href: "/dashboard/media", icon: ImageIcon },
+  { name: "Dairy Store & Feed", href: "/dashboard/store", icon: ShoppingBag },
   { name: "Pricing Engine", href: "/dashboard/rates", icon: Grid },
   { name: "Analytics", href: "/dashboard/analytics", icon: Calculator },
   { name: "Subscription", href: "/dashboard/subscription", icon: ShieldCheck },

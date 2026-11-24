@@ -4,10 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/lib/store";
 import api from "@/lib/api";
 import { toast } from "@/lib/toast";
-import { 
-  Loader2, ShieldCheck, Crown, CreditCard, CheckCircle2, Clock, 
-  AlertTriangle, Zap, Gift, Info, AlertCircle, Receipt, 
-  Lock, Printer, X, Tag, Check 
+import {
+  Loader2, ShieldCheck, Crown, CreditCard, CheckCircle2, Clock,
+  AlertTriangle, Zap, Gift, Info, AlertCircle, Receipt,
+  Lock, Printer, X, Tag, Check
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,40 +67,40 @@ export default function SubscriptionPage() {
   const plans = (data?.plans && data.plans.length > 0)
     ? data.plans
     : [
-        {
-          planId: "monthly",
-          name: "Monthly Plan",
-          price: config.monthlyPrice || 499,
-          durationDays: 30,
-          billingCycle: "monthly",
-          description: "Pay as you go. Standard features.",
-          badge: "",
-          features: ["Cancel anytime", "Standard Support", "Full client & farmer access", "Thermal printing & daily records"],
-          isActive: true,
-        },
-        {
-          planId: "quarterly",
-          name: "Quarterly Plan",
-          price: config.quarterlyPrice || 1299,
-          durationDays: 90,
-          billingCycle: "quarterly",
-          description: "Popular & cost-effective billing buffer.",
-          badge: "Save 13%",
-          features: ["90 days uninterrupted access", "Full milk ledger & thermal printing", "Priority phone & email support", "Automated backup sync"],
-          isActive: true,
-        },
-        {
-          planId: "yearly",
-          name: "Annual Plan",
-          price: config.yearlyPrice || 4499,
-          durationDays: 365,
-          billingCycle: "yearly",
-          description: "Ultimate peace of mind with maximum value.",
-          badge: "Best Value",
-          features: ["365 days full enterprise access", "Zero price hike guarantee", "VIP cloud bandwidth & storage", "Dedicated account assistance"],
-          isActive: true,
-        },
-      ];
+      {
+        planId: "monthly",
+        name: "Monthly Plan",
+        price: config.monthlyPrice || 499,
+        durationDays: 30,
+        billingCycle: "monthly",
+        description: "Pay as you go. Standard features.",
+        badge: "",
+        features: ["Cancel anytime", "Standard Support", "Full client & farmer access", "Thermal printing & daily records"],
+        isActive: true,
+      },
+      {
+        planId: "quarterly",
+        name: "Quarterly Plan",
+        price: config.quarterlyPrice || 1299,
+        durationDays: 90,
+        billingCycle: "quarterly",
+        description: "Popular & cost-effective billing buffer.",
+        badge: "Save 13%",
+        features: ["90 days uninterrupted access", "Full milk ledger & thermal printing", "Priority phone & email support", "Automated backup sync"],
+        isActive: true,
+      },
+      {
+        planId: "yearly",
+        name: "Annual Plan",
+        price: config.yearlyPrice || 4499,
+        durationDays: 365,
+        billingCycle: "yearly",
+        description: "Ultimate peace of mind with maximum value.",
+        badge: "Best Value",
+        features: ["365 days full enterprise access", "Zero price hike guarantee", "VIP cloud bandwidth & storage", "Dedicated account assistance"],
+        isActive: true,
+      },
+    ];
 
   const currentSelectedPlanObj = plans.find((p) => p.planId === selectedPlan) || plans[0];
   const basePrice = currentSelectedPlanObj?.price || 0;
@@ -155,11 +155,12 @@ export default function SubscriptionPage() {
       const { order, keyId, customer } = orderRes.data;
 
       const formatContact = (mobile) => {
-        const digits = String(mobile || "").replace(/\D/g, "");
-        if (/^[6-9]\d{9}$/.test(digits)) return `+91${digits}`;
-        if (/^91[6-9]\d{9}$/.test(digits)) return `+${digits}`;
-        if (digits.length === 10) return `+919${digits.slice(1)}`;
-        return "+919876543210";
+        let digits = String(mobile || "").replace(/\D/g, "");
+        if (digits.length >= 10) {
+          digits = digits.slice(-10);
+        }
+        if (/^[6-9]\d{9}$/.test(digits)) return digits;
+        return "9876543210";
       };
 
       const formatEmail = (email) => {
@@ -197,7 +198,7 @@ export default function SubscriptionPage() {
         prefill: {
           name: customer?.name || user?.name || "Admin",
           email: formatEmail(customer?.email || user?.email),
-          contact: customer?.contact || formatContact(user?.mobile),
+          contact: formatContact(customer?.contact || user?.mobile),
         },
         readonly: {
           contact: true,
@@ -394,17 +395,15 @@ export default function SubscriptionPage() {
                 <div
                   key={promo._id}
                   onClick={() => isApplied ? handleRemovePromo() : handleApplyPromo(promo.code)}
-                  className={`shrink-0 cursor-pointer p-3.5 rounded-2xl border transition-all duration-200 min-w-[240px] max-w-[280px] select-none flex items-center justify-between gap-3 ${
-                    isApplied
+                  className={`shrink-0 cursor-pointer p-3.5 rounded-2xl border transition-all duration-200 min-w-[240px] max-w-[280px] select-none flex items-center justify-between gap-3 ${isApplied
                       ? "bg-emerald-500 text-white border-emerald-600 shadow-md ring-2 ring-emerald-500/30 scale-[1.02]"
                       : "bg-white dark:bg-slate-800/90 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700/70 hover:border-indigo-500 hover:shadow-sm"
-                  }`}
+                    }`}
                 >
                   <div className="min-w-0 space-y-0.5">
                     <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider ${
-                        isApplied ? "bg-white/20 text-white" : "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400"
-                      }`}>
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider ${isApplied ? "bg-white/20 text-white" : "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400"
+                        }`}>
                         {promo.discountType === "percentage" ? `${promo.discountValue}% OFF` : `₹${promo.discountValue} OFF`}
                       </span>
                       {isApplied && (
@@ -458,30 +457,27 @@ export default function SubscriptionPage() {
                     setSelectedPlan(p.planId);
                     setAppliedPromo(null);
                   }}
-                  className={`group relative overflow-hidden rounded-2xl cursor-pointer p-5 border transition-all duration-300 flex flex-col justify-between ${
-                    isPlanActive
+                  className={`group relative overflow-hidden rounded-2xl cursor-pointer p-5 border transition-all duration-300 flex flex-col justify-between ${isPlanActive
                       ? "bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-400 ring-2 ring-emerald-500/20 shadow-md"
                       : isSelected
-                      ? "bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md"
-                      : "bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 hover:border-indigo-500/50 hover:shadow-sm"
-                  }`}
+                        ? "bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20 shadow-md"
+                        : "bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 hover:border-indigo-500/50 hover:shadow-sm"
+                    }`}
                 >
                   {/* Decorative top accent line */}
-                  <div className={`absolute top-0 left-0 right-0 h-1.5 ${
-                    isPlanActive
+                  <div className={`absolute top-0 left-0 right-0 h-1.5 ${isPlanActive
                       ? "bg-gradient-to-r from-emerald-400 to-teal-500"
                       : p.badge
-                      ? "bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-600"
-                      : "bg-gradient-to-r from-blue-500 to-indigo-500"
-                  }`} />
+                        ? "bg-gradient-to-r from-violet-500 via-indigo-500 to-purple-600"
+                        : "bg-gradient-to-r from-blue-500 to-indigo-500"
+                    }`} />
 
                   <div>
                     <div className="flex items-center justify-between mb-3.5">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        isPlanActive
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isPlanActive
                           ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600"
                           : "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500"
-                      }`}>
+                        }`}>
                         {isPlanActive ? <Lock className="w-4 h-4 text-emerald-600" /> : <Zap className="w-4 h-4" />}
                       </div>
 
@@ -538,11 +534,10 @@ export default function SubscriptionPage() {
                         Currently In Use
                       </div>
                     ) : (
-                      <div className={`w-full py-1.5 text-center text-[11px] font-bold rounded-lg transition-colors ${
-                        isSelected 
-                          ? "bg-indigo-600 text-white" 
+                      <div className={`w-full py-1.5 text-center text-[11px] font-bold rounded-lg transition-colors ${isSelected
+                          ? "bg-indigo-600 text-white"
                           : "text-slate-500 bg-slate-100 dark:bg-slate-700/50 group-hover:bg-indigo-50 group-hover:text-indigo-600"
-                      }`}>
+                        }`}>
                         {isSelected ? "Selected" : "Select Tier"}
                       </div>
                     )}
@@ -604,9 +599,9 @@ export default function SubscriptionPage() {
                       onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                       className="flex-1 h-10 px-3.5 bg-white/10 border border-white/15 rounded-xl text-xs font-bold placeholder-slate-400 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase tracking-wider transition-all"
                     />
-                    <Button 
-                      onClick={() => handleApplyPromo()} 
-                      disabled={processing || !promoCode} 
+                    <Button
+                      onClick={() => handleApplyPromo()}
+                      disabled={processing || !promoCode}
                       variant="secondary"
                       className="h-10 rounded-xl px-4 text-xs font-bold bg-white text-slate-900 hover:bg-slate-200 shrink-0"
                     >
@@ -646,7 +641,7 @@ export default function SubscriptionPage() {
               <div className="pt-2">
                 {isCurrentPlanActive ? (
                   <div className="space-y-2">
-                    <Button 
+                    <Button
                       disabled
                       className="w-full h-11.5 text-xs font-black bg-slate-800 text-slate-400 border border-slate-700/60 rounded-xl cursor-not-allowed flex items-center justify-center gap-2"
                     >
@@ -658,9 +653,9 @@ export default function SubscriptionPage() {
                     </p>
                   </div>
                 ) : (
-                  <Button 
-                    onClick={handlePayment} 
-                    disabled={processing} 
+                  <Button
+                    onClick={handlePayment}
+                    disabled={processing}
                     className="w-full h-11.5 text-sm font-black bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl shadow-md transition-all active:scale-98 border-none flex items-center justify-center gap-2"
                   >
                     {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4.5 w-4.5" />}
@@ -781,8 +776,8 @@ export default function SubscriptionPage() {
                 const TypeIcon = getAdTypeIcon(ad.type);
                 const dismissedDate = new Date(ad.dismissedAt);
                 return (
-                  <div 
-                    key={ad._id} 
+                  <div
+                    key={ad._id}
                     className="flex items-start gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-700/60 bg-slate-50/40 dark:bg-slate-900/20 hover:border-slate-200 dark:hover:border-slate-700 transition-colors"
                   >
                     <div className={`p-2 rounded-xl shrink-0 border ${getAdTypeBadgeColor(ad.type)}`}>

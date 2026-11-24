@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Tag, IndianRupee, LogOut, Loader2, ArrowLeftRight,
   Settings, Menu, X, PanelLeftClose, PanelLeftOpen, Shield,
   Megaphone, TicketIcon, Eye, Bell, Users, Cpu, ChevronRight, Image as ImageIcon,
+  Store,
 } from "lucide-react";
 import Brand from "@/components/ui/Brand";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -23,6 +24,7 @@ const navItems = [
   { name: "Notifications",     href: "/master/dashboard/notifications",    icon: Bell },
   { name: "Pricing Plans",     href: "/master/dashboard/pricing",          icon: Tag },
   { name: "Promo Codes",       href: "/master/dashboard/promos",           icon: IndianRupee },
+  { name: "Store Network",     href: "/master/dashboard/store-network",    icon: Store },
   { name: "Advertisements",    href: "/master/dashboard/advertisements",   icon: Megaphone },
   { name: "Support Desk",      href: "/master/dashboard/tickets",          icon: TicketIcon },
   { name: "Media Gallery",     href: "/master/dashboard/media",            icon: ImageIcon },
