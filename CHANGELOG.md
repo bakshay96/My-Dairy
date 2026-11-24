@@ -6,7 +6,7 @@ The project adheres to [Semantic Versioning (SemVer 2.0.0)](https://semver.org/s
 ---
 
 ## [2.5.0] - 2026-11-24
-### 🚀 Major Feature Release: Dairy Products & Cattle Feed E-Commerce Ecosystem
+### 🚀 Major Feature Release: Dairy Products & Cattle Feed E-Commerce Ecosystem called Milki_Store
 
 #### ✨ Added
 - **Omnichannel E-Commerce Storefront (`/store/[slug]`)**:
