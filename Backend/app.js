@@ -18,6 +18,7 @@ const { paymentRouter } = require("./src/Payment/paymentRoutes");
 const { masterRouter } = require("./src/MasterAdmin/masterAdmin.routes");
 const ticketRouter = require("./src/Ticket/ticket.routes");
 const { adminMediaRouter, masterMediaRouter } = require("./src/Media/media.routes");
+const { storeRouter } = require("./src/Store/store.routes");
 const authMiddleware = require("./src/middleware/authMiddleware");
 const subscriptionGuard = require("./src/middleware/subscriptionGuard");
 const { analyticsRouter } = require("./src/Analytics/analyticsRoutes");
@@ -191,6 +192,9 @@ app.use("/api/rates", authMiddleware, subscriptionGuard, ratesRouter);
 app.use("/api/payment", authMiddleware, subscriptionGuard, paymentRouter);
 app.use("/api/analytics", authMiddleware, subscriptionGuard, analyticsRouter);
 app.use("/api/media", authMiddleware, subscriptionGuard, adminMediaRouter);
+
+// Dairy Store & Cattle Feed E-Commerce Ecosystem
+app.use("/api/store", storeRouter);
 
 // ============================================================
 // 404 HANDLER

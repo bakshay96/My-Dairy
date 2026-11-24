@@ -1466,16 +1466,13 @@ const createSubscriptionOrder = async (req, res) => {
     const finalPrice = parseFloat((basePrice - discountAmount).toFixed(2));
     const amountPaise = Math.round(finalPrice * 100); // Razorpay uses smallest currency unit
 
-    // Format clean, valid E.164 phone number compliant with Indian telecom & Razorpay validation
+    // Format clean 10-digit Indian mobile number strictly without +91 (Razorpay checkout standard requires 10 digits)
     let cleanMobile = String(admin?.mobile || "").replace(/\D/g, "");
-    if (/^[6-9]\d{9}$/.test(cleanMobile)) {
-      cleanMobile = `+91${cleanMobile}`;
-    } else if (/^91[6-9]\d{9}$/.test(cleanMobile)) {
-      cleanMobile = `+${cleanMobile}`;
-    } else if (cleanMobile.length === 10) {
-      cleanMobile = `+919${cleanMobile.slice(1)}`;
-    } else {
-      cleanMobile = "+919876543210";
+    if (cleanMobile.length >= 10) {
+      cleanMobile = cleanMobile.slice(-10);
+    }
+    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      cleanMobile = "9876543210";
     }
 
     const cleanEmail = admin?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.email)
