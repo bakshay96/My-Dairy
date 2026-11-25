@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState} from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -86,6 +86,28 @@ function AuthContent() {
     },
   });
 
+  const getRedirectTarget = useCallback(() => {
+    const redirectParam = searchParams.get("redirect") || searchParams.get("from");
+    if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
+      return redirectParam;
+    }
+    if (typeof window !== "undefined") {
+      try {
+        const savedLast = localStorage.getItem("milkify_last_admin_route");
+        if (
+          savedLast &&
+          savedLast.startsWith("/") &&
+          !savedLast.startsWith("//") &&
+          savedLast !== "/login" &&
+          savedLast !== "/"
+        ) {
+          return savedLast;
+        }
+      } catch {}
+    }
+    return "/dashboard";
+  }, [searchParams]);
+
   const onLoginSubmit = async (values) => {
     setLoading(true);
     setErrorMsg("");
@@ -94,7 +116,11 @@ function AuthContent() {
       if (res.data && res.data.admin) {
         setAuth(res.data.admin, null, res.data.sessionExpiresAt || null);
         toast.success("Welcome back!");
-        router.push("/dashboard");
+        const targetRoute = getRedirectTarget();
+        try {
+          localStorage.removeItem("milkify_last_admin_route");
+        } catch {}
+        router.push(targetRoute);
       }
     } catch (error) {
       toast.error("Login failed");
@@ -165,7 +191,11 @@ function AuthContent() {
         setAuth(res.data.admin, null, res.data.sessionExpiresAt || null);
       }
       toast.success("Account created successfully!");
-      router.push("/dashboard");
+      const targetRoute = getRedirectTarget();
+      try {
+        localStorage.removeItem("milkify_last_admin_route");
+      } catch {}
+      router.push(targetRoute);
     } catch (error) {
       toast.error("Registration failed");
       setErrorMsg(error.response?.data?.message || "Registration failed.");
@@ -196,7 +226,8 @@ function AuthContent() {
         const me = await api.get("/admin/me");
         if (me.data?.admin) {
           setAuth(me.data.admin, null, me.data.sessionExpiresAt || null);
-          router.push("/dashboard");
+          const targetRoute = getRedirectTarget();
+          router.push(targetRoute);
           return;
         }
       } catch {
@@ -206,7 +237,7 @@ function AuthContent() {
       }
     };
     checkSession();
-  }, [router, setAuth]);
+  }, [router, setAuth, getRedirectTarget]);
 
   if (checkingSession) {
     return (

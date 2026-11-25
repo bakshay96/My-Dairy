@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -25,23 +26,51 @@ import {
   CheckCircle2,
   Calendar,
   Share2,
-  Menu,
   FileText,
-  DollarSign,
   TrendingUp,
   CreditCard,
   QrCode,
   Eye,
+  User,
+  Camera,
+  Upload,
+  ShieldCheck,
+  UserCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronRight,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import SessionTimer from "@/components/ui/SessionTimer";
+import { socket } from "@/lib/socket";
+import { useAuthStore } from "@/lib/store";
+import { CopyIcon } from "lucide-react";
+import { IndianRupee } from "lucide-react";
 
 export default function DairyAdminStorePage() {
-  // Navigation tabs: 'analytics' | 'pos' | 'inventory' | 'bills' | 'coupons' | 'settings'
+  const { user } = useAuthStore();
+  // Navigation tabs: 'analytics' | 'pos' | 'inventory' | 'bills' | 'coupons' | 'settings' | 'profile'
   const [activeTab, setActiveTab] = useState("analytics");
   const [loading, setLoading] = useState(true);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Store Admin User Profile State
+  const [adminUser, setAdminUser] = useState(null);
+  const [adminProfileForm, setAdminProfileForm] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    shopName: "",
+    village: "",
+    gender: "Male",
+    profilePhoto: "",
+  });
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   // Store Profile & Geofence Settings
   const [profile, setProfile] = useState(null);
@@ -86,6 +115,9 @@ export default function DairyAdminStorePage() {
 
   // Analytics & Day-wise Collections State
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [analyticsStartDate, setAnalyticsStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [analyticsEndDate, setAnalyticsEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [analyticsPreset, setAnalyticsPreset] = useState("today");
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
@@ -131,9 +163,10 @@ export default function DairyAdminStorePage() {
   const fetchAllStoreData = async () => {
     try {
       setLoading(true);
-      const [profileRes, productsRes] = await Promise.all([
+      const [profileRes, productsRes, adminRes] = await Promise.all([
         api.get("/store/admin/profile").catch(() => ({ data: { profile: null } })),
         api.get("/store/admin/products").catch(() => ({ data: { products: [] } })),
+        api.get("/admin/me").catch(() => ({ data: { admin: null } })),
       ]);
 
       if (profileRes.data?.profile) {
@@ -145,6 +178,20 @@ export default function DairyAdminStorePage() {
       if (productsRes.data?.products) {
         setProducts(productsRes.data.products);
       }
+
+      const resolvedAdmin = adminRes.data?.data?.admin || adminRes.data?.admin || profileRes.data?.admin || user;
+      if (resolvedAdmin) {
+        setAdminUser(resolvedAdmin);
+        setAdminProfileForm({
+          name: resolvedAdmin.name || "",
+          email: resolvedAdmin.email || "",
+          mobile: resolvedAdmin.mobile || "",
+          shopName: resolvedAdmin.shopName || "",
+          village: resolvedAdmin.village || "",
+          gender: resolvedAdmin.gender || "Male",
+          profilePhoto: resolvedAdmin.profilePhoto || profileRes.data?.profile?.ownerPhoto || "",
+        });
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to load store information");
     } finally {
@@ -152,10 +199,15 @@ export default function DairyAdminStorePage() {
     }
   };
 
-  const fetchAnalytics = async (dateStr) => {
+  const fetchAnalytics = async (customStart, customEnd) => {
     try {
       setAnalyticsLoading(true);
-      const res = await api.get(`/store/admin/analytics?date=${dateStr || selectedDate}`);
+      const start = customStart !== undefined ? customStart : analyticsStartDate;
+      const end = customEnd !== undefined ? customEnd : analyticsEndDate;
+      const queryParam = start && end && start !== end
+        ? `startDate=${start}&endDate=${end}`
+        : `date=${start || selectedDate}`;
+      const res = await api.get(`/store/admin/analytics?${queryParam}`);
       if (res.data?.success) {
         setAnalytics(res.data);
       }
@@ -164,6 +216,38 @@ export default function DairyAdminStorePage() {
     } finally {
       setAnalyticsLoading(false);
     }
+  };
+
+  const handleApplyDatePreset = (preset) => {
+    setAnalyticsPreset(preset);
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    let startStr = todayStr;
+    let endStr = todayStr;
+
+    if (preset === "today") {
+      startStr = todayStr;
+      endStr = todayStr;
+    } else if (preset === "yesterday") {
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      startStr = y.toISOString().slice(0, 10);
+      endStr = startStr;
+    } else if (preset === "last7days") {
+      const past = new Date();
+      past.setDate(past.getDate() - 6);
+      startStr = past.toISOString().slice(0, 10);
+      endStr = todayStr;
+    } else if (preset === "thisMonth") {
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      startStr = startOfMonth.toISOString().slice(0, 10);
+      endStr = todayStr;
+    }
+
+    setSelectedDate(startStr);
+    setAnalyticsStartDate(startStr);
+    setAnalyticsEndDate(endStr);
+    fetchAnalytics(startStr, endStr);
   };
 
   const fetchBills = async () => {
@@ -206,6 +290,31 @@ export default function DairyAdminStorePage() {
     fetchCoupons();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Real-time socket updates for incoming store orders & status updates
+  useEffect(() => {
+    if (!user?._id) return;
+    if (!socket.connected) socket.connect();
+    socket.emit("join_room", `admin:${user._id}`);
+
+    const handleNewStoreOrder = (data) => {
+      const ordNum = data.order?.orderNumber || "New Order";
+      const totalAmt = data.order?.grandTotal || 0;
+      toast.success(`🔔 New Store Order Received: #${ordNum} (₹${totalAmt})`);
+      fetchAnalytics(selectedDate);
+      fetchBills();
+      fetchAllStoreData();
+    };
+
+    socket.on("store:new_order", handleNewStoreOrder);
+    socket.on("store:order_status_updated", handleNewStoreOrder);
+
+    return () => {
+      socket.off("store:new_order", handleNewStoreOrder);
+      socket.off("store:order_status_updated", handleNewStoreOrder);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, selectedDate]);
 
   // POS Calculations
   const posSubtotal = useMemo(() => {
@@ -346,9 +455,13 @@ export default function DairyAdminStorePage() {
       };
 
       const res = await api.post("/store/admin/pos-sale", payload);
-      if (res.data?.success) {
-        toast.success(`Bill #${res.data.bill.orderNumber} created successfully!`);
-        setPosGeneratedBill(res.data.bill);
+      const resData = res.data;
+      const createdBill = resData?.bill || resData?.order || resData?.data?.bill || resData?.data?.order || resData;
+
+      if (createdBill && (createdBill.orderNumber || resData?.success)) {
+        const orderNum = createdBill.orderNumber || "NEW";
+        toast.success(`Bill #${orderNum} created successfully!`);
+        setPosGeneratedBill(createdBill);
         setPosCart([]);
         setPosCustomerName("Walk-in Customer");
         setPosCustomerPhone("");
@@ -364,11 +477,13 @@ export default function DairyAdminStorePage() {
     }
   };
 
-  // Clean Server-side HTML Receipt Print
-  const handlePrintReceiptClean = (orderNumber) => {
+  // Clean Server-side HTML Receipt Print & Direct PDF Download
+  const handlePrintReceiptClean = (orderNumber, mode = "print") => {
     if (!orderNumber) return;
-    const printUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/store/public/bill/${orderNumber}/print?autoprint=1`;
-    window.open(printUrl, "_blank", "width=450,height=650,menubar=no,toolbar=no,location=no,status=no");
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3030/api";
+    const param = mode === "download" ? "download=1" : "autoprint=1";
+    const printUrl = `${baseUrl}/store/public/bill/${orderNumber}/print?${param}`;
+    window.open(printUrl, "_blank", "width=460,height=680,menubar=no,toolbar=no,location=no,status=no");
   };
 
   // Add / Edit Product Submit
@@ -503,6 +618,90 @@ export default function DairyAdminStorePage() {
     }
   };
 
+  // Save Store Admin User Profile Details
+  const handleSaveAdminProfile = async (e) => {
+    if (e) e.preventDefault();
+    setAdminSaving(true);
+    try {
+      const res = await api.put("/admin/profile", adminProfileForm);
+      const updatedAdmin = res.data?.data?.admin || res.data?.admin;
+      if (updatedAdmin) {
+        setAdminUser(updatedAdmin);
+        setAdminProfileForm((prev) => ({
+          ...prev,
+          ...updatedAdmin,
+        }));
+      }
+      toast.success("Admin store user profile updated successfully!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update admin profile");
+    } finally {
+      setAdminSaving(false);
+    }
+  };
+
+  // Upload Profile Photo via API with FileReader Fallback
+  const handleAdminPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error("Photo size must be less than 5MB");
+    }
+
+    setPhotoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await api.post("/admin/photo", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const newPhoto = res.data?.profilePhoto;
+      if (newPhoto) {
+        setAdminUser((prev) => ({ ...prev, profilePhoto: newPhoto }));
+        setAdminProfileForm((prev) => ({ ...prev, profilePhoto: newPhoto }));
+        if (profile) {
+          setProfile((prev) => ({ ...prev, ownerPhoto: newPhoto }));
+        }
+        toast.success("Admin profile photo updated successfully!");
+      }
+    } catch {
+      // Fallback: convert to base64 Data URI and save directly
+      try {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64Data = reader.result;
+          setAdminProfileForm((prev) => ({ ...prev, profilePhoto: base64Data }));
+          setAdminUser((prev) => ({ ...prev, profilePhoto: base64Data }));
+          await api.put("/admin/profile", { profilePhoto: base64Data });
+          toast.success("Profile photo saved successfully!");
+        };
+        reader.readAsDataURL(file);
+      } catch {
+        toast.error("Failed to upload profile photo");
+      }
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  // Remove Admin Profile Photo
+  const handleRemoveAdminPhoto = async () => {
+    setPhotoUploading(true);
+    try {
+      await api.delete("/admin/photo").catch(async () => {
+        await api.put("/admin/profile", { profilePhoto: "" });
+      });
+      setAdminUser((prev) => ({ ...prev, profilePhoto: "" }));
+      setAdminProfileForm((prev) => ({ ...prev, profilePhoto: "" }));
+      if (profile) setProfile((prev) => ({ ...prev, ownerPhoto: "" }));
+      toast.success("Profile photo removed successfully");
+    } catch {
+      toast.error("Failed to remove profile photo");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
   const navItems = [
     { id: "analytics", label: "Analytics & Collections", icon: BarChart3, badge: "Daily" },
     { id: "pos", label: "Walk-in POS Billing", icon: Receipt, badge: "Instant" },
@@ -510,6 +709,7 @@ export default function DairyAdminStorePage() {
     { id: "bills", label: "All Bills & History", icon: FileText, badge: null },
     { id: "coupons", label: "Coupons & Promos", icon: Percent, badge: coupons.length },
     { id: "settings", label: "Geofence & Settings", icon: MapPin, badge: null },
+    { id: "profile", label: "Admin Profile", icon: UserCheck, badge: null },
   ];
 
   if (loading) {
@@ -524,26 +724,50 @@ export default function DairyAdminStorePage() {
 
   return (
     <div id="store-admin-container" className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
-      {/* ─── PRINT SUPPRESSION STYLE ─── */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      {/* ─── PRINT SUPPRESSION & SIDEBAR ANIMATION STYLES ─── */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
           #store-admin-container, header, aside, .modal-backdrop, .no-print-modal {
             display: none !important;
           }
+        }
+        @keyframes customChevronWave {
+          0%, 100% {
+            transform: translateX(0);
+            opacity: 0.5;
+          }
+          50% {
+            transform: translateX(4px);
+            opacity: 1;
+          }
+        }
+        .animate-chevron-wave-1 {
+          animation: customChevronWave 1.4s ease-in-out infinite;
+        }
+        .animate-chevron-wave-2 {
+          animation: customChevronWave 1.4s ease-in-out infinite;
+          animation-delay: 0.2s;
+        }
+        @keyframes radialGlowEmerald {
+          0% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+          }
+          70% {
+            box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+          }
+        }
+        .animate-radial-glow {
+          animation: radialGlowEmerald 2s infinite;
         }
       ` }} />
 
       {/* ─── TOP PORTAL HEADER ─── */}
       <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-3">
-          {/* Mobile hamburger menu toggle */}
-          <button
-            onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white md:hidden transition"
-          >
-            {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 p-0.5 shrink-0 flex items-center justify-center shadow-xs">
             <Store className="w-5 h-5 text-white" />
           </div>
@@ -563,12 +787,38 @@ export default function DairyAdminStorePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <SessionTimer />
           <ThemeToggle />
+
+          {/* Admin Profile Header Pill */}
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={`flex items-center gap-2 p-1 sm:px-2.5 sm:py-1.5 rounded-xl border transition ${activeTab === "profile"
+              ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-500"
+              }`}
+            title="View & Edit Store Admin Profile"
+          >
+            <div className="w-6 h-6 rounded-lg overflow-hidden bg-emerald-700 flex items-center justify-center shrink-0 border border-white/20">
+              {adminProfileForm.profilePhoto || adminUser?.profilePhoto ? (
+                <img
+                  src={adminProfileForm.profilePhoto || adminUser?.profilePhoto}
+                  alt={adminProfileForm.name || "Admin"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-3.5 h-3.5 text-white" />
+              )}
+            </div>
+            <span className="text-xs font-bold hidden sm:inline">
+              {adminProfileForm.name || adminUser?.name || "Profile"}
+            </span>
+          </button>
 
           <Link
             href="/dashboard"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 transition shadow-xs"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 transition shadow-xs"
             title="Switch back to Milk Collection Dashboard"
           >
             <span>Dairy Dashboard</span>
@@ -579,50 +829,232 @@ export default function DairyAdminStorePage() {
               href={`/store/${profile.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-xl border border-emerald-200 dark:border-emerald-800 transition shadow-xs"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-xl border border-emerald-200 dark:border-emerald-800 transition shadow-xs"
               title="Open public customer storefront in new tab"
             >
-              <span>Milki Store (New Tab)</span>
+              <span>Milki Store</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}
+
+          {/* Navbar Toggle Button (Top Right of Admin Store UI) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.innerWidth < 768) {
+                setIsMobileMenuOpen(!isMobileMenuOpen);
+              } else {
+                setIsCollapsed(!isCollapsed);
+              }
+            }}
+            className={cn(
+              "p-2 sm:px-2.5 sm:py-2 rounded-xl border transition shadow-xs flex items-center gap-1.5 shrink-0",
+              isMobileMenuOpen || isCollapsed
+                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-emerald-500"
+            )}
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label="Toggle Navigation"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            ) : isCollapsed ? (
+              <PanelLeftOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5" />
+            )}
+            <span className="text-xs font-bold hidden xl:inline">
+              {isMobileMenuOpen ? "Close" : isCollapsed ? "Expand" : "Collapse"}
+            </span>
+          </button>
         </div>
       </header>
 
+      {/* Animated Left-Edge Pull Tab (Mobile only, identical to Dairy Admin UI & Master UI) */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className={cn(
+          "fixed top-[45%] -translate-y-1/2 z-[60] flex flex-col items-center justify-center w-8 h-20 rounded-r-2xl transition-all duration-300 ease-in-out md:hidden shadow-[4px_0_20px_rgba(16,185,129,0.25)] border-y border-r border-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/50",
+          isMobileMenuOpen
+            ? "left-[288px] bg-slate-900/90 dark:bg-slate-800/90 text-white"
+            : "left-0 bg-emerald-600 text-white animate-radial-glow"
+        )}
+        aria-label="Toggle Navigation Drawer"
+      >
+        {/* Subtle vertical accent line inside the tab handle */}
+        <div className="absolute left-1 w-0.5 h-10 rounded-full bg-white/20" />
+
+        {/* Sequential Double Chevron Arrows */}
+        <div className="flex flex-col items-center gap-1">
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 transition-all duration-300",
+              isMobileMenuOpen
+                ? "rotate-180 text-white/70"
+                : "animate-chevron-wave-1 text-white"
+            )}
+          />
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 transition-all duration-300 -mt-1",
+              isMobileMenuOpen
+                ? "rotate-180 text-white/40"
+                : "animate-chevron-wave-2 text-white/80"
+            )}
+          />
+        </div>
+      </button>
+
+      {/* Mobile Side Drawer Backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Side Drawer Content */}
+      <div
+        className={cn(
+          "fixed top-0 left-0 bottom-0 z-50 w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl flex flex-col transition-transform duration-300 ease-in-out md:hidden border-r border-slate-200/50 dark:border-slate-800/80",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Mobile Drawer Header */}
+        <div className="flex h-16 items-center justify-between px-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-xs">
+              <Store className="w-4 h-4" />
+            </div>
+            <span className="font-extrabold text-sm text-slate-900 dark:text-white">Store Menu</span>
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="relative flex items-center justify-center p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all duration-200"
+            aria-label="Close Navigation Drawer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Mobile Navigation Links */}
+        <div className="flex-1 overflow-y-auto py-4 px-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
+                  isActive
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge !== null && (
+                  <span
+                    className={cn(
+                      "text-[10px] px-2 py-0.5 rounded-full font-bold",
+                      isActive ? "bg-emerald-800 text-emerald-100" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                    )}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* ─── MAIN PORTAL BODY WITH RESPONSIVE SIDEBAR ─── */}
       <div className="flex flex-col md:flex-row">
-        {/* Left Sidebar (Desktop & Mobile Drawer) */}
+        {/* Desktop Sidebar (Identical to Dairy Admin UI & Master UI) */}
         <aside
-          className={`${
-            isMobileNavOpen ? "block" : "hidden"
-          } md:block w-full md:w-64 bg-white dark:bg-slate-900/60 border-r border-slate-200 dark:border-slate-800/80 p-4 shrink-0 transition-all shadow-xs`}
+          className={cn(
+            "hidden md:flex flex-col border-r border-slate-200 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/90 backdrop-blur-md transition-all duration-300 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)]",
+            isCollapsed ? "w-16" : "w-60"
+          )}
         >
-          <div className="space-y-1">
+          {/* Sidebar Header with Brand + Collapse Toggle */}
+          <div
+            className={cn(
+              "relative flex h-14 items-center border-b border-slate-200 dark:border-slate-800",
+              isCollapsed ? "justify-center px-2" : "justify-between px-4"
+            )}
+          >
+            <div className="flex items-center gap-2 overflow-hidden">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shrink-0 shadow-xs">
+                <Store className="w-4 h-4 text-white" />
+              </div>
+              {!isCollapsed && (
+                <span className="font-extrabold text-sm text-slate-900 dark:text-white truncate">
+                  Store Hub
+                </span>
+              )}
+            </div>
+
+            {!isCollapsed && (
+              <button
+                onClick={() => setIsCollapsed(true)}
+                className="rounded-md p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
+            )}
+            {isCollapsed && (
+              <button
+                onClick={() => setIsCollapsed(false)}
+                className="absolute top-3 right-1.5 rounded-md p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Scrollable Navigation Area */}
+          <nav className={cn("flex-1 overflow-y-auto py-3 space-y-1", isCollapsed ? "px-2" : "px-3")}>
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setIsMobileNavOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
+                  onClick={() => setActiveTab(item.id)}
+                  title={isCollapsed ? item.label : ""}
+                  className={cn(
+                    "w-full flex items-center rounded-xl font-medium text-xs sm:text-sm transition-all duration-200",
+                    isCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5",
                     isActive
-                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60"
-                  }`}
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  )}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
+                    <Icon className={cn("h-4 w-4 shrink-0", !isCollapsed && "mr-1")} />
+                    {!isCollapsed && <span>{item.label}</span>}
                   </div>
-                  {item.badge !== null && (
+                  {!isCollapsed && item.badge !== null && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                        isActive ? "bg-emerald-800 text-emerald-100" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                      }`}
+                      className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                        isActive
+                          ? "bg-emerald-800 text-emerald-100"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                      )}
                     >
                       {item.badge}
                     </span>
@@ -630,14 +1062,16 @@ export default function DairyAdminStorePage() {
                 </button>
               );
             })}
-          </div>
+          </nav>
 
-          <div className="mt-8 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400 shadow-xs">
-            <p className="font-bold text-slate-800 dark:text-slate-300">Omnichannel Sync</p>
-            <p className="text-[11px] mt-1 text-slate-500">
-              POS Counter Sales &amp; Online Orders decrement from the same real-time stock pool.
-            </p>
-          </div>
+          {!isCollapsed && (
+            <div className="p-3 m-3 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400 shadow-xs">
+              <p className="font-bold text-slate-800 dark:text-slate-300">Omnichannel Sync</p>
+              <p className="text-[11px] mt-1 text-slate-500">
+                POS Counter Sales &amp; Online Orders decrement from the same real-time stock pool.
+              </p>
+            </div>
+          )}
         </aside>
 
         {/* Content Area */}
@@ -647,45 +1081,134 @@ export default function DairyAdminStorePage() {
           ══════════════════════════════════════════════════════════════════════ */}
           {activeTab === "analytics" && (
             <div className="space-y-6">
-              {/* Header with Date Picker */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+              {/* Header with Date Span Selector & Presets */}
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    Store Analytics &amp; Daily Collections
+                    Store Analytics &amp; Revenue Collections
                     {analyticsLoading && <Loader2 className="w-4 h-4 animate-spin text-emerald-500 inline ml-1" />}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Real-time day-wise revenue, payment split (Cash/UPI/Credit), and bestsellers
+                    Real-time day-wise and date-range revenue, payment split (Cash/UPI/Credit), and bestsellers
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 self-start sm:self-auto shadow-xs">
-                  <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => {
-                      setSelectedDate(e.target.value);
-                      fetchAnalytics(e.target.value);
-                    }}
-                    className="bg-transparent text-xs text-slate-800 dark:text-white focus:outline-none"
-                  />
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Quick Preset Buttons */}
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyDatePreset("today")}
+                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                        analyticsPreset === "today"
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyDatePreset("yesterday")}
+                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                        analyticsPreset === "yesterday"
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      Yesterday
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyDatePreset("last7days")}
+                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                        analyticsPreset === "last7days"
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      Last 7 Days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyDatePreset("thisMonth")}
+                      className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                        analyticsPreset === "thisMonth"
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      This Month
+                    </button>
+                  </div>
+
+                  {/* Date Range Picker (From -> To) */}
+                  <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 shadow-xs text-xs">
+                    <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-400 text-[11px] font-medium">From:</span>
+                      <input
+                        type="date"
+                        value={analyticsStartDate}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAnalyticsStartDate(val);
+                          setAnalyticsPreset("custom");
+                          fetchAnalytics(val, analyticsEndDate);
+                        }}
+                        className="bg-transparent text-xs text-slate-800 dark:text-white focus:outline-none"
+                      />
+                      <span className="text-slate-400 text-[11px] font-medium ml-1">To:</span>
+                      <input
+                        type="date"
+                        value={analyticsEndDate}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAnalyticsEndDate(val);
+                          setAnalyticsPreset("custom");
+                          fetchAnalytics(analyticsStartDate, val);
+                        }}
+                        className="bg-transparent text-xs text-slate-800 dark:text-white focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Range Active Indicator Banner */}
+              {analytics?.isRange && (
+                <div className="flex items-center justify-between px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl text-xs text-emerald-800 dark:text-emerald-300">
+                  <div className="flex items-center gap-2 font-medium">
+                    <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>
+                      Displaying aggregated metrics for date span: <strong className="font-bold underline">{analyticsStartDate}</strong> to <strong className="font-bold underline">{analyticsEndDate}</strong> ({analytics?.summary?.rangeOrdersCount || 0} orders found)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyDatePreset("today")}
+                    className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline"
+                  >
+                    Reset to Today
+                  </button>
+                </div>
+              )}
 
               {/* Day-Wise Collection Summary Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <Card className="bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 p-4 shadow-xs">
                   <div className="flex justify-between items-start">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Selected Day Sales</span>
-                    <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      {analytics?.isRange ? "Period Gross Sales" : "Selected Day Sales"}
+                    </span>
+                    <IndianRupee className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <p className="text-2xl font-black text-slate-900 dark:text-white mt-2">
                     ₹{analytics?.summary?.todayGrossSales || 0}
                   </p>
                   <span className="text-[10px] text-slate-400 dark:text-slate-500 block mt-1">
-                    {analytics?.summary?.todayPosBills || 0} bills transacted
+                    {analytics?.summary?.rangeOrdersCount || 0} bills transacted ({analytics?.summary?.todayPosBills || 0} POS + {analytics?.summary?.todayOnlineBills || 0} Online)
                   </span>
                 </Card>
 
@@ -723,28 +1246,42 @@ export default function DairyAdminStorePage() {
                 </Card>
               </div>
 
-              {/* 7-Day Trend and Category Breakdown */}
+              {/* Daily Trend / Selected Span Breakdown and Category Breakdown */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* 7-Day History Table */}
+                {/* Daily Trend Table / History */}
                 <div className="lg:col-span-2 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-                  <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    Last 7 Days Revenue Trend
+                  <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      {analytics?.isRange ? "Selected Period Daily Revenue Breakdown" : "Recent Revenue History"}
+                    </span>
+                    <span className="text-[11px] font-normal text-slate-500">
+                      Avg Order: ₹{analytics?.summary?.avgOrderValue || 0}
+                    </span>
                   </h3>
-                  {analytics?.weeklyTrend?.length === 0 ? (
-                    <p className="text-xs text-slate-400 dark:text-slate-500 py-6 text-center">No transactions recorded in the past 7 days</p>
+                  {((analytics?.isRange && analytics?.dailyTrend?.length > 0) ? analytics?.dailyTrend : analytics?.weeklyTrend)?.length === 0 ? (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 py-6 text-center">
+                      No transactions recorded in the selected period
+                    </p>
                   ) : (
                     <div className="space-y-2">
-                      {analytics?.weeklyTrend?.map((day) => (
-                        <div
-                          key={day._id}
-                          className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 text-xs"
-                        >
-                          <span className="font-semibold text-slate-700 dark:text-slate-300">{day._id}</span>
-                          <span className="text-slate-500 dark:text-slate-400">{day.billCount} bills</span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">₹{day.totalRevenue}</span>
-                        </div>
-                      ))}
+                      {((analytics?.isRange && analytics?.dailyTrend?.length > 0) ? analytics?.dailyTrend : analytics?.weeklyTrend)?.map((day) => {
+                        const dateLabel = day.date || day._id;
+                        const billCount = day.ordersCount !== undefined ? day.ordersCount : day.billCount;
+                        const revenue = day.revenue !== undefined ? day.revenue : day.totalRevenue;
+                        return (
+                          <div
+                            key={dateLabel}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 text-xs"
+                          >
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">{dateLabel}</span>
+                            <span className="text-slate-500 dark:text-slate-400">
+                              {billCount} bills {day.posRevenue !== undefined && `(POS: ₹${day.posRevenue} | Online: ₹${day.onlineRevenue})`}
+                            </span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">₹{revenue}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -852,11 +1389,10 @@ export default function DairyAdminStorePage() {
                       key={tab.id}
                       type="button"
                       onClick={() => setPosCategory(tab.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
-                        posCategory === tab.id
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${posCategory === tab.id
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -1031,10 +1567,16 @@ export default function DairyAdminStorePage() {
                       <span>Subtotal:</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">₹{posSubtotal}</span>
                     </div>
+                    {posDiscountAmount > 0 && (
+                      <div className="flex justify-between text-rose-600 dark:text-rose-400 font-bold text-xs">
+                        <span>Discount Applied:</span>
+                        <span>-₹{posDiscountAmount}</span>
+                      </div>
+                    )}
                     {posApplyTax && (
-                      <div className="flex justify-between text-slate-500 dark:text-slate-400 text-[11px]">
-                        <span>CGST + SGST:</span>
-                        <span>₹{posTaxDetails.cgst} + ₹{posTaxDetails.sgst}</span>
+                      <div className="flex justify-between text-slate-600 dark:text-slate-300 text-xs">
+                        <span>GST Tax ({posTaxRate}%):</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">+₹{posTaxDetails.taxAmount}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-base font-black text-slate-900 dark:text-white pt-1 border-t border-slate-200 dark:border-slate-800">
@@ -1130,11 +1672,10 @@ export default function DairyAdminStorePage() {
                     <button
                       key={c}
                       onClick={() => setProductCategoryFilter(c)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition ${
-                        productCategoryFilter === c
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition ${productCategoryFilter === c
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
+                        }`}
                     >
                       {c === "farming" ? "Cattle Feed" : c}
                     </button>
@@ -1199,11 +1740,10 @@ export default function DairyAdminStorePage() {
 
                             <td className="px-4 py-3">
                               <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                  isLowStock
-                                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
-                                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                }`}
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isLowStock
+                                  ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                  }`}
                               >
                                 {p.stockQuantity} {p.unit}
                               </span>
@@ -1357,11 +1897,18 @@ export default function DairyAdminStorePage() {
                                   <Eye className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => handlePrintReceiptClean(b.orderNumber)}
+                                  onClick={() => handlePrintReceiptClean(b.orderNumber, "print")}
                                   className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition"
                                   title="Print Clean Thermal Slip"
                                 >
                                   <Printer className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handlePrintReceiptClean(b.orderNumber, "download")}
+                                  className="p-1.5 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 transition"
+                                  title="Download PDF Slip"
+                                >
+                                  <FileText className="w-4 h-4" />
                                 </button>
                               </div>
                             </td>
@@ -1415,11 +1962,10 @@ export default function DairyAdminStorePage() {
                         </span>
                         <button
                           onClick={() => handleToggleCoupon(c)}
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            c.isActive
-                              ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-                              : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                          }`}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.isActive
+                            ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                            : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                            }`}
                         >
                           {c.isActive ? "Active" : "Inactive"}
                         </button>
@@ -1562,6 +2108,370 @@ export default function DairyAdminStorePage() {
                   </div>
                 </form>
               )}
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════════════════════════════════
+              TAB 7: STORE ADMIN USER PROFILE & PHOTO
+          ══════════════════════════════════════════════════════════════════════ */}
+          {activeTab === "profile" && (
+            <div className="max-w-4xl space-y-6">
+              {/* Header Card */}
+              <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs">
+                <div className="border-b border-slate-200 dark:border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <UserCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      Store Admin User Profile
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Manage your dairy store administrator identity, profile photo, and registered merchant credentials
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold rounded-xl self-start sm:self-auto">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Verified Store Admin
+                  </span>
+                </div>
+
+                <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                  {/* Left Column: Profile Photo & Fast Identity Badge */}
+                  <div className="flex flex-col items-center text-center p-6 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800/80 space-y-4">
+                    <div className="relative group">
+                      <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden ring-4 ring-emerald-500/30 shadow-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center">
+                        {adminProfileForm.profilePhoto || adminUser?.profilePhoto ? (
+                          <img
+                            src={adminProfileForm.profilePhoto || adminUser?.profilePhoto}
+                            alt={adminProfileForm.name || "Admin"}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-3xl font-black text-white uppercase">
+                            {adminProfileForm.name ? adminProfileForm.name.slice(0, 2) : "AD"}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Photo Upload Overlay / Trigger Button */}
+                      <label
+                        htmlFor="admin-photo-input"
+                        className="absolute inset-0 bg-black/60 text-white rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer gap-1 text-xs font-semibold backdrop-blur-xs"
+                        title="Upload new profile photo"
+                      >
+                        <Camera className="w-6 h-6" />
+                        <span>Change Photo</span>
+                      </label>
+                      <input
+                        id="admin-photo-input"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="hidden"
+                        onChange={handleAdminPhotoUpload}
+                        disabled={photoUploading}
+                      />
+                    </div>
+
+                    <div>
+                      <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                        {adminProfileForm.name || adminUser?.name || "Store Administrator"}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {adminProfileForm.shopName || profile?.storeName || "Milkify Partner Outlet"}
+                      </p>
+                      <div className="flex items-center justify-center gap-1.5 mt-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
+                          {adminUser?.role || "Admin"}
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          {adminUser?.Status || "Active"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions for Photo */}
+                    <div className="w-full flex flex-col gap-2 pt-2">
+                      <label
+                        htmlFor="admin-photo-input"
+                        className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        {photoUploading ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Upload Photo</span>
+                          </>
+                        )}
+                      </label>
+                      {(adminProfileForm.profilePhoto || adminUser?.profilePhoto) && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveAdminPhoto}
+                          disabled={photoUploading}
+                          className="w-full py-1.5 px-3 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 text-xs font-semibold rounded-xl transition"
+                        >
+                          Remove Photo
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Meta info */}
+                    <div className="w-full pt-3 border-t border-slate-200 dark:border-slate-800/80 text-left space-y-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="flex justify-between">
+                        <span>Member ID:</span>
+                        <strong className="text-slate-800 dark:text-slate-200 font-mono">
+                          {adminUser?.memberId || "ADMIN-01"}
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Base Village:</span>
+                        <strong className="text-slate-800 dark:text-slate-200">
+                          {adminProfileForm.village || profile?.village || "—"}
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Registered:</span>
+                        <strong className="text-slate-800 dark:text-slate-200">
+                          {adminUser?.createdAt ? new Date(adminUser.createdAt).toLocaleDateString() : "Active"}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Editable Profile Information */}
+                  <div className="md:col-span-2">
+                    <form onSubmit={handleSaveAdminProfile} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Full Legal Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={adminProfileForm.name}
+                            onChange={(e) => setAdminProfileForm({ ...adminProfileForm, name: e.target.value })}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                            placeholder="e.g. Ramesh Patel"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Mobile Phone (10 digits) *
+                          </label>
+                          <input
+                            type="tel"
+                            required
+                            maxLength={10}
+                            value={adminProfileForm.mobile}
+                            onChange={(e) => setAdminProfileForm({ ...adminProfileForm, mobile: e.target.value })}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                            placeholder="9876543210"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Email Address *
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            value={adminProfileForm.email}
+                            onChange={(e) => setAdminProfileForm({ ...adminProfileForm, email: e.target.value })}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                            placeholder="admin@milkify.com"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Gender
+                          </label>
+                          <select
+                            value={adminProfileForm.gender}
+                            onChange={(e) => setAdminProfileForm({ ...adminProfileForm, gender: e.target.value })}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                          >
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Dairy / Shop Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={adminProfileForm.shopName}
+                            onChange={(e) => setAdminProfileForm({ ...adminProfileForm, shopName: e.target.value })}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                            placeholder="e.g. Patel Dairy Farm"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Headquarters Village *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={adminProfileForm.village}
+                            onChange={(e) => setAdminProfileForm({ ...adminProfileForm, village: e.target.value })}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                            placeholder="e.g. Rampur"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Photo URL Input fallback */}
+                      <div className="space-y-1.5 pt-2">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                          <span>Profile Photo Direct URL (Optional)</span>
+                          <span className="text-[11px] text-slate-400 font-normal">Or use the upload button on the left</span>
+                        </label>
+                        <input
+                          type="url"
+                          value={adminProfileForm.profilePhoto}
+                          onChange={(e) => setAdminProfileForm({ ...adminProfileForm, profilePhoto: e.target.value })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                          placeholder="https://images.unsplash.com/... or data:image/..."
+                        />
+                      </div>
+
+                      <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Updates sync across your Milkify Admin account and Store Outlet.
+                        </p>
+                        <Button
+                          type="submit"
+                          disabled={adminSaving}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 px-6 py-2.5 h-auto flex items-center justify-center gap-2"
+                        >
+                          {adminSaving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4" />
+                              <span>Save Profile Information</span>
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              {/* Connected Outlet & Quick Business Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-xs">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Store className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    Connected Public Outlet Info
+                  </h3>
+                  <div className="space-y-2.5 text-xs">
+                    <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500 dark:text-slate-400">Storefront Outlet Handle:</span>
+                      <strong className="font-mono text-emerald-600 dark:text-emerald-400">
+                        {profile?.slug || "—"}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500 dark:text-slate-400">Store Name:</span>
+                      <strong className="text-slate-800 dark:text-slate-200">
+                        {profile?.storeName || adminProfileForm.shopName || "—"}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500 dark:text-slate-400">Delivery Coverage:</span>
+                      <strong className="text-slate-800 dark:text-slate-200">
+                        {profile?.deliveryRadiusKm || 8} km ({(profile?.serviceVillages || []).length} villages)
+                      </strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500 dark:text-slate-400">Status:</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        {profile?.isOpen !== false ? "🟢 Open for Orders" : "🔴 Closed"}
+                      </span>
+                    </div>
+                  </div>
+                  {profile?.slug && (
+                    <div className="pt-2 flex gap-2">
+                      <a
+                        href={`/store/${profile.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-xs rounded-xl border border-emerald-200 dark:border-emerald-800 text-center transition flex items-center justify-center gap-1.5"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Visit Storefront</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/store/${profile.slug}`);
+                          toast.success("Store link copied!");
+                        }}
+                        className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition"
+                        title="Copy store URL"
+                      >
+                        <CopyIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-xs">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    Account Overview &amp; Store Metrics
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold">Catalog Items</span>
+                      <strong className="text-base text-slate-900 dark:text-white">{products.length}</strong>
+                      <p className="text-[10px] text-slate-500">Active products</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold">Coupons</span>
+                      <strong className="text-base text-slate-900 dark:text-white">{coupons.length}</strong>
+                      <p className="text-[10px] text-slate-500">Live discount deals</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold">Bills Processed</span>
+                      <strong className="text-base text-slate-900 dark:text-white">{bills.length}</strong>
+                      <p className="text-[10px] text-slate-500">Walk-in &amp; Online</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold">POS Billing</span>
+                      <strong className="text-base text-emerald-600 dark:text-emerald-400">Active</strong>
+                      <p className="text-[10px] text-slate-500">Thermal receipts</p>
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("settings")}
+                      className="w-full py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5"
+                    >
+                      <Store className="w-3.5 h-3.5" />
+                      <span>Configure Store Operational Settings</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </main>
@@ -1911,10 +2821,16 @@ export default function DairyAdminStorePage() {
                   <span>Subtotal:</span>
                   <span>₹{posGeneratedBill?.subtotal || viewingBill?.subtotal}</span>
                 </div>
+                {Number(posGeneratedBill?.discountAmount || viewingBill?.discountAmount || 0) > 0 && (
+                  <div className="flex justify-between text-rose-600 dark:text-rose-400 font-bold text-[11px]">
+                    <span>Discount:</span>
+                    <span>-₹{posGeneratedBill?.discountAmount || viewingBill?.discountAmount}</span>
+                  </div>
+                )}
                 {(posGeneratedBill?.taxDetails?.isTaxApplied || viewingBill?.taxDetails?.isTaxApplied) && (
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 text-[11px]">
-                    <span>GST Tax:</span>
-                    <span>₹{posGeneratedBill?.taxDetails?.taxAmount || viewingBill?.taxDetails?.taxAmount}</span>
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
+                    <span>GST Tax ({posGeneratedBill?.taxDetails?.taxRate || viewingBill?.taxDetails?.taxRate || 5}%):</span>
+                    <span>+₹{posGeneratedBill?.taxDetails?.taxAmount || viewingBill?.taxDetails?.taxAmount}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white pt-1 border-t border-slate-200 dark:border-slate-800">
@@ -1924,14 +2840,22 @@ export default function DairyAdminStorePage() {
               </div>
             </div>
 
-            {/* Action Buttons: Clean Print & WhatsApp Share */}
-            <div className="flex items-center gap-2 pt-2">
+            {/* Action Buttons: Clean Print, Direct PDF Download & WhatsApp Share */}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
               <Button
-                onClick={() => handlePrintReceiptClean(posGeneratedBill?.orderNumber || viewingBill?.orderNumber)}
+                onClick={() => handlePrintReceiptClean(posGeneratedBill?.orderNumber || viewingBill?.orderNumber, "print")}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20"
               >
                 <Printer className="w-3.5 h-3.5 mr-1.5" />
-                Print Clean Thermal Slip
+                Print 80mm Slip
+              </Button>
+
+              <Button
+                onClick={() => handlePrintReceiptClean(posGeneratedBill?.orderNumber || viewingBill?.orderNumber, "download")}
+                className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl shadow-md shadow-sky-600/20"
+              >
+                <FileText className="w-3.5 h-3.5 mr-1.5" />
+                Download PDF Slip
               </Button>
 
               {(posGeneratedBill?.whatsappUrl || (viewingBill && viewingBill.deliveryAddress?.recipientPhone)) && (

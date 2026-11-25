@@ -37,6 +37,10 @@ const storeProfileSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    ownerPhoto: {
+      type: String,
+      default: "",
+    },
     // Primary village where the dairy is physically established
     village: {
       type: String,
@@ -109,6 +113,19 @@ const storeProfileSchema = new mongoose.Schema(
     upiId: {
       type: String,
       default: "",
+    },
+    // Payment mode toggles controlled by Store Admin
+    isOnlinePaymentEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    isCodEnabled: {
+      type: Boolean,
+      default: true,
+    },
+    isFarmerCreditEnabled: {
+      type: Boolean,
+      default: true,
     },
     // SaaS feature toggle status controlled by Master Admin
     isStoreEnabled: {

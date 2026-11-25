@@ -100,6 +100,56 @@ function emitAdDismissed(adminId, adId) {
   io.to(`admin:${adminId}`).emit("advertisement_dismissed", { adId });
 }
 
+/** Emit real-time notification to store admin when new online order is placed */
+function emitStoreOrderCreated(adminId, orderData) {
+  const io = getIo();
+  if (!io) return;
+  io.to(`admin:${adminId}`).emit("store:new_order", {
+    order: orderData,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/** Emit real-time update when an order status changes */
+function emitStoreOrderStatusUpdated(adminId, orderNumber, newStatus) {
+  const io = getIo();
+  if (!io) return;
+  const payload = {
+    orderNumber,
+    newStatus,
+    timestamp: new Date().toISOString(),
+  };
+  if (adminId) io.to(`admin:${adminId}`).emit("store:order_status_updated", payload);
+  io.emit("store:order_status_updated", payload);
+}
+
+/** Emit real-time inventory updates to public store and admin */
+function emitStoreInventoryUpdated(adminId, slug, data = {}) {
+  const io = getIo();
+  if (!io) return;
+  const payload = { ...data, timestamp: new Date().toISOString() };
+  if (slug) io.to(`outlet:${slug.toLowerCase()}`).emit("store:inventory_updated", payload);
+  if (adminId) io.to(`admin:${adminId.toString()}`).emit("store:inventory_updated", payload);
+}
+
+/** Emit real-time coupon updates to public store and admin */
+function emitStoreCouponsUpdated(adminId, slug, data = {}) {
+  const io = getIo();
+  if (!io) return;
+  const payload = { ...data, timestamp: new Date().toISOString() };
+  if (slug) io.to(`outlet:${slug.toLowerCase()}`).emit("store:coupon_updated", payload);
+  if (adminId) io.to(`admin:${adminId.toString()}`).emit("store:coupon_updated", payload);
+}
+
+/** Emit real-time profile / settings updates to public store and admin */
+function emitStoreProfileUpdated(adminId, slug, data = {}) {
+  const io = getIo();
+  if (!io) return;
+  const payload = { ...data, timestamp: new Date().toISOString() };
+  if (slug) io.to(`outlet:${slug.toLowerCase()}`).emit("store:profile_updated", payload);
+  if (adminId) io.to(`admin:${adminId.toString()}`).emit("store:profile_updated", payload);
+}
+
 module.exports = {
   initSocketService,
   getIo,
@@ -108,4 +158,9 @@ module.exports = {
   emitPaymentCaptured,
   emitNewAdvertisement,
   emitAdDismissed,
+  emitStoreOrderCreated,
+  emitStoreOrderStatusUpdated,
+  emitStoreInventoryUpdated,
+  emitStoreCouponsUpdated,
+  emitStoreProfileUpdated,
 };

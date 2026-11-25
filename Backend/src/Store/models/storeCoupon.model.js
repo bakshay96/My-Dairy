@@ -18,6 +18,14 @@ const storeCouponSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    description: {
+      type: String,
+      default: "",
+    },
+    badgeText: {
+      type: String,
+      default: "SPECIAL OFFER",
+    },
     discountType: {
       type: String,
       enum: ["percentage", "fixed"],

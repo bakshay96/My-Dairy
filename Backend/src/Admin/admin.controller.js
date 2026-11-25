@@ -224,8 +224,18 @@ const adminLogin = async (req, res) => {
 // ─── Get Current User ─────────────────────────────────────────────────────────
 const getCurrentUser = async (req, res) => {
   try {
+    let admin = req.admin;
+    if ((!admin?.profilePhoto || admin.profilePhoto === "") && admin?.mobile) {
+      try {
+        const StoreCustomerModel = require("../Store/models/storeCustomer.model");
+        const customer = await StoreCustomerModel.findOne({ mobile: admin.mobile, profilePhoto: { $exists: true, $ne: "" } });
+        if (customer?.profilePhoto) {
+          admin = await AdminModel.findByIdAndUpdate(admin._id || admin.id, { profilePhoto: customer.profilePhoto }, { new: true }).select("-password");
+        }
+      } catch (e) {}
+    }
     return res.sendSuccess(
-      { admin: req.admin, sessionExpiresAt: req.tokenExp || Date.now() + 30 * 60 * 1000 },
+      { admin, sessionExpiresAt: req.tokenExp || Date.now() + 30 * 60 * 1000 },
       "User fetched successfully"
     );
   } catch (error) {
@@ -236,7 +246,7 @@ const getCurrentUser = async (req, res) => {
 // ─── Update Admin Profile ──────────────────────────────────────────────────────
 const updateAdminProfile = async (req, res) => {
   try {
-    const allowedFields = ["name", "email", "mobile", "shopName", "village", "gender"];
+    const allowedFields = ["name", "email", "mobile", "shopName", "village", "gender", "profilePhoto"];
     const updateData = {};
     allowedFields.forEach((field) => {
       if (req.body[field] !== undefined) updateData[field] = req.body[field];
@@ -246,10 +256,136 @@ const updateAdminProfile = async (req, res) => {
       return res.sendError("No valid fields to update", 400);
     }
 
-    const admin = await AdminModel.findByIdAndUpdate(req.admin.id, { $set: updateData }, { new: true }).select("-password");
+    const admin = await AdminModel.findByIdAndUpdate(
+      req.admin._id || req.admin.id,
+      { $set: updateData },
+      { new: true }
+    ).select("-password");
+
+    // Also sync to storeProfile & storeCustomer for the same user
+    try {
+      const { StoreProfileModel } = require("../Store/models");
+      const storeUpdates = {};
+      if (updateData.profilePhoto !== undefined) storeUpdates.ownerPhoto = updateData.profilePhoto;
+      if (updateData.mobile) storeUpdates.phone = updateData.mobile;
+      if (updateData.email) storeUpdates.email = updateData.email;
+      if (updateData.village) storeUpdates.village = updateData.village;
+      if (Object.keys(storeUpdates).length > 0) {
+        await StoreProfileModel.findOneAndUpdate(
+          { adminId: req.admin._id || req.admin.id },
+          { $set: storeUpdates }
+        );
+      }
+
+      const StoreCustomerModel = require("../Store/models/storeCustomer.model");
+      const customerSync = {};
+      if (updateData.name) customerSync.name = updateData.name;
+      if (updateData.email) customerSync.email = updateData.email;
+      if (updateData.village) customerSync.village = updateData.village;
+      if (updateData.profilePhoto !== undefined) customerSync.profilePhoto = updateData.profilePhoto;
+
+      const adminRecord = admin || (await AdminModel.findById(req.admin._id || req.admin.id));
+      const targetMobile = adminRecord?.mobile || req.admin?.mobile;
+      if (targetMobile && Object.keys(customerSync).length > 0) {
+        await StoreCustomerModel.updateMany(
+          { $or: [{ mobile: targetMobile }, { adminId: adminRecord._id, mobile: targetMobile }] },
+          { $set: customerSync }
+        );
+      }
+    } catch (e) {
+      console.error("[Sync] updateAdminProfile sync error:", e.message);
+    }
+
     return res.sendSuccess({ admin }, "Profile updated successfully");
   } catch (error) {
     return res.sendError(error.message, 500);
+  }
+};
+
+// ─── Upload Admin Profile Photo ────────────────────────────────────────────────
+const uploadAdminPhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No photo provided" });
+    }
+    let photoUrl = "";
+    try {
+      const { uploadToS3 } = require("../services/s3.service");
+      photoUrl = await uploadToS3(req.file.buffer, req.file.originalname, "admins/profiles");
+    } catch (s3Err) {
+      const mime = req.file.mimetype || "image/jpeg";
+      photoUrl = `data:${mime};base64,${req.file.buffer.toString("base64")}`;
+    }
+
+    const admin = await AdminModel.findByIdAndUpdate(
+      req.admin._id || req.admin.id,
+      { profilePhoto: photoUrl },
+      { new: true }
+    ).select("-password");
+
+    try {
+      const { StoreProfileModel } = require("../Store/models");
+      await StoreProfileModel.findOneAndUpdate(
+        { adminId: req.admin._id || req.admin.id },
+        { ownerPhoto: photoUrl }
+      );
+      const StoreCustomerModel = require("../Store/models/storeCustomer.model");
+      if (admin?.mobile) {
+        await StoreCustomerModel.updateMany(
+          { $or: [{ mobile: admin.mobile }, { adminId: admin._id, mobile: admin.mobile }] },
+          { $set: { profilePhoto: photoUrl } }
+        );
+      }
+    } catch (e) {
+      console.error("[Sync] uploadAdminPhoto sync error:", e.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin profile photo uploaded successfully",
+      profilePhoto: photoUrl,
+      admin,
+    });
+  } catch (error) {
+    console.error("uploadAdminPhoto error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ─── Delete Admin Profile Photo ────────────────────────────────────────────────
+const deleteAdminPhoto = async (req, res) => {
+  try {
+    const admin = await AdminModel.findByIdAndUpdate(
+      req.admin._id || req.admin.id,
+      { profilePhoto: "" },
+      { new: true }
+    ).select("-password");
+
+    try {
+      const { StoreProfileModel } = require("../Store/models");
+      await StoreProfileModel.findOneAndUpdate(
+        { adminId: req.admin._id || req.admin.id },
+        { ownerPhoto: "" }
+      );
+      const StoreCustomerModel = require("../Store/models/storeCustomer.model");
+      if (admin?.mobile) {
+        await StoreCustomerModel.updateMany(
+          { $or: [{ mobile: admin.mobile }, { adminId: admin._id, mobile: admin.mobile }] },
+          { $set: { profilePhoto: "" } }
+        );
+      }
+    } catch (e) {
+      console.error("[Sync] deleteAdminPhoto sync error:", e.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile photo removed",
+      admin,
+    });
+  } catch (error) {
+    console.error("deleteAdminPhoto error:", error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -577,4 +713,6 @@ module.exports = {
   verifyEmailOtp,
   getMyNotificationSettings,
   updateMyNotificationSettings,
+  uploadAdminPhoto,
+  deleteAdminPhoto,
 };

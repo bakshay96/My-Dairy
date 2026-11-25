@@ -4,6 +4,8 @@ const {
   message,
   getCurrentUser,
   updateAdminProfile,
+  uploadAdminPhoto,
+  deleteAdminPhoto,
   logoutUser,
   registerAdmin,
   adminForgotPassword,
@@ -15,6 +17,7 @@ const {
 } = require("./admin.controller");
 const { messageResponse } = require("../middleware/messageResponse.middleware.js");
 const authMiddleware = require("../middleware/authMiddleware.js");
+const { upload } = require("../middleware/upload.middleware.js");
 
 const AdminRouter = express.Router();
 
@@ -29,6 +32,8 @@ AdminRouter.post("/message", messageResponse, message);
 // Protected routes
 AdminRouter.get("/me", authMiddleware, getCurrentUser);
 AdminRouter.put("/profile", authMiddleware, updateAdminProfile);
+AdminRouter.post("/photo", authMiddleware, upload.single("photo"), uploadAdminPhoto);
+AdminRouter.delete("/photo", authMiddleware, deleteAdminPhoto);
 AdminRouter.put("/change-password", authMiddleware, changeAdminPassword);
 AdminRouter.get("/notification-settings", authMiddleware, getMyNotificationSettings);
 AdminRouter.put("/notification-settings", authMiddleware, updateMyNotificationSettings);

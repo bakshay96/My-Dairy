@@ -43,6 +43,8 @@
                 if (error.response?.status === 401 && typeof window !== "undefined") {
                   const requestUrl = String(error.config?.url || "");
                   const pathname = window.location.pathname;
+                  const search = window.location.search || "";
+                  const fullPath = pathname + search;
                   const isAuthPage =
                     pathname === "/" ||
                     pathname === "/login" ||
@@ -56,10 +58,15 @@
 
                   // Avoid reload loops and unwanted redirects on public pages and auth forms.
                   if (!isAuthPage && !isAuthEndpoint) {
+                    try {
+                      if (!pathname.startsWith("/master")) {
+                        localStorage.setItem("milkify_last_admin_route", fullPath);
+                      }
+                    } catch {}
                     if (pathname.startsWith("/master")) {
-                      window.location.href = "/master/login";
+                      window.location.href = `/master/login?redirect=${encodeURIComponent(fullPath)}`;
                     } else {
-                      window.location.href = "/login";
+                      window.location.href = `/login?redirect=${encodeURIComponent(fullPath)}`;
                     }
                   }
                 }

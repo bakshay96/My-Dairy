@@ -39,6 +39,10 @@ const storeCustomerSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    profilePhoto: {
+      type: String,
+      default: "",
+    },
     savedAddresses: [
       {
         label: { type: String, default: "Home" },

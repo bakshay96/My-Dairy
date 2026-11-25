@@ -100,7 +100,7 @@ const storeOrderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["cod", "razorpay", "cash_counter", "farmer_milk_bill", "upi_qr", "card", "credit"],
+      enum: ["cod", "online", "razorpay", "cash_counter", "farmer_milk_bill", "upi_qr", "card", "credit"],
       default: "cod",
     },
     paymentStatus: {
@@ -144,6 +144,23 @@ const storeOrderSchema = new mongoose.Schema(
     adminNotes: {
       type: String,
       default: "",
+    },
+    cancellationReason: {
+      type: String,
+      default: "",
+    },
+    cancelledBy: {
+      type: String,
+      enum: ["customer", "admin", "system_timeout", ""],
+      default: "",
+    },
+    refundDetails: {
+      isRefunded: { type: Boolean, default: false },
+      refundId: { type: String, default: null },
+      amount: { type: Number, default: 0 },
+      status: { type: String, enum: ["none", "pending", "processed", "failed"], default: "none" },
+      refundedAt: { type: Date, default: null },
+      reason: { type: String, default: "" },
     },
     deliveredAt: {
       type: Date,
