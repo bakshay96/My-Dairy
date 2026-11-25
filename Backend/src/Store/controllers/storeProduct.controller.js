@@ -120,6 +120,14 @@ exports.createAdminProduct = async (req, res) => {
       isFeatured: Boolean(isFeatured),
     });
 
+    // Emit live inventory update
+    try {
+      const { StoreProfileModel } = require("../models");
+      const profile = await StoreProfileModel.findOne({ adminId });
+      const { emitStoreInventoryUpdated } = require("../../services/socketService");
+      emitStoreInventoryUpdated(adminId, profile?.slug, { action: "created", product });
+    } catch (e) {}
+
     res.status(201).json({ success: true, message: "Product created successfully", product });
   } catch (error) {
     console.error("createAdminProduct error:", error);
@@ -148,6 +156,14 @@ exports.updateAdminProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
+    // Emit live inventory update
+    try {
+      const { StoreProfileModel } = require("../models");
+      const profile = await StoreProfileModel.findOne({ adminId });
+      const { emitStoreInventoryUpdated } = require("../../services/socketService");
+      emitStoreInventoryUpdated(adminId, profile?.slug, { action: "updated", product });
+    } catch (e) {}
+
     res.status(200).json({ success: true, message: "Product updated successfully", product });
   } catch (error) {
     console.error("updateAdminProduct error:", error);
@@ -167,6 +183,14 @@ exports.deleteAdminProduct = async (req, res) => {
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
+
+    // Emit live inventory update
+    try {
+      const { StoreProfileModel } = require("../models");
+      const profile = await StoreProfileModel.findOne({ adminId });
+      const { emitStoreInventoryUpdated } = require("../../services/socketService");
+      emitStoreInventoryUpdated(adminId, profile?.slug, { action: "deleted", productId: id });
+    } catch (e) {}
 
     res.status(200).json({ success: true, message: "Product deleted from inventory" });
   } catch (error) {

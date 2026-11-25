@@ -25,6 +25,9 @@ const {
   getStoreAnalytics,
   getAdminBills,
   getPrintableBillHtml,
+  getPrintableBillPdf,
+  cancelCustomerOrder,
+  timeoutCustomerOrder,
 
   // Coupons
   getAdminCoupons,
@@ -32,6 +35,7 @@ const {
   updateAdminCoupon,
   deleteAdminCoupon,
   validateCouponCode,
+  getPublicCoupons,
 
   // Customers
   registerCustomer,
@@ -39,6 +43,10 @@ const {
   getCustomerProfile,
   getCustomerOrders,
   updateCustomerProfile,
+  uploadCustomerPhoto,
+  deleteCustomerPhoto,
+  changeCustomerPassword,
+  resetCustomerPassword,
 
   // Master Admin
   getMasterStoreNetworkStats,
@@ -48,22 +56,32 @@ const {
 const authMiddleware = require("../../middleware/authMiddleware");
 const subscriptionGuard = require("../../middleware/subscriptionGuard");
 const masterAuthMiddleware = require("../../middleware/masterAuthMiddleware");
+const { upload } = require("../../middleware/upload.middleware.js");
 
 // ─── PUBLIC STOREFRONT ENDPOINTS (For End Customers) ─────────────────────────
 storeRouter.get("/public/outlet/:slug", getPublicStoreBySlug);
 storeRouter.get("/public/outlet/:slug/products", getPublicProducts);
+storeRouter.get("/public/outlet/:slug/coupons", getPublicCoupons);
 storeRouter.post("/public/outlet/:slug/validate-delivery", validateDeliveryEligibility);
 storeRouter.post("/public/outlet/:slug/order", placeCustomerOnlineOrder);
 storeRouter.post("/public/order/verify-payment", verifyOnlineOrderPayment);
 storeRouter.get("/public/order/track/:orderNumber", trackPublicOrder);
+storeRouter.put("/public/order/:orderNumber/cancel", cancelCustomerOrder);
+storeRouter.put("/public/order/:orderNumber/timeout", timeoutCustomerOrder);
 storeRouter.post("/public/coupon/validate", validateCouponCode);
 storeRouter.get("/public/bill/:orderNumber/print", getPrintableBillHtml);
+storeRouter.get("/public/bill/:orderNumber/pdf", getPrintableBillPdf);
+storeRouter.get("/public/bill/:orderNumber/download", getPrintableBillPdf);
 
 // ─── PUBLIC STORE CUSTOMER AUTH & PROFILE (Saved Addresses & Purchase History) ─
 storeRouter.post("/public/customer/register", registerCustomer);
 storeRouter.post("/public/customer/login", loginCustomer);
 storeRouter.get("/public/customer/profile", getCustomerProfile);
 storeRouter.put("/public/customer/profile", updateCustomerProfile);
+storeRouter.post("/public/customer/photo", upload.single("photo"), uploadCustomerPhoto);
+storeRouter.delete("/public/customer/photo", deleteCustomerPhoto);
+storeRouter.put("/public/customer/change-password", changeCustomerPassword);
+storeRouter.post("/public/customer/reset-password", resetCustomerPassword);
 storeRouter.get("/public/customer/orders", getCustomerOrders);
 
 // ─── PROTECTED DAIRY ADMIN STORE ENDPOINTS (Requires Active SaaS Plan) ────────

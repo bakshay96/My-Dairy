@@ -27,6 +27,8 @@ exports.createAdminCoupon = async (req, res) => {
     const {
       code,
       title,
+      description = "",
+      badgeText = "SPECIAL OFFER",
       discountType = "fixed",
       discountValue,
       minOrderValue = 0,
@@ -50,6 +52,8 @@ exports.createAdminCoupon = async (req, res) => {
       adminId,
       code: cleanCode,
       title: title || cleanCode,
+      description: description || "",
+      badgeText: badgeText || "SPECIAL OFFER",
       discountType,
       discountValue: Number(discountValue),
       minOrderValue: Number(minOrderValue) || 0,
@@ -58,6 +62,14 @@ exports.createAdminCoupon = async (req, res) => {
       usageLimit: Number(usageLimit) || 100,
       isActive: true,
     });
+
+    // Real-time socket broadcast
+    try {
+      const { StoreProfileModel } = require("../models");
+      const profile = await StoreProfileModel.findOne({ adminId });
+      const { emitStoreCouponsUpdated } = require("../../services/socketService");
+      emitStoreCouponsUpdated(adminId, profile?.slug, { action: "created", coupon });
+    } catch (e) {}
 
     res.status(201).json({
       success: true,
@@ -88,6 +100,14 @@ exports.updateAdminCoupon = async (req, res) => {
       return res.status(404).json({ success: false, message: "Coupon not found." });
     }
 
+    // Real-time socket broadcast
+    try {
+      const { StoreProfileModel } = require("../models");
+      const profile = await StoreProfileModel.findOne({ adminId });
+      const { emitStoreCouponsUpdated } = require("../../services/socketService");
+      emitStoreCouponsUpdated(adminId, profile?.slug, { action: "updated", coupon });
+    } catch (e) {}
+
     res.status(200).json({
       success: true,
       message: "Coupon updated successfully",
@@ -111,6 +131,14 @@ exports.deleteAdminCoupon = async (req, res) => {
     if (!coupon) {
       return res.status(404).json({ success: false, message: "Coupon not found." });
     }
+
+    // Real-time socket broadcast
+    try {
+      const { StoreProfileModel } = require("../models");
+      const profile = await StoreProfileModel.findOne({ adminId });
+      const { emitStoreCouponsUpdated } = require("../../services/socketService");
+      emitStoreCouponsUpdated(adminId, profile?.slug, { action: "deleted", couponId: id });
+    } catch (e) {}
 
     res.status(200).json({
       success: true,
@@ -208,6 +236,72 @@ exports.validateCouponCode = async (req, res) => {
     });
   } catch (error) {
     console.error("validateCouponCode error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Public: List active promotions and coupons for an outlet storefront
+ */
+exports.getPublicCoupons = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { StoreProfileModel } = require("../models");
+    let adminId = null;
+
+    if (slug) {
+      const profile = await StoreProfileModel.findOne({ slug: slug.toLowerCase() });
+      if (profile) adminId = profile.adminId;
+    }
+
+    if (!adminId) {
+      const defaultProfile = await StoreProfileModel.findOne();
+      if (defaultProfile) adminId = defaultProfile.adminId;
+    }
+
+    if (!adminId) {
+      return res.status(200).json({
+        success: true,
+        coupons: [
+          {
+            code: "WELCOME50",
+            title: "Welcome Special - Flat ₹50 OFF",
+            discountType: "fixed",
+            discountValue: 50,
+            minOrderValue: 200,
+          },
+        ],
+      });
+    }
+
+    const now = new Date();
+    const outletCoupons = await StoreCouponModel.find({
+      adminId,
+      isActive: true,
+      $or: [{ validTill: null }, { validTill: { $gte: now } }],
+    })
+      .sort({ discountValue: -1 })
+      .limit(8)
+      .lean();
+
+    // Always ensure a starter welcome offer if none defined
+    if (outletCoupons.length === 0) {
+      outletCoupons.push({
+        _id: "welcome-default",
+        code: "WELCOME50",
+        title: "Welcome Special Offer",
+        discountType: "fixed",
+        discountValue: 50,
+        minOrderValue: 200,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      coupons: outletCoupons,
+    });
+  } catch (error) {
+    console.error("getPublicCoupons error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

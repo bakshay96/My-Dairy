@@ -35,7 +35,12 @@ import {
   Activity,
   Laptop,
   CheckCircle,
-  Radio
+  Radio,
+  Store,
+  Truck,
+  CreditCard,
+  Smartphone,
+  Tag,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -87,6 +92,7 @@ export default function LandingPage() {
   const [simulatedShift, setSimulatedShift] = useState("morning"); // "morning" | "evening"
   const [slipPrinted, setSlipPrinted] = useState(false);
   const [broadcastSent, setBroadcastSent] = useState(false);
+  const [pricingCycle, setPricingCycle] = useState("monthly"); // "monthly" | "annual"
 
   const handlePrintSlip = () => {
     setSlipPrinted(true);
@@ -117,22 +123,27 @@ export default function LandingPage() {
           </Link>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600 dark:text-slate-300">
+          <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600 dark:text-slate-300">
             <a href="#features" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
               Features
+            </a>
+            <a href="#facilities" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
+              <Store className="h-4 w-4 text-emerald-500" />
+              Store &amp; Services
             </a>
             <a href="#roles" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
               <Laptop className="h-4 w-4 text-indigo-500" />
               Workspaces
             </a>
-            <a href="#calculator" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
-              <Calculator className="h-4 w-4 text-emerald-500" />
-              Rate Sandbox
+            <a href="#pricing" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
+              <CreditCard className="h-4 w-4 text-blue-500" />
+              Pricing
             </a>
-            <a href="#updates" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
+            <Link href="/version" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5">
               <Sparkles className="h-4 w-4 text-amber-500" />
-              What&apos;s New
-            </a>
+              <span>v2.5.0 Release</span>
+              <span className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded-full font-mono font-bold">NEW</span>
+            </Link>
           </nav>
 
           {/* Action Buttons */}
@@ -1219,22 +1230,449 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Services, Facilities & Customer E-Commerce Section ──────────── */}
+      <section id="facilities" className="py-24 bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900/50 dark:to-slate-950 border-b border-slate-200/80 dark:border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-mono mb-3">
+              <Store className="w-3.5 h-3.5" />
+              <span>WHAT&apos;S NEW IN MILKIFY V2.5.0</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+              Customer Facilities &amp; Retail Network Services
+            </h2>
+            <p className="text-base text-slate-600 dark:text-slate-400 mt-3 leading-relaxed">
+              Equip your dairy center with end-to-end digital retail commerce, village delivery logistics, and integrated payment processing.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {/* Facility 1 */}
+            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/50 hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-5">
+                  <Store className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2">
+                  Public Dairy E-Commerce Storefront
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Every dairy outlet gets a dedicated public storefront (<code className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">/store/[slug]</code>) enabling local customers to order cow/buffalo milk, ghee, paneer, and cattle feed online.
+                </p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center text-xs font-bold text-emerald-600 dark:text-emerald-400 gap-1">
+                <span>Custom Branded URLs</span>
+                <CheckCircle2 className="w-4 h-4 ml-auto" />
+              </div>
+            </div>
+
+            {/* Facility 2 */}
+            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-5">
+                  <Truck className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2">
+                  Hyper-Local Village Delivery Engine
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Geofenced delivery radius calculations (up to 15 km) with GPS coordinate validation. Automatically calculates delivery fees and free-shipping thresholds for rural village clusters.
+                </p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center text-xs font-bold text-blue-600 dark:text-blue-400 gap-1">
+                <span>GPS Geofencing Active</span>
+                <CheckCircle2 className="w-4 h-4 ml-auto" />
+              </div>
+            </div>
+
+            {/* Facility 3 */}
+            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800 hover:border-amber-500/50 hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-5">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2">
+                  Farmer Milk Credit (Milk-Pay)
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Registered dairy farmers can purchase cattle feed and essentials directly by deducting the amount from their upcoming milk settlement payout, with zero cash or card required.
+                </p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center text-xs font-bold text-amber-600 dark:text-amber-400 gap-1">
+                <span>Automated Payout Deduction</span>
+                <CheckCircle2 className="w-4 h-4 ml-auto" />
+              </div>
+            </div>
+
+            {/* Facility 4 */}
+            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800 hover:border-purple-500/50 hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-5">
+                  <Printer className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2">
+                  Walk-in POS &amp; 80mm Thermal Slips
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Ultra-fast walk-in POS counter billing generating crisp 80mm thermal roll receipts with auto-print and vector PDF downloads, plus 1-tap WhatsApp invoice sharing.
+                </p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center text-xs font-bold text-purple-600 dark:text-purple-400 gap-1">
+                <span>Vector PDF &amp; Thermal Roll</span>
+                <CheckCircle2 className="w-4 h-4 ml-auto" />
+              </div>
+            </div>
+
+            {/* Facility 5 */}
+            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800 hover:border-teal-500/50 hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-5">
+                  <Smartphone className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2">
+                  Razorpay &amp; Multi-UPI Gateway
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Seamless payment flow supporting Google Pay, PhonePe, Paytm, RuPay, and Cards. Features Swiggy &amp; Zomato-inspired 10-minute session countdowns with auto-restocking.
+                </p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center text-xs font-bold text-teal-600 dark:text-teal-400 gap-1">
+                <span>10-Minute Safe Countdown</span>
+                <CheckCircle2 className="w-4 h-4 ml-auto" />
+              </div>
+            </div>
+
+            {/* Facility 6 */}
+            <div className="p-7 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800 hover:border-rose-500/50 hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-5">
+                  <Tag className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white mb-2">
+                  Promotional Coupons &amp; Live Sync
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Admins can launch festive coupon campaigns with custom expiry dates and badges. Any inventory or coupon change updates customers&apos; open storefront tabs via real-time WebSockets.
+                </p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center text-xs font-bold text-rose-600 dark:text-rose-400 gap-1">
+                <span>Real-Time Socket.io Broadcast</span>
+                <CheckCircle2 className="w-4 h-4 ml-auto" />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Payment Gateway Trust Banner ── */}
+          <div className="mt-16 p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-2xl border border-indigo-900/40">
+            <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Enterprise Payment Security</span>
+                </div>
+                <h4 className="text-xl sm:text-2xl font-black">
+                  Accept All Major Indian Payment Modes
+                </h4>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
+                  Built-in multi-channel payment orchestrator supporting instant UPI collections, bank settlements, and rural cash-on-delivery reconciliation.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2.5">
+                <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md text-xs font-bold border border-white/15">
+                  ⚡ Razorpay Verified
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md text-xs font-bold border border-white/15">
+                  📱 Google Pay
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md text-xs font-bold border border-white/15">
+                  🟣 PhonePe
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md text-xs font-bold border border-white/15">
+                  💳 Paytm UPI
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md text-xs font-bold border border-white/15">
+                  🏦 RuPay &amp; NetBanking
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold">
+                  🥛 Dairy Milk-Pay
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Comprehensive Pricing Section ───────────────────────────── */}
+      <section id="pricing" className="py-24 bg-white dark:bg-slate-900/40 border-b border-slate-200/80 dark:border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2 font-mono">
+              SIMPLE, TRANSPARENT SAAS PRICING
+            </h2>
+            <p className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+              Predictable Plans for Growing Dairies
+            </p>
+            <p className="text-base text-slate-600 dark:text-slate-400 mt-3 max-w-xl mx-auto">
+              Start with a 14-day free trial on any plan. Cancel anytime or upgrade as your farmer network expands.
+            </p>
+
+            {/* Monthly vs Annual Toggle */}
+            <div className="mt-8 inline-flex items-center p-1.5 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setPricingCycle("monthly")}
+                className={`px-5 py-2 text-xs sm:text-sm font-bold rounded-xl transition ${
+                  pricingCycle === "monthly"
+                    ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                }`}
+              >
+                Monthly Billing
+              </button>
+              <button
+                type="button"
+                onClick={() => setPricingCycle("annual")}
+                className={`px-5 py-2 text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-1.5 ${
+                  pricingCycle === "annual"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                }`}
+              >
+                <span>Annual Billing</span>
+                <span className="text-[10px] bg-amber-400 text-amber-950 px-2 py-0.2 rounded-full font-black uppercase">
+                  Save 20%
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Pricing Cards Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+            {/* Plan 1: Basic */}
+            <div className="p-8 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-xs hover:shadow-lg transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Starter Dairy
+                  </span>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">Basic</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Ideal for small village milk centers and independent milk collectors.
+                </p>
+
+                <div className="my-6">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-black text-slate-900 dark:text-white">
+                      ₹{pricingCycle === "monthly" ? "999" : "799"}
+                    </span>
+                    <span className="text-xs text-slate-500">/ month</span>
+                  </div>
+                  {pricingCycle === "annual" && (
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold block mt-1">
+                      Billed ₹9,588 annually (Save ₹2,400)
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Up to <strong>50 Registered Farmers</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Morning &amp; Evening Milk Collection Entry</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Dynamic Fat &amp; SNF Rate Matrix Calculation</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>10-Day Automated Billing Statements (PDF)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Standard SMS Collection Receipts</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Bilingual Devanagari Slip Printing</span>
+                  </div>
+                </div>
+              </div>
+
+              <Link href="/login?tab=register" className="mt-8 block">
+                <Button className="w-full h-11 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs transition">
+                  Start 14-Day Free Trial
+                </Button>
+              </Link>
+            </div>
+
+            {/* Plan 2: Pro (Most Popular) */}
+            <div className="relative p-8 rounded-3xl bg-white dark:bg-slate-900 border-2 border-blue-600 dark:border-blue-500 shadow-2xl flex flex-col justify-between scale-102 lg:-translate-y-2">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[11px] font-black uppercase tracking-wider px-4 py-1 rounded-full shadow-md">
+                ⭐ Most Popular • Full Retail Stack
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                    Smart Dairy &amp; Storefront
+                  </span>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">Pro</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Complete operating system for modern dairies selling milk &amp; cattle feed.
+                </p>
+
+                <div className="my-6">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-black text-slate-900 dark:text-white">
+                      ₹{pricingCycle === "monthly" ? "2,499" : "1,999"}
+                    </span>
+                    <span className="text-xs text-slate-500">/ month</span>
+                  </div>
+                  {pricingCycle === "annual" && (
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold block mt-1">
+                      Billed ₹23,988 annually (Save ₹6,000)
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span><strong>Unlimited Farmers</strong> &amp; Milk Collectors</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span><strong>Public Storefront</strong> (<code className="font-mono">/store/[slug]</code>)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span><strong>Hyper-Local Geofence Delivery</strong> Engine</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span><strong>Walk-in POS Billing</strong> &amp; 80mm Thermal Slips</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span><strong>Razorpay &amp; Multi-UPI</strong> Payment Gateway</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span><strong>Farmer Milk Credit (Milk-Pay)</strong> Checkout</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>Promotional Coupons with Expiry &amp; Badges</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>Real-Time Socket.io Live Inventory Sync</span>
+                  </div>
+                </div>
+              </div>
+
+              <Link href="/login?tab=register" className="mt-8 block">
+                <Button className="w-full h-11 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-blue-500/25 transition">
+                  Start 14-Day Free Trial <ArrowRight className="w-4 h-4 ml-1.5" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Plan 3: Pro Max */}
+            <div className="p-8 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-xs hover:shadow-lg transition-all">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                    Enterprise &amp; Multi-Chilling
+                  </span>
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">Pro Max</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  For dairy federations, multi-center chilling hubs, and retail chains.
+                </p>
+
+                <div className="my-6">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-black text-slate-900 dark:text-white">
+                      ₹{pricingCycle === "monthly" ? "4,999" : "3,999"}
+                    </span>
+                    <span className="text-xs text-slate-500">/ month</span>
+                  </div>
+                  {pricingCycle === "annual" && (
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold block mt-1">
+                      Billed ₹47,988 annually (Save ₹12,000)
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>Everything in Pro Plan</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span><strong>Multi-Outlet Chilling Centers</strong> Network</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>Custom Brand Subdomains &amp; White-labeling</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>IoT Milk Analyzer Hardware Auto-Read API</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>AI Predictive Yield &amp; Anomaly Detection</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>Dedicated Master Superadmin Multi-Tenant Console</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>24/7 Dedicated Account Manager &amp; 99.99% SLA</span>
+                  </div>
+                </div>
+              </div>
+
+              <Link href="/login?tab=register" className="mt-8 block">
+                <Button className="w-full h-11 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs transition">
+                  Contact Enterprise Sales
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Footer ─────────────────────────────────────────────────── */}
       <footer className="bg-white dark:bg-slate-950 border-t border-slate-200/80 dark:border-slate-800/80 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div>
             <Brand />
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
-              Next-Generation Agricultural Dairy SaaS Platform. Built for precision & scale.
+              Next-Generation Agricultural Dairy SaaS Platform. Built for precision &amp; scale.
             </p>
           </div>
-          <div className="flex items-center gap-6 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center justify-center gap-5 text-xs font-semibold text-slate-500 dark:text-slate-400">
             <Link href="/login" className="hover:text-blue-600 dark:hover:text-blue-400">Dairy Sign In</Link>
             <Link href="/login?tab=register" className="hover:text-blue-600 dark:hover:text-blue-400">Register Dairy</Link>
+            <Link href="/version" className="hover:text-blue-600 dark:hover:text-blue-400 font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+              <span>v2.5.0 Release Notes</span>
+              <span className="text-[9px] bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-1 py-0.2 rounded font-mono">NEW</span>
+            </Link>
             <Link href="/master/login" className="hover:text-purple-600 dark:hover:text-purple-400">Master Control</Link>
           </div>
           <p className="text-xs text-slate-400 font-mono">
-            © 2026 Milkify Dairy Systems. All rights reserved.
+            &copy; 2026 Milkify Dairy Systems. All rights reserved.
           </p>
         </div>
       </footer>

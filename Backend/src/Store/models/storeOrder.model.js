@@ -145,6 +145,23 @@ const storeOrderSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    cancellationReason: {
+      type: String,
+      default: "",
+    },
+    cancelledBy: {
+      type: String,
+      enum: ["customer", "admin", "system_timeout", ""],
+      default: "",
+    },
+    refundDetails: {
+      isRefunded: { type: Boolean, default: false },
+      refundId: { type: String, default: null },
+      amount: { type: Number, default: 0 },
+      status: { type: String, enum: ["none", "pending", "processed", "failed"], default: "none" },
+      refundedAt: { type: Date, default: null },
+      reason: { type: String, default: "" },
+    },
     deliveredAt: {
       type: Date,
       default: null,

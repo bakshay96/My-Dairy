@@ -13,12 +13,16 @@ import {
   ArrowLeft,
   AlertCircle,
   Share2,
+  Clock,
+  XCircle,
+  Loader2,
+  FileText,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import axios from "axios";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_BASE = typeof window !== "undefined" ? "/api" : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3030/api");
 
 const STATUS_STEPS = [
   { key: "placed", label: "Order Placed", desc: "Received at outlet" },
@@ -33,13 +37,24 @@ export default function OrderTrackingPage({ params }) {
 
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState(null);
+  const [storeSlug, setStoreSlug] = useState("");
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("Changed mind / Ordered by mistake");
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchOrder = async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${API_BASE}/store/public/order/track/${orderNumber}`);
-      if (res.data?.success) {
+      if (res.data?.success && res.data.order) {
         setOrder(res.data.order);
+        const resolvedSlug = res.data.order.storeSlug || res.data.storeSlug;
+        if (resolvedSlug) {
+          setStoreSlug(resolvedSlug);
+          try {
+            localStorage.setItem("milkify_last_store_slug", resolvedSlug);
+          } catch {}
+        }
       } else {
         toast.error("Order not found");
       }
@@ -51,6 +66,10 @@ export default function OrderTrackingPage({ params }) {
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("milkify_last_store_slug");
+      if (saved) setStoreSlug(saved);
+    }
     if (orderNumber) fetchOrder();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNumber]);
@@ -83,6 +102,42 @@ export default function OrderTrackingPage({ params }) {
     }
   };
 
+  const canCancel =
+    order &&
+    order.orderStatus !== "cancelled" &&
+    (order.orderStatus === "placed" || order.paymentStatus === "pending");
+
+  const handleCancelOrder = async () => {
+    if (!orderNumber) return;
+    setCancelling(true);
+    try {
+      const res = await axios.put(`${API_BASE}/store/public/order/${orderNumber}/cancel`, {
+        reason: cancelReason,
+      });
+      if (res.data?.success) {
+        toast.success(res.data.message || "Order cancelled successfully");
+        setOrder(res.data.order);
+        setIsCancelModalOpen(false);
+        try {
+          const savedCurrent = localStorage.getItem("milkify_current_order");
+          if (savedCurrent) {
+            const parsed = JSON.parse(savedCurrent);
+            if (parsed.orderNumber === orderNumber) {
+              localStorage.removeItem("milkify_current_order");
+            }
+          }
+          const existing = JSON.parse(localStorage.getItem("milkify_guest_order_history") || "[]");
+          const updated = existing.map((o) => (o.orderNumber === orderNumber ? res.data.order : o));
+          localStorage.setItem("milkify_guest_order_history", JSON.stringify(updated));
+        } catch {}
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to cancel order");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center text-slate-800 dark:text-slate-100 p-6">
@@ -91,6 +146,12 @@ export default function OrderTrackingPage({ params }) {
       </div>
     );
   }
+
+  const backToStoreUrl = order?.storeSlug
+    ? `/store/${order.storeSlug}`
+    : storeSlug
+    ? `/store/${storeSlug}`
+    : "/";
 
   if (!order) {
     return (
@@ -101,10 +162,10 @@ export default function OrderTrackingPage({ params }) {
           We could not find an order matching #{orderNumber}. Please verify your order number.
         </p>
         <Link
-          href="/"
+          href={backToStoreUrl}
           className="mt-6 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-medium transition shadow-sm"
         >
-          Return Home
+          Return to Dairy Store
         </Link>
       </div>
     );
@@ -116,7 +177,7 @@ export default function OrderTrackingPage({ params }) {
         {/* Top bar & actions */}
         <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
           <Link
-            href="/"
+            href={backToStoreUrl}
             className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -124,6 +185,15 @@ export default function OrderTrackingPage({ params }) {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            {canCancel && (
+              <button
+                onClick={() => setIsCancelModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-xl text-xs font-bold transition shadow-xs"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                Cancel Order
+              </button>
+            )}
             <button
               onClick={handleCopyLink}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 transition shadow-xs"
@@ -159,6 +229,17 @@ export default function OrderTrackingPage({ params }) {
                 Placed on {new Date(order.createdAt).toLocaleDateString()} at{" "}
                 {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>
+
+              {order.orderStatus !== "cancelled" && (
+                <div className="mt-3 flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-3 py-1.5 rounded-xl w-fit">
+                  <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>
+                    {order.fulfillmentType === "village_delivery"
+                      ? "Estimated Delivery: Today within 45-60 mins"
+                      : "Ready for Pickup: Within 15 mins at dairy counter"}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="text-left sm:text-right">
@@ -171,7 +252,11 @@ export default function OrderTrackingPage({ params }) {
                     : "bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20"
                 }`}
               >
-                Payment: {order.paymentStatus.toUpperCase()} ({order.paymentMethod.toUpperCase()})
+                {order.paymentMethod === "farmer_milk_bill"
+                  ? `🥛 Dairy Cash: ${(order.paymentStatus || "paid").toUpperCase()}`
+                  : order.paymentMethod === "online"
+                  ? `⚡ Online: ${(order.paymentStatus || "paid").toUpperCase()}`
+                  : `💵 COD: ${(order.paymentStatus || "pending").toUpperCase()}`}
               </span>
             </div>
           </div>
@@ -215,9 +300,32 @@ export default function OrderTrackingPage({ params }) {
               </div>
             </div>
           ) : (
-            <div className="py-6 text-center text-rose-500">
-              <AlertCircle className="w-10 h-10 mx-auto mb-2" />
-              <h3 className="font-bold">This order has been cancelled</h3>
+            <div className="py-6 px-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 rounded-2xl text-center space-y-2 mt-4">
+              <AlertCircle className="w-10 h-10 mx-auto text-rose-500" />
+              <h3 className="font-extrabold text-base text-rose-600 dark:text-rose-400">This Order Has Been Rejected / Cancelled</h3>
+              <div className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">
+                {order.cancelledBy === "customer"
+                  ? "👤 Cancelled by You (Customer)"
+                  : order.cancelledBy === "system_timeout"
+                  ? "⏱️ Auto-Cancelled (Online Payment Window Elapsed)"
+                  : "🛡️ Rejected by Dairy Store Admin"}
+              </div>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 max-w-md mx-auto">
+                <strong>Reason:</strong> {order.cancellationReason || order.statusHistory?.slice(-1)[0]?.note || "Order was cancelled."}
+              </p>
+              {order.refundDetails?.isRefunded || order.paymentStatus === "refunded" ? (
+                <div className="max-w-md mx-auto p-3 bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/40 text-xs space-y-1">
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 block">
+                    ✓ 100% Refund Initiated (₹{order.refundDetails?.amount || order.grandTotal})
+                  </span>
+                  <p className="text-[11px] text-slate-500">
+                    Refund ID: <strong className="font-mono text-slate-700 dark:text-slate-300">{order.refundDetails?.refundId || "Processed"}</strong>
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {order.refundDetails?.reason || (order.paymentMethod === "farmer_milk_bill" ? "Restored to your unsettled milk settlement credit." : "Amount will reflect in your UPI/Bank account.")}
+                  </p>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -293,6 +401,18 @@ export default function OrderTrackingPage({ params }) {
                 <span className="text-emerald-600 dark:text-emerald-400">₹{order.grandTotal}</span>
               </div>
             </div>
+
+            {order.paymentMethod === "farmer_milk_bill" && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+                <CheckCircle2 className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <div>
+                  <p className="font-bold">Paid with Dairy Milk Credit (Dairy Cash)</p>
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                    ₹{order.grandTotal} was deducted instantly from your unsettled milk settlement balance.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Customer & Delivery Info (1 col) */}
@@ -323,6 +443,18 @@ export default function OrderTrackingPage({ params }) {
               </div>
             </div>
 
+            {order.customerNotes && (
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-3xl p-5 space-y-1.5 shadow-sm">
+                <h3 className="text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  Your Delivery Instructions / Note
+                </h3>
+                <p className="text-xs text-amber-950 dark:text-amber-200 italic">
+                  &ldquo;{order.customerNotes}&rdquo;
+                </p>
+              </div>
+            )}
+
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-3 shadow-sm">
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
                 <Store className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -339,6 +471,58 @@ export default function OrderTrackingPage({ params }) {
           </div>
         </div>
       </div>
+
+      {/* Cancel Order Confirmation Modal */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
+              <XCircle className="w-6 h-6" />
+            </div>
+            <div className="text-center">
+              <h3 className="font-extrabold text-base text-slate-900 dark:text-white">Cancel Order #{order.orderNumber}?</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Are you sure you want to cancel this order? The reserved inventory will be restored to the dairy outlet.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Reason for Cancellation</label>
+              <select
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500"
+              >
+                <option value="Changed mind / Ordered by mistake">Changed mind / Ordered by mistake</option>
+                <option value="Need to change delivery location">Need to change delivery location</option>
+                <option value="Want to change items in order">Want to change items in order</option>
+                <option value="Delivery time does not suit me">Delivery time does not suit me</option>
+                <option value="Other reason">Other reason</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsCancelModalOpen(false)}
+                disabled={cancelling}
+                className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition"
+              >
+                Keep Order
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelOrder}
+                disabled={cancelling}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-rose-600/20"
+              >
+                {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                Confirm Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

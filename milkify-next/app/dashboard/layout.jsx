@@ -124,6 +124,15 @@ export default function DashboardLayout({ children }) {
   };
 
   useEffect(() => {
+    // Continuously save last active admin dashboard route (e.g. /dashboard/store)
+    if (typeof window !== "undefined" && pathname && pathname.startsWith("/dashboard")) {
+      try {
+        localStorage.setItem("milkify_last_admin_route", pathname + (window.location.search || ""));
+      } catch {}
+    }
+  }, [pathname]);
+
+  useEffect(() => {
     // Mark as hydrated once Zustand persistence loads
     setIsHydrated(true);
 
@@ -133,8 +142,10 @@ export default function DashboardLayout({ children }) {
       // request that always returns 401 and floods the logs unnecessarily.
       const storedUser = useAuthStore.getState().user;
       if (!storedUser) {
-        // No prior session — redirect straight to login, no network call needed.
-        window.location.href = "/login";
+        // No prior session — redirect straight to login with redirect param
+        const currentTarget = typeof window !== "undefined" ? window.location.pathname + (window.location.search || "") : "/dashboard";
+        try { localStorage.setItem("milkify_last_admin_route", currentTarget); } catch {}
+        window.location.href = `/login?redirect=${encodeURIComponent(currentTarget)}`;
         return;
       }
       try {
@@ -149,7 +160,9 @@ export default function DashboardLayout({ children }) {
         // Only force logout when server explicitly says session is invalid.
         if (status === 401) {
           logout();
-          window.location.href = "/login";
+          const currentTarget = typeof window !== "undefined" ? window.location.pathname + (window.location.search || "") : "/dashboard";
+          try { localStorage.setItem("milkify_last_admin_route", currentTarget); } catch {}
+          window.location.href = `/login?redirect=${encodeURIComponent(currentTarget)}`;
           return;
         }
         // For transient/network/proxy issues, avoid hard redirect loop.
@@ -158,7 +171,7 @@ export default function DashboardLayout({ children }) {
     };
 
     checkSession();
-  }, [logout, setAuth]);
+  }, [logout, setAuth, pathname]);
 
   if (!isHydrated) {
     return (

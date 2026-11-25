@@ -114,11 +114,40 @@ function emitStoreOrderCreated(adminId, orderData) {
 function emitStoreOrderStatusUpdated(adminId, orderNumber, newStatus) {
   const io = getIo();
   if (!io) return;
-  io.to(`admin:${adminId}`).emit("store:order_status_updated", {
+  const payload = {
     orderNumber,
     newStatus,
     timestamp: new Date().toISOString(),
-  });
+  };
+  if (adminId) io.to(`admin:${adminId}`).emit("store:order_status_updated", payload);
+  io.emit("store:order_status_updated", payload);
+}
+
+/** Emit real-time inventory updates to public store and admin */
+function emitStoreInventoryUpdated(adminId, slug, data = {}) {
+  const io = getIo();
+  if (!io) return;
+  const payload = { ...data, timestamp: new Date().toISOString() };
+  if (slug) io.to(`outlet:${slug.toLowerCase()}`).emit("store:inventory_updated", payload);
+  if (adminId) io.to(`admin:${adminId.toString()}`).emit("store:inventory_updated", payload);
+}
+
+/** Emit real-time coupon updates to public store and admin */
+function emitStoreCouponsUpdated(adminId, slug, data = {}) {
+  const io = getIo();
+  if (!io) return;
+  const payload = { ...data, timestamp: new Date().toISOString() };
+  if (slug) io.to(`outlet:${slug.toLowerCase()}`).emit("store:coupon_updated", payload);
+  if (adminId) io.to(`admin:${adminId.toString()}`).emit("store:coupon_updated", payload);
+}
+
+/** Emit real-time profile / settings updates to public store and admin */
+function emitStoreProfileUpdated(adminId, slug, data = {}) {
+  const io = getIo();
+  if (!io) return;
+  const payload = { ...data, timestamp: new Date().toISOString() };
+  if (slug) io.to(`outlet:${slug.toLowerCase()}`).emit("store:profile_updated", payload);
+  if (adminId) io.to(`admin:${adminId.toString()}`).emit("store:profile_updated", payload);
 }
 
 module.exports = {
@@ -131,4 +160,7 @@ module.exports = {
   emitAdDismissed,
   emitStoreOrderCreated,
   emitStoreOrderStatusUpdated,
+  emitStoreInventoryUpdated,
+  emitStoreCouponsUpdated,
+  emitStoreProfileUpdated,
 };

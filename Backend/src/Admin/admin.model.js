@@ -88,6 +88,10 @@ const adminSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    profilePhoto: {
+      type: String,
+      default: "",
+    },
     modifiedBy: { type: String, default: null },
     modifiedAt: { type: Date, default: null },
   },
