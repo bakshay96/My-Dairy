@@ -2,6 +2,8 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import ThemeInitializer from "@/components/ui/ThemeInitializer";
+import ScrollToTop from "@/components/ui/ScrollToTop";
+import GlobalChatBot from "@/components/ui/GlobalChatBot";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,6 +23,8 @@ export default function RootLayout({ children }) {
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeInitializer />
         {children}
+        <ScrollToTop />
+        <GlobalChatBot />
         <Toaster
           position="top-right"
           gutter={10}

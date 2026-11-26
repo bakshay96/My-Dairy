@@ -43,6 +43,8 @@ const {
   getDatabaseSchemaStats,
   getUserLoginHistory,
   getCountryUserLogins,
+  getPublicPlatformStats,
+  getPublicPricingPlans,
 } = require("./masterAdmin.controller");
 
 const {
@@ -67,7 +69,9 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const masterRouter = express.Router();
 
-// ─── Public ───────────────────────────────────────────────
+// ─── Public (no auth) ──────────────────────────────────────────────────────
+masterRouter.get("/public/platform-stats", getPublicPlatformStats);
+masterRouter.get("/public/pricing-plans", getPublicPricingPlans);
 masterRouter.post("/login", masterLogin);
 masterRouter.post("/forgot-password", forgotPasswordMaster);
 

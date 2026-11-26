@@ -2417,4 +2417,85 @@ module.exports = {
   getDatabaseSchemaStats,
   getUserLoginHistory,
   getCountryUserLogins,
+  getPublicPlatformStats,
+  getPublicPricingPlans,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUBLIC ENDPOINTS  (no auth required — used by the landing page)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/master/public/platform-stats
+ * Returns aggregated, non-sensitive platform-wide numbers for the landing page.
+ */
+const getPublicPlatformStats = async (req, res) => {
+  try {
+    const [totalDairies, activeDairies, totalFarmers] = await Promise.all([
+      AdminModel.countDocuments({}),
+      AdminModel.countDocuments({ Status: "Active" }),
+      // FarmerModel lives in Farmer collection — query via AdminModel aggregation or raw
+      (async () => {
+        const FarmerModel = (() => {
+          try { return require("../Farmer/farmer.model").FarmerModel; } catch { return null; }
+        })();
+        if (FarmerModel) return FarmerModel.countDocuments({});
+        // Fallback: count via aggregation on Admin model is not possible without join
+        return 0;
+      })(),
+    ]);
+
+    // Platform uptime is static SLA percentage (99.9 %)
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalDairies,
+        activeDairies,
+        totalFarmers,
+        platformUptimePct: 99.9,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * GET /api/master/public/pricing-plans
+ * Returns the active pricing plans (from PlanConfigModel) without auth.
+ */
+const getPublicPricingPlans = async (req, res) => {
+  try {
+    let config = await PlanConfigModel.findOne();
+    if (!config) config = await PlanConfigModel.create({});
+
+    const defaultPlans = _getDefaultPlans(config);
+    if (!config.plans || config.plans.length === 0) {
+      config.plans = defaultPlans;
+      await config.save();
+    }
+
+    // Only expose active plans; strip internal fields
+    const activePlans = (config.plans || defaultPlans)
+      .filter((p) => p.isActive !== false)
+      .sort((a, b) => (a.sortOrder || 99) - (b.sortOrder || 99))
+      .map(({ planId, name, price, durationDays, billingCycle, description, badge, features }) => ({
+        planId,
+        name,
+        price,
+        durationDays,
+        billingCycle,
+        description,
+        badge: badge || "",
+        features: features || [],
+      }));
+
+    return res.status(200).json({
+      success: true,
+      plans: activePlans,
+      currency: config.currency || "INR",
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };
