@@ -569,7 +569,7 @@ async function createPdfBuffer(data, lang) {
       const html = buildHtml(data, lang);
       const page = await browser.newPage();
       try {
-        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 15000 });
+        await page.setContent(html, { waitUntil: 'load', timeout: 10000 });
         const bodyHandle = await page.$('body');
         const boundingBox = bodyHandle ? await bodyHandle.boundingBox() : null;
         const contentHeight = boundingBox ? Math.ceil(boundingBox.height) + 10 + 'px' : '900px';
