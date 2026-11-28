@@ -6,6 +6,7 @@
 const puppeteer = require("puppeteer-core");
 const path = require("path");
 const fs = require("fs");
+const PDFDocument = require("pdfkit");
 
 // ── i18n labels ────────────────────────────────────────────────────────────
 const LABELS = {
@@ -344,45 +345,252 @@ function buildHtml(data, lang) {
 
 let _browser = null;
 
-async function getBrowser() {
-  if (!_browser) {
+// Cross-platform browser executable candidate locations
+const POSSIBLE_BROWSER_PATHS = [
+  process.env.PUPPETEER_EXECUTABLE_PATH,
+  process.env.CHROME_BIN,
+  "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+  process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, "Google\\Chrome\\Application\\chrome.exe") : null,
+  process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, "Microsoft\\Edge\\Application\\msedge.exe") : null,
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/snap/bin/chromium",
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+].filter(Boolean);
+
+function findBrowserPath() {
+  for (const candidate of POSSIBLE_BROWSER_PATHS) {
     try {
-      _browser = await puppeteer.launch({ 
-        executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-    } catch (e) {
-      console.error("[PDF] Failed to launch Edge browser:", e.message);
-      throw new Error("Unable to launch PDF engine (Edge).");
-    }
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    } catch (_) {}
   }
-  return _browser;
+  return null;
+}
+
+async function getBrowser() {
+  if (_browser && _browser.isConnected && _browser.isConnected()) {
+    return _browser;
+  }
+
+  const browserPath = findBrowserPath();
+  if (!browserPath) {
+    console.warn("[PDF Engine] No headless Chromium/Edge binary detected on host. Using PDFKit fallback.");
+    return null;
+  }
+
+  try {
+    _browser = await puppeteer.launch({ 
+      executablePath: browserPath,
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-extensions',
+      ]
+    });
+
+    _browser.on('disconnected', () => {
+      _browser = null;
+    });
+
+    return _browser;
+  } catch (e) {
+    console.warn("[PDF Engine] Failed to spawn browser at", browserPath, ":", e.message, "- Switching to PDFKit fallback.");
+    _browser = null;
+    return null;
+  }
+}
+
+/**
+ * Pure Node.js fallback using PDFKit (zero external browser executable dependencies).
+ * Generates an 80mm POS Thermal Receipt Slip with 100% guarantee across any environment.
+ */
+function createPdfWithPdfKit(data, lang = "en") {
+  return new Promise((resolve, reject) => {
+    try {
+      const L = LABELS[lang] || LABELS.en;
+      const entries = data.entries || [];
+      const summary = data.summary || {};
+      const farmer = data.farmer || {};
+      const dateRange = data.dateRange || {};
+      const payment = data.payment || {};
+      const filterStatus = data.filterStatus || "all";
+
+      const paidAmt = Number(payment.paidAmount || 0);
+      const unpaidAmt = Number(payment.unpaidAmount || 0);
+      const isPaidAll = payment.status === "paid" || unpaidAmt === 0;
+      const isPartial = payment.status === "partial";
+
+      // Calculate dynamic receipt height based on entry count
+      const baseHeight = 360;
+      const entriesHeight = Math.max(entries.length * 16, 40);
+      const docHeight = Math.min(Math.max(baseHeight + entriesHeight, 500), 2400);
+
+      const doc = new PDFDocument({
+        size: [226.77, docHeight], // 80mm width standard
+        margins: { top: 12, bottom: 12, left: 10, right: 10 },
+      });
+
+      const chunks = [];
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", (err) => reject(err));
+
+      const shopName = data.adminShopName || "Milkify Dairy";
+
+      // ── Header ──
+      doc.fontSize(11).font("Helvetica-Bold").text(shopName.toUpperCase(), { align: "center" });
+      doc.fontSize(7).font("Helvetica").text("THERMAL MILK COLLECTION SLIP", { align: "center" });
+      doc.fontSize(6).fillColor("#555").text("POS 80mm Cycle Statement", { align: "center" });
+      doc.moveDown(0.4);
+
+      // Dash line
+      doc.strokeColor("#888").lineWidth(0.5).dash(3, { space: 2 }).moveTo(10, doc.y).lineTo(216, doc.y).stroke().undash();
+      doc.moveDown(0.4);
+
+      // ── Farmer Metadata ──
+      doc.fillColor("#000").fontSize(6.5).font("Helvetica");
+      doc.text(`Farmer: ${farmer.name || "-"}`);
+      if (farmer.memberId) doc.text(`Member ID: #${farmer.memberId}`);
+      if (farmer.mobile) doc.text(`Mobile: ${farmer.mobile}`);
+      if (farmer.village) doc.text(`Village: ${farmer.village}`);
+      doc.text(`Period: ${fmtDate(dateRange.startDate)} to ${fmtDate(dateRange.endDate)}`);
+      doc.text(`View: ${filterStatus === 'paid' ? 'Paid Only' : filterStatus === 'unpaid' ? 'Unpaid Only' : 'All Entries'}`);
+      doc.moveDown(0.4);
+
+      // Dash line
+      doc.strokeColor("#888").lineWidth(0.5).dash(3, { space: 2 }).moveTo(10, doc.y).lineTo(216, doc.y).stroke().undash();
+      doc.moveDown(0.4);
+
+      // ── Table Header ──
+      const headerY = doc.y;
+      doc.font("Helvetica-Bold").fontSize(6);
+      doc.text("Date", 10, headerY, { width: 35 });
+      doc.text("S", 45, headerY, { width: 12 });
+      doc.text("Cat", 58, headerY, { width: 22 });
+      doc.text("Ltr", 82, headerY, { width: 24, align: "right" });
+      doc.text("FAT", 108, headerY, { width: 22, align: "right" });
+      doc.text("SNF", 132, headerY, { width: 22, align: "right" });
+      doc.text("Amt(Rs)", 156, headerY, { width: 34, align: "right" });
+      doc.text("St", 192, headerY, { width: 22, align: "center" });
+      doc.moveDown(0.3);
+
+      doc.strokeColor("#ccc").lineWidth(0.5).moveTo(10, doc.y).lineTo(216, doc.y).stroke();
+      doc.moveDown(0.3);
+
+      // ── Table Rows ──
+      doc.font("Helvetica").fontSize(5.8);
+      entries.forEach((e) => {
+        const rowY = doc.y;
+        const dStr = fmtShortDate(e.createdAt);
+        const shiftCode = e.shift === "morning" ? "M" : "E";
+        const catCode = (e.category || "cow").slice(0, 3).toUpperCase();
+        const ltr = Number(e.litter || 0).toFixed(1);
+        const fat = Number(e.fat || 0).toFixed(1);
+        const snf = Number(e.snf || 0).toFixed(1);
+        const amt = Number(e.calculatedAmount || 0).toFixed(0);
+        const st = e.paymentStatus === "paid" ? "PAID" : "UNPD";
+
+        doc.text(dStr, 10, rowY, { width: 35 });
+        doc.text(shiftCode, 45, rowY, { width: 12 });
+        doc.text(catCode, 58, rowY, { width: 22 });
+        doc.text(ltr, 82, rowY, { width: 24, align: "right" });
+        doc.text(fat, 108, rowY, { width: 22, align: "right" });
+        doc.text(snf, 132, rowY, { width: 22, align: "right" });
+        doc.text(amt, 156, rowY, { width: 34, align: "right" });
+        doc.text(st, 192, rowY, { width: 22, align: "center" });
+        doc.moveDown(0.3);
+      });
+
+      // Dash line
+      doc.strokeColor("#888").lineWidth(0.5).dash(3, { space: 2 }).moveTo(10, doc.y).lineTo(216, doc.y).stroke().undash();
+      doc.moveDown(0.4);
+
+      // ── Summary Box ──
+      const avgRate = Number(summary.totalLiters || 0) > 0 ? (Number(summary.totalAmount || 0) / Number(summary.totalLiters || 1)) : 0;
+      doc.font("Helvetica").fontSize(6.5);
+      doc.text(`Total Quantity: ${Number(summary.totalLiters || 0).toFixed(2)} L`);
+      doc.text(`Avg FAT / SNF: ${Number(summary.avgFat || 0).toFixed(1)}% / ${Number(summary.avgSnf || 0).toFixed(1)}`);
+      doc.text(`Avg Rate / Ltr: Rs. ${avgRate.toFixed(2)}`);
+      doc.moveDown(0.3);
+
+      doc.font("Helvetica-Bold");
+      doc.text(`Gross Bill Total: Rs. ${Number(summary.totalAmount || 0).toFixed(2)}`);
+      doc.text(`Paid Amount: Rs. ${paidAmt.toFixed(2)}`);
+      doc.text(`Balance Payable: Rs. ${unpaidAmt.toFixed(2)}`);
+      doc.moveDown(0.4);
+
+      // ── Net Payable Highlight Box ──
+      doc.strokeColor("#000").lineWidth(1).rect(10, doc.y, 206, 16).stroke();
+      const netBoxY = doc.y + 3.5;
+      doc.fontSize(7.5).font("Helvetica-Bold").text("NET PAYABLE", 14, netBoxY);
+      doc.text(`Rs. ${(filterStatus === 'paid' ? paidAmt : unpaidAmt).toFixed(2)}`, 110, netBoxY, { width: 100, align: "right" });
+      doc.moveDown(1.2);
+
+      // ── Stamp ──
+      doc.fontSize(7).font("Helvetica-Bold").fillColor(isPaidAll ? "#137333" : "#b06000");
+      const stampText = isPaidAll ? "*** FULLY PAID / ALL PAID ***" : (isPartial ? "*** PARTIALLY PAID ***" : "*** BALANCE DUE / UNPAID ***");
+      doc.text(stampText, { align: "center" });
+      doc.moveDown(0.8);
+
+      // ── Signatures ──
+      const sigY = doc.y;
+      doc.fontSize(6).font("Helvetica").fillColor("#000");
+      doc.text("Farmer Sign", 14, sigY);
+      doc.text("Authorized Sign", 140, sigY, { width: 70, align: "right" });
+      doc.moveDown(1);
+
+      // ── Footer ──
+      doc.fontSize(5.5).font("Helvetica").fillColor("#666");
+      doc.text(`Generated: ${fmtDateTime()}`, { align: "center" });
+      doc.text("Milkify Dairy - System Generated POS Thermal Slip", { align: "center" });
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 async function createPdfBuffer(data, lang) {
-  const html = buildHtml(data, lang);
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  
-  // Set content and wait until network is idle (though resources are base64 inline so it's instant)
-  await page.setContent(html, { waitUntil: 'networkidle0' });
-  
-  // Evaluate the height of the document
-  const bodyHandle = await page.$('body');
-  const boundingBox = await bodyHandle.boundingBox();
-  // Provide extra bottom padding
-  const contentHeight = Math.ceil(boundingBox.height) + 'px';
-  
-  const pdfBuffer = await page.pdf({
-    width: '300px',
-    height: contentHeight,
-    printBackground: true,
-    margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
-  });
-  
-  await page.close();
-  return pdfBuffer;
+  try {
+    const browser = await getBrowser();
+    if (browser) {
+      const html = buildHtml(data, lang);
+      const page = await browser.newPage();
+      try {
+        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 15000 });
+        const bodyHandle = await page.$('body');
+        const boundingBox = bodyHandle ? await bodyHandle.boundingBox() : null;
+        const contentHeight = boundingBox ? Math.ceil(boundingBox.height) + 10 + 'px' : '900px';
+
+        const pdfBuffer = await page.pdf({
+          width: '300px',
+          height: contentHeight,
+          printBackground: true,
+          margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
+        });
+        return pdfBuffer;
+      } finally {
+        await page.close().catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.warn("[PDF Engine] Puppeteer generation failed, falling back to PDFKit:", err.message);
+  }
+
+  // Pure Node.js fallback with zero browser executable dependencies
+  return createPdfWithPdfKit(data, lang);
 }
 
 exports.generateBillingPdf = async (data, res, lang = "en") => {

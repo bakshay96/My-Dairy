@@ -19,10 +19,17 @@ const sendMail = (req, res, next) => {
     snf = 0, fat = 0, litter = 0, shift = "morning", date = new Date().toLocaleDateString("en-IN"),
     mobile = "", category = "cow", water = 0, degree = 0, calculatedAmount = 0, rate = 0,
   } = milkdata;
-  const { email = "", name = "Farmer" } = milkdata;
+  const { name = "Farmer" } = milkdata;
+  const rawEmail = milkdata.email || "";
+  const adminEmail = req.admin?.email || "";
 
-  if (!email || !email.includes("@")) {
-    console.log(`[Mail] No valid email for ${name}, skipping.`);
+  // Prefer farmer's personal email; fallback to dairy admin's email if missing or generic
+  const targetEmail = (rawEmail && rawEmail.includes("@") && rawEmail !== "milkify@gmail.com")
+    ? rawEmail
+    : (adminEmail && adminEmail.includes("@") ? adminEmail : rawEmail);
+
+  if (!targetEmail || !targetEmail.includes("@")) {
+    console.log(`[Mail] No valid recipient email for ${name}, skipping.`);
     return next();
   }
 
@@ -149,7 +156,8 @@ const sendMail = (req, res, next) => {
   // ── Build mail options ────────────────────────────────────────────────────
   const mailOptions = {
     from: `"Milkify Dairy" <${process.env.SMTP_EMAIL}>`,
-    to: email,
+    to: targetEmail,
+    ...(adminEmail && adminEmail.includes("@") && adminEmail !== targetEmail ? { cc: adminEmail } : {}),
     subject: `📄 Milk Receipt: ${litter}L · ${amountFmt} | ${date}`,
     html,
     text: `Hello ${name},\nYour milk collection has been recorded.\n\nDate: ${date}\nShift: ${shift}\nCategory: ${category}\nVolume: ${litter} L\nFAT: ${fat}% | SNF: ${snf}\nAmount: ${amountFmt}\n\nThank you!\nMilkify – Uplifting Dairy Digitally`,
@@ -167,7 +175,7 @@ const sendMail = (req, res, next) => {
 
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) console.error("[Mail] Email error:", error.message);
-    else console.log(`[Mail] Sent to ${email}:`, info.response);
+    else console.log(`[Mail] Sent to ${targetEmail}:`, info.response);
     next();
   });
 };
