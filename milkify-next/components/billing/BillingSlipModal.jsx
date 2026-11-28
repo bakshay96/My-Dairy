@@ -132,7 +132,12 @@ export default function BillingSlipModal({ slipData, isOpen, onClose, initialLan
 
   const t = useMemo(() => languageText[language] || languageText.en, [language]);
 
-  const { farmer, entries = [], dateRange = {} } = slipData || {};
+  // Safely resolve slip data whether passed unwrapped or wrapped inside { success: true, data: { ... } }
+  const resolvedSlip = useMemo(() => {
+    return slipData?.data || slipData || {};
+  }, [slipData]);
+
+  const { farmer, entries = [], dateRange = {} } = resolvedSlip;
 
   // Compute breakdown counts and amounts
   const {
@@ -274,7 +279,7 @@ export default function BillingSlipModal({ slipData, isOpen, onClose, initialLan
 
   // WhatsApp / Share Thermal Slip Receipt
   const handleShareThermalSlip = () => {
-    const shopName = slipData?.adminShopName || "Milkify Dairy";
+    const shopName = resolvedSlip?.adminShopName || slipData?.adminShopName || "Milkify Dairy";
     const statusText = 
       billStatus === "paid" ? "✓ FULLY PAID / पूर्ण चुकता" :
       billStatus === "partial" ? `⚠️ PARTIAL / बाकी ₹${unpaidTotalAmount.toFixed(2)}` :
@@ -360,7 +365,7 @@ export default function BillingSlipModal({ slipData, isOpen, onClose, initialLan
                 )}
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {slipData?.adminShopName || "Milkify Dairy Center"} • {t.title}
+                {resolvedSlip?.adminShopName || slipData?.adminShopName || "Milkify Dairy Center"} • {t.title}
               </p>
             </div>
           </div>

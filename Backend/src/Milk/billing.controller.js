@@ -476,7 +476,11 @@ exports.getBillingSlipData = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid farmer ID" });
     }
 
-    const adminId = new mongoose.Types.ObjectId(req.admin._id);
+    const rawAdminId = req.admin?._id || req.admin?.id || req.adminId;
+    if (!rawAdminId) {
+      return res.status(401).json({ success: false, message: "Unauthorized. Admin ID missing." });
+    }
+    const adminId = new mongoose.Types.ObjectId(rawAdminId);
     const { start, end, startDate, endDate } = buildDateRange(req.query);
     const lang = ["en", "hi", "mr"].includes(req.query.lang) ? req.query.lang : "en";
     const statusFilter = req.query.status || "all";
@@ -606,7 +610,11 @@ exports.getBillingSlipData = async (req, res) => {
 exports.generateBillingSlipPdf = async (req, res) => {
   try {
     const { farmerId } = req.params;
-    const adminId = new mongoose.Types.ObjectId(req.admin._id);
+    const rawAdminId = req.admin?._id || req.admin?.id || req.adminId;
+    if (!rawAdminId) {
+      return res.status(401).json({ success: false, message: "Unauthorized. Admin ID missing." });
+    }
+    const adminId = new mongoose.Types.ObjectId(rawAdminId);
     const { start, end, startDate, endDate } = buildDateRange(req.query);
     const statusFilter = req.query.status || "all";
 
@@ -725,7 +733,11 @@ exports.generateBillingSlipPdf = async (req, res) => {
 exports.sendBillingEmail = async (req, res) => {
   try {
     const { farmerId } = req.params;
-    const adminId = new mongoose.Types.ObjectId(req.admin._id);
+    const rawAdminId = req.admin?._id || req.admin?.id || req.adminId;
+    if (!rawAdminId) {
+      return res.status(401).json({ success: false, message: "Unauthorized. Admin ID missing." });
+    }
+    const adminId = new mongoose.Types.ObjectId(rawAdminId);
     const { start, end, startDate, endDate } = buildDateRange(req.query);
     const lang = ["en", "hi", "mr"].includes(req.query.lang) ? req.query.lang : "en";
     const statusFilter = req.query.status || "all";

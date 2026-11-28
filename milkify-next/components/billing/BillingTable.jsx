@@ -74,11 +74,11 @@ export default function BillingTable({ farmers, onPaymentSuccess, startDate = ""
       setLoadingSlipId(farmer.farmerId);
       let url = `/billing/slip/${farmer.farmerId}${buildDateQuery(startDate, endDate)}`;
       const res = await api.get(url);
-      setSlipData(res.data);
+      setSlipData(res.data?.data || res.data);
       setShowSlipModal(true);
     } catch (error) {
       console.error("Failed to generate bill:", error);
-      alert("Unable to generate bill for selected range.");
+      toast.error("Unable to generate bill for selected range.");
     } finally {
       setLoadingSlipId(null);
     }
